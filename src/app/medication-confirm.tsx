@@ -1,89 +1,201 @@
-import { useState } from 'react';
-import { Alert, Pressable, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { AppButton } from '@/components/ui/app-button';
+import { Card } from '@/components/ui/card';
+import { InfoRow } from '@/components/ui/info-row';
+import { Screen } from '@/components/ui/screen';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Radius, Spacing } from '@/constants/theme';
+import { useFamilyContext } from '@/context/family-context';
+import { useTheme } from '@/hooks/use-theme';
+import { isToday } from '@/utils/date';
+
+const steps = [
+  { key: 'photo', label: 'ถ่ายรูปยา' },
+  { key: 'confirm', label: 'ยืนยันการทาน' },
+] as const;
 
 export default function MedicationConfirmScreen() {
   const router = useRouter();
+  const theme = useTheme();
+  const params = useLocalSearchParams<{ id?: string }>();
+  const { medications, primaryElderId, confirmMedicationTaken } = useFamilyContext();
   const [photoCaptured, setPhotoCaptured] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
 
-  const handleCapture = () => {
-    setPhotoCaptured(true);
-    Alert.alert('ถ่ายรูปสำเร็จ', 'ภาพยืนยันจากกล้องพร้อมแล้ว');
-  };
+  const medication = useMemo(() => {
+    if (params.id) return medications.find((med) => med.id === params.id);
+    return medications.find((med) => med.memberId === primaryElderId && med.active);
+  }, [medications, params.id, primaryElderId]);
+
+  const takenToday = medication?.lastTakenAt ? isToday(medication.lastTakenAt.slice(0, 10)) : false;
+  const currentStep = takenToday ? 2 : photoCaptured ? 1 : 0;
 
   const handleConfirm = () => {
-    if (!photoCaptured) {
-      Alert.alert('ยังไม่ได้ถ่ายรูป', 'กรุณาถ่ายภาพยืนยันก่อนกดยืนยัน');
-      return;
-    }
-
-    setConfirmed(true);
-    Alert.alert('ยืนยันสำเร็จ', 'ระบบบันทึกการทานยาของคุณแล้ว', [{ text: 'ตกลง', onPress: () => router.back() }]);
+    if (!medication) return;
+    confirmMedicationTaken(medication.id);
+    router.back();
   };
 
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.card}>
-          <ThemedText type="subtitle">ยืนยันการทานยา</ThemedText>
-          <ThemedText themeColor="textSecondary" style={styles.description}>
-            Amlodipine 5 mg · เวลา 08:00
+  if (!medication) {
+    return (
+      <Screen center gap={Spacing.three}>
+        <ScreenHeader title="ยืนยันการทานยา" />
+        <Card tone="sunken" elevation="flat" gap={Spacing.two}>
+          <ThemedText type="smallBold">ยังไม่มีรายการยา</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            เพิ่มรายการยาก่อน เพื่อให้สามารถยืนยันการทานยาได้
           </ThemedText>
+        </Card>
+        <AppButton label="เพิ่มรายการยา" onPress={() => router.replace('/medication-form')} />
+      </Screen>
+    );
+  }
 
-          <ThemedView style={styles.helperCard}>
-            <ThemedText style={styles.helperTitle}>{confirmed ? '✓ ยืนยันแล้ว' : '📸 ต้องถ่ายรูปเพื่อยืนยัน'}</ThemedText>
-            <ThemedText themeColor="textSecondary">
-              {confirmed ? 'ครอบครัวจะเห็นว่าคุณทานยาตามกำหนดแล้ว' : 'ระบบจำลองกระบวนการถ่ายรูปก่อนส่งยืนยัน'}
-            </ThemedText>
-          </ThemedView>
+  return (
+    <Screen
+      gap={Spacing.three}
+      footer={
+        <>
+          <AppButton
+            label={takenToday ? 'ยืนยันแล้ววันนี้' : 'ทานแล้ว และยืนยัน'}
+            icon={takenToday ? '✓' : '💊'}
+            size="xlarge"
+            variant={takenToday ? 'success' : 'primary'}
+            disabled={!photoCaptured || takenToday}
+            onPress={handleConfirm}
+            accessibilityHint={photoCaptured ? 'บันทึกว่าคุณทานยาแล้ว' : 'ต้องถ่ายรูปยืนยันก่อนจึงจะกดได้'}
+          />
+          <AppButton label="ยกเลิก" variant="ghost" size="medium" onPress={() => router.back()} />
+        </>
+      }>
+      <ScreenHeader
+        title="ยืนยันการทานยา"
+        eyebrow="ยาประจำวัน"
+        subtitle="ถ่ายรูปยาแล้วกดยืนยัน เพื่อให้ครอบครัวเห็นว่าคุณทานยาแล้ว"
+      />
 
-          <Pressable style={({ pressed }) => [styles.captureButton, pressed && styles.pressed]} onPress={handleCapture}>
-            <ThemedText style={styles.buttonText}>{photoCaptured ? '✓ ถ่ายรูปแล้ว' : '📷 ถ่ายรูปยืนยัน'}</ThemedText>
-          </Pressable>
-
-          {photoCaptured ? (
-            <ThemedView style={styles.photoPreview}>
-              <ThemedText style={styles.photoEmoji}>🩺</ThemedText>
-              <ThemedText style={styles.photoText}>ภาพยืนยันพร้อมส่ง</ThemedText>
-              <ThemedText themeColor="textSecondary" type="small">
-                รูปนี้จำลองการอัปโหลดจากกล้องเพื่อยืนยันการทานยา
+      <View style={styles.stepper}>
+        {steps.map((step, index) => {
+          const isDone = currentStep > index;
+          const isActive = currentStep === index;
+          return (
+            <View key={step.key} style={styles.step}>
+              <View
+                style={[
+                  styles.stepDot,
+                  {
+                    backgroundColor: isDone ? theme.success : isActive ? theme.primary : theme.surfaceSunken,
+                    borderColor: isDone ? theme.success : isActive ? theme.primary : theme.border,
+                  },
+                ]}>
+                <ThemedText style={[styles.stepGlyph, { color: isDone || isActive ? '#FFFFFF' : theme.textMuted }]}>
+                  {isDone ? '✓' : String(index + 1)}
+                </ThemedText>
+              </View>
+              <ThemedText type="caption" themeColor={isDone || isActive ? 'text' : 'textMuted'} numberOfLines={1}>
+                {step.label}
               </ThemedText>
-            </ThemedView>
-          ) : null}
+              {index < steps.length - 1 ? (
+                <View style={[styles.stepLine, { backgroundColor: currentStep > index ? theme.success : theme.border }]} />
+              ) : null}
+            </View>
+          );
+        })}
+      </View>
 
-          <Pressable style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]} onPress={handleConfirm}>
-            <ThemedText style={styles.buttonText}>✓ ทานแล้วและยืนยัน</ThemedText>
-          </Pressable>
+      <Card gap={Spacing.three} padding={Spacing.four}>
+        <View style={styles.pillHead}>
+          <View style={[styles.pillIcon, { backgroundColor: theme.primarySoft }]}>
+            <ThemedText style={styles.pillGlyph}>💊</ThemedText>
+          </View>
+          <View style={styles.pillText}>
+            <ThemedText type="heading">{medication.name}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {medication.dosage}
+            </ThemedText>
+          </View>
+        </View>
 
-          <Pressable style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]} onPress={() => router.back()}>
-            <ThemedText style={styles.buttonTextSecondary}>ยกเลิก</ThemedText>
-          </Pressable>
-        </ThemedView>
-      </SafeAreaView>
-    </ThemedView>
+        <View style={[styles.separator, { backgroundColor: theme.border }]} />
+
+        <InfoRow icon="⏰" label="เวลาที่กำหนด" value={medication.schedule.join(', ') + ' น.'} />
+        {medication.reason ? <InfoRow icon="🩺" label="ใช้เพื่อ" value={medication.reason} /> : null}
+        {medication.notes ? <InfoRow icon="📝" label="หมายเหตุ" value={medication.notes} /> : null}
+      </Card>
+
+      <Card tone={takenToday ? 'success' : photoCaptured ? 'primary' : 'sunken'} elevation="flat" gap={Spacing.two}>
+        <StatusBadge
+          label={takenToday ? 'ยืนยันแล้ววันนี้' : photoCaptured ? 'พร้อมยืนยัน' : 'รอถ่ายรูป'}
+          tone={takenToday ? 'success' : photoCaptured ? 'primary' : 'neutral'}
+        />
+        <ThemedText type="small" themeColor="textSecondary">
+          {takenToday
+            ? 'ครอบครัวจะเห็นว่าคุณทานยาตามกำหนดแล้ว'
+            : photoCaptured
+              ? 'ภาพพร้อมส่งแล้ว กดปุ่มยืนยันด้านล่างเพื่อบันทึก'
+              : 'ถ่ายรูปยาก่อนทาน เพื่อให้ครอบครัวมั่นใจว่าทานถูกต้อง'}
+        </ThemedText>
+      </Card>
+
+      {photoCaptured ? (
+        <Card gap={Spacing.two} style={styles.preview}>
+          <View style={[styles.previewFrame, { backgroundColor: theme.surfaceSunken, borderColor: theme.border }]}>
+            <ThemedText style={styles.previewEmoji}>🩺</ThemedText>
+          </View>
+          <ThemedText type="smallBold">ภาพยืนยันพร้อมส่ง</ThemedText>
+          <ThemedText type="caption" themeColor="textMuted" style={styles.previewCaption}>
+            รูปนี้จำลองการอัปโหลดจากกล้องเพื่อยืนยันการทานยา
+          </ThemedText>
+          <AppButton label="ถ่ายใหม่" variant="ghost" size="medium" onPress={() => setPhotoCaptured(true)} />
+        </Card>
+      ) : (
+        <AppButton
+          label="ถ่ายรูปยืนยัน"
+          icon="📷"
+          variant="secondary"
+          size="xlarge"
+          onPress={() => setPhotoCaptured(true)}
+          accessibilityHint="เปิดกล้องเพื่อถ่ายภาพยาก่อนยืนยัน"
+        />
+      )}
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  safeArea: { flex: 1, paddingHorizontal: Spacing.four, paddingBottom: BottomTabInset + Spacing.three, maxWidth: MaxContentWidth, alignSelf: 'center', width: '100%', justifyContent: 'center' },
-  card: { borderRadius: Spacing.three, padding: Spacing.four, gap: Spacing.two, backgroundColor: '#FFFFFF' },
-  description: { maxWidth: 320 },
-  helperCard: { borderRadius: Spacing.three, padding: Spacing.three, gap: Spacing.half, backgroundColor: '#EFF6FF' },
-  helperTitle: { fontSize: 15, fontWeight: '700', color: '#1D4ED8' },
-  captureButton: { minHeight: 48, borderRadius: 12, backgroundColor: '#E0F2FE', justifyContent: 'center', alignItems: 'center' },
-  photoPreview: { borderRadius: Spacing.three, padding: Spacing.three, gap: Spacing.half, backgroundColor: '#F8FAFC', alignItems: 'center' },
-  photoEmoji: { fontSize: 28 },
-  photoText: { fontWeight: '700' },
-  primaryButton: { minHeight: 56, borderRadius: 12, backgroundColor: '#2563EB', justifyContent: 'center', alignItems: 'center' },
-  secondaryButton: { minHeight: 56, borderRadius: 12, backgroundColor: '#E2E8F0', justifyContent: 'center', alignItems: 'center' },
-  buttonText: { color: '#FFFFFF', fontWeight: '600' },
-  buttonTextSecondary: { color: '#111827', fontWeight: '600' },
-  pressed: { opacity: 0.9 },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  step: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  stepDot: {
+    width: 28,
+    height: 28,
+    borderRadius: Radius.full,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepGlyph: { fontSize: 13, lineHeight: 18, fontWeight: '800' },
+  stepLine: { width: 28, height: 2, marginHorizontal: Spacing.one },
+
+  pillHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  pillIcon: { width: 52, height: 52, borderRadius: Radius.lg, justifyContent: 'center', alignItems: 'center' },
+  pillGlyph: { fontSize: 24, lineHeight: 32 },
+  pillText: { flex: 1, gap: Spacing.half },
+  separator: { height: 1 },
+
+  preview: { alignItems: 'center' },
+  previewFrame: {
+    width: '100%',
+    height: 132,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewEmoji: { fontSize: 40, lineHeight: 48 },
+  previewCaption: { textAlign: 'center' },
 });

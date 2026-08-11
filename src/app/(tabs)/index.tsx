@@ -1,229 +1,348 @@
-import { Alert, Pressable, ScrollView, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useMemo } from 'react';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { AppButton } from '@/components/ui/app-button';
+import { Avatar } from '@/components/ui/avatar';
+import { Card } from '@/components/ui/card';
+import { Screen } from '@/components/ui/screen';
+import { SectionHeader } from '@/components/ui/section-header';
+import { StatTile } from '@/components/ui/stat-tile';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { MemberStatusMeta, StatusPriority, TaskStatusMeta } from '@/constants/status';
+import { HitSize, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
-import { useFamilyContext } from '@/context/family-context';
+import { useFamilyContext, type FamilyEvent } from '@/context/family-context';
+import { useTheme } from '@/hooks/use-theme';
 
-const statusConfig = {
-  normal: { label: '🟢 ปกติ', background: '#ECFDF5', text: '#065F46' },
-  monitor: { label: '🟡 ต้องติดตาม', background: '#FFFBEB', text: '#92400E' },
-  urgent: { label: '🔴 ต้องช่วยเหลือ', background: '#FEF2F2', text: '#991B1B' },
+const timelineIcons: Record<FamilyEvent['type'], string> = {
+  'check-in': '✓',
+  medication: '💊',
+  task: '👥',
+  appointment: '🏥',
+  vitals: '📋',
+  emergency: '🆘',
 };
 
-const getInitials = (name: string) =>
-  name
-    .split(' ')
-    .map((word) => word[0] ?? '')
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+const taskIcons: Record<string, string> = {
+  checkin: '✓',
+  medication: '💊',
+  appointment: '🏥',
+};
 
-export default function HomeScreen() {
+function greetingForNow() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'สวัสดีตอนเช้า';
+  if (hour < 18) return 'สวัสดีตอนบ่าย';
+  return 'สวัสดีตอนค่ำ';
+}
+
+export default function CaregiverDashboardScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const { user, logout } = useAuth();
-  const { familyMembers, tasks, timeline, setSelectedMemberId, updateTaskStatus } = useFamilyContext();
+  const { familyMembers, tasks, timeline, setSelectedMemberId, updateTaskStatus, addTimelineEvent } =
+    useFamilyContext();
 
-  const sortedMembers = [...familyMembers].sort((a, b) => {
-    const priority = { urgent: 0, monitor: 1, normal: 2 } as const;
-    return priority[a.status] - priority[b.status] || a.name.localeCompare(b.name);
-  });
+  const sortedMembers = useMemo(
+    () =>
+      [...familyMembers].sort(
+        (a, b) => StatusPriority[a.status] - StatusPriority[b.status] || a.name.localeCompare(b.name)
+      ),
+    [familyMembers]
+  );
 
-  const needsAttention = sortedMembers.filter((member) => member.status !== 'normal').length;
-  const nextAttention = sortedMembers.find((member) => member.status !== 'normal');
+  const normalCount = familyMembers.filter((member) => member.status === 'normal').length;
+  const attentionMembers = sortedMembers.filter((member) => member.status !== 'normal');
+  const openTasks = tasks.filter((task) => task.status !== 'done');
+
+  const confirmLogout = () => {
+    Alert.alert('ออกจากระบบ', 'ต้องการออกจากระบบใช่หรือไม่?', [
+      { text: 'ยกเลิก', style: 'cancel' },
+      {
+        text: 'ออกจากระบบ',
+        style: 'destructive',
+        onPress: () => {
+          logout();
+          router.replace('/login');
+        },
+      },
+    ]);
+  };
 
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          <ThemedView style={styles.heroCard}>
-            <ThemedView style={styles.heroHeader}>
-              <ThemedText style={styles.heroTitle}>สวัสดี {user?.name || 'คุณ'}</ThemedText>
-              <Pressable onPress={() => Alert.alert('ออกจากระบบ', 'ต้องการออกจากระบบหรือไม่?', [{ text: 'ยกเลิก' }, { text: 'ออกจากระบบ', style: 'destructive', onPress: () => { logout(); router.replace('/login'); } }])}>
-                <ThemedText style={styles.logoutText}>ออกจากระบบ</ThemedText>
-              </Pressable>
-            </ThemedView>
-            <ThemedText style={styles.heroSubtitle}>วันนี้มี {needsAttention} รายการที่ควรตรวจสอบ</ThemedText>
-            <ThemedView style={styles.heroRow}>
-              <ThemedView type="backgroundElement" style={styles.statusPill}>
-                <ThemedText type="smallBold" themeColor="success">
-                  🟢 {familyMembers.filter((member) => member.status === 'normal').length} ปกติ
-                </ThemedText>
-              </ThemedView>
-              <ThemedText themeColor="textSecondary" type="small">
-                Check-in ล่าสุด 08:32
-              </ThemedText>
-            </ThemedView>
-          </ThemedView>
-
-          <ThemedView type="backgroundElement" style={styles.summaryCard}>
-            <ThemedText type="smallBold">สถานะครอบครัววันนี้</ThemedText>
-            <ThemedText type="subtitle">ดูสถานะสำคัญแบบสั้น ๆ ก่อนกดเข้าไปดูรายละเอียด</ThemedText>
-          </ThemedView>
-
-          {nextAttention ? (
-            <ThemedView style={styles.alertCard}>
-              <ThemedText style={styles.alertTitle}>⚠️ ต้องติดตามก่อน</ThemedText>
-              <ThemedText style={styles.alertText}>
-                {nextAttention.name} · {statusConfig[nextAttention.status].label}
-              </ThemedText>
-            </ThemedView>
-          ) : null}
-
-          <ThemedText type="smallBold" style={styles.sectionTitle}>
-            สมาชิกในบ้าน
-          </ThemedText>
-          <ThemedView style={styles.familyList}>
-            {sortedMembers.map((member) => (
-              <Pressable
-                key={member.id}
-                onPress={() => {
-                  setSelectedMemberId(member.id);
-                  router.push('/family-member');
-                }}
-                style={({ pressed }) => [styles.memberCard, pressed && styles.pressed]}>
-                <ThemedView
-                  type="backgroundElement"
-                  style={[styles.memberInner, member.status !== 'normal' && styles.memberInnerAttention]}>
-                  <ThemedView style={styles.avatarWrap}>
-                    <ThemedText style={styles.avatarText}>{getInitials(member.name)}</ThemedText>
-                  </ThemedView>
-                  <ThemedView style={styles.memberBody}>
-                    <ThemedView style={styles.memberHeader}>
-                      <ThemedText type="smallBold">{member.name}</ThemedText>
-                      <ThemedText themeColor="textSecondary" type="small">
-                        {member.relation}
-                      </ThemedText>
-                    </ThemedView>
-                    <ThemedView style={[styles.statusBadge, { backgroundColor: statusConfig[member.status].background }]}>
-                      <ThemedText style={[styles.statusBadgeText, { color: statusConfig[member.status].text }]}> 
-                        {statusConfig[member.status].label}
-                      </ThemedText>
-                    </ThemedView>
-                    <ThemedText themeColor="textSecondary" type="small">
-                      {member.detail}
-                    </ThemedText>
-                  </ThemedView>
-                  <ThemedText style={styles.chevron}>›</ThemedText>
-                </ThemedView>
-              </Pressable>
-            ))}
-          </ThemedView>
-
-          <ThemedView style={styles.sectionHeader}>
-            <ThemedText type="smallBold" style={styles.sectionTitle}>
-              งานที่ต้องดูแลวันนี้
+    <Screen>
+      {/* Hero — who you are, and the one number that matters today. */}
+      <Card
+        tone="surface"
+        elevation="floating"
+        padding={Spacing.four}
+        gap={Spacing.three}
+        style={{ backgroundColor: theme.hero, borderColor: theme.hero }}>
+        <View style={styles.heroTop}>
+          <View style={styles.heroGreeting}>
+            <ThemedText type="caption" style={{ color: theme.heroTextMuted }}>
+              {greetingForNow().toUpperCase()}
             </ThemedText>
-            <Pressable onPress={() => router.push('/appointment-detail')}>
-              <ThemedText themeColor="textSecondary" style={styles.linkText}>
-                ดูทั้งหมด
-              </ThemedText>
+            <ThemedText type="display" style={{ color: theme.heroText }} numberOfLines={1}>
+              {user?.name ?? 'คุณ'}
+            </ThemedText>
+          </View>
+
+          <Pressable
+            onPress={confirmLogout}
+            accessibilityRole="button"
+            accessibilityLabel="ออกจากระบบ"
+            hitSlop={Spacing.two}
+            style={({ pressed }) => [
+              styles.logout,
+              { backgroundColor: theme.heroSurface },
+              pressed && styles.pressed,
+            ]}>
+            <ThemedText type="caption" style={{ color: theme.heroText }}>
+              ออกจากระบบ
+            </ThemedText>
+          </Pressable>
+        </View>
+
+        <ThemedText type="small" style={{ color: theme.heroTextMuted }}>
+          {attentionMembers.length > 0
+            ? `วันนี้มี ${attentionMembers.length} คนที่ควรตรวจสอบ และ ${openTasks.length} งานที่ยังไม่เสร็จ`
+            : 'วันนี้ทุกคนในบ้านสถานะปกติดี ไม่มีเรื่องเร่งด่วน'}
+        </ThemedText>
+
+        <View style={[styles.heroFooter, { borderTopColor: theme.heroSurface }]}>
+          <ThemedText type="caption" style={{ color: theme.heroTextMuted }}>
+            Check-in ล่าสุด 08:32 น.
+          </ThemedText>
+        </View>
+      </Card>
+
+      {/* At-a-glance counts. */}
+      <View style={styles.statRow}>
+        <StatTile value={normalCount} label="ปกติดี" tone="success" />
+        <StatTile value={attentionMembers.length} label="ต้องติดตาม" tone="warning" />
+        <StatTile value={openTasks.length} label="งานค้าง" tone="primary" />
+      </View>
+
+      {attentionMembers.length > 0 ? (
+        <Card tone="warning" accented elevation="flat" gap={Spacing.two}>
+          <View style={styles.alertHead}>
+            <ThemedText style={styles.alertIcon}>⚠️</ThemedText>
+            <ThemedText type="smallBold" style={{ color: theme.warningText }}>
+              ต้องติดตามก่อน
+            </ThemedText>
+          </View>
+          {attentionMembers.map((member) => (
+            <ThemedText key={member.id} type="small" style={{ color: theme.warningText }}>
+              • {member.name} — {member.detail}
+            </ThemedText>
+          ))}
+        </Card>
+      ) : null}
+
+      <SectionHeader title="สมาชิกในบ้าน" count={familyMembers.length} />
+      <View style={styles.list}>
+        {sortedMembers.map((member) => {
+          const status = MemberStatusMeta[member.status];
+          return (
+            <Pressable
+              key={member.id}
+              onPress={() => {
+                setSelectedMemberId(member.id);
+                router.push('/family-member');
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`${member.name} ${member.relation} สถานะ ${status.label}`}
+              accessibilityHint="เปิดรายละเอียดสมาชิก"
+              style={({ pressed }) => pressed && styles.pressed}>
+              <Card
+                accented={member.status !== 'normal'}
+                tone={member.status === 'normal' ? 'surface' : 'warning'}
+                gap={Spacing.three}
+                style={styles.memberCard}>
+                <Avatar name={member.name} tone={status.tone} />
+
+                <View style={styles.memberBody}>
+                  <View style={styles.memberHead}>
+                    <ThemedText type="smallBold" numberOfLines={1} style={styles.memberName}>
+                      {member.name}
+                    </ThemedText>
+                    <ThemedText type="caption" themeColor="textMuted">
+                      {member.relation} · {member.role}
+                    </ThemedText>
+                  </View>
+                  <StatusBadge label={status.label} tone={status.tone} />
+                  <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
+                    {member.detail}
+                  </ThemedText>
+                </View>
+
+                <ThemedText style={[styles.chevron, { color: theme.textMuted }]}>›</ThemedText>
+              </Card>
             </Pressable>
-          </ThemedView>
-          <ThemedView style={styles.taskList}>
-            {tasks.map((task) => (
-              <Pressable
-                key={task.id}
-                onPress={() => {
-                  const nextStatus = task.status === 'done' ? 'pending' : 'done';
-                  updateTaskStatus(task.id, nextStatus);
-                  Alert.alert('อัปเดตงานแล้ว', `${task.title} ถูกเปลี่ยนเป็น ${nextStatus === 'done' ? 'เสร็จแล้ว' : 'รอดำเนินการ'}`);
-                }}
-                style={({ pressed }) => [styles.taskItem, pressed && styles.pushed]}>
-                <ThemedText style={styles.taskIcon}>{task.status === 'done' ? '✓' : task.title === 'Medication' ? '💊' : '🏥'}</ThemedText>
-                <ThemedView style={styles.taskTextWrap}>
-                  <ThemedText type="smallBold">{task.title}</ThemedText>
-                  <ThemedText themeColor="textSecondary" type="small">
+          );
+        })}
+      </View>
+
+      <SectionHeader
+        title="งานที่ต้องดูแลวันนี้"
+        actionLabel="ดูนัดหมาย"
+        onActionPress={() => router.push('/appointments')}
+      />
+      <View style={styles.list}>
+        {tasks.map((task) => {
+          const isDone = task.status === 'done';
+          const meta = TaskStatusMeta[task.status];
+          return (
+            <Pressable
+              key={task.id}
+              onPress={() => updateTaskStatus(task.id, isDone ? 'pending' : 'done')}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: isDone }}
+              accessibilityLabel={`${task.title} — ${meta.label}`}
+              accessibilityHint="แตะเพื่อสลับสถานะงาน"
+              style={({ pressed }) => pressed && styles.pressed}>
+              <Card gap={Spacing.three} style={styles.taskCard}>
+                <View
+                  style={[
+                    styles.checkbox,
+                    {
+                      borderColor: isDone ? theme.success : theme.borderStrong,
+                      backgroundColor: isDone ? theme.success : 'transparent',
+                    },
+                  ]}>
+                  <ThemedText style={styles.checkGlyph}>{isDone ? '✓' : ''}</ThemedText>
+                </View>
+
+                <View style={styles.taskBody}>
+                  <ThemedText
+                    type="smallBold"
+                    style={isDone ? [styles.taskDone, { color: theme.textMuted }] : undefined}>
+                    {taskIcons[task.id] ?? '•'} {task.title}
+                  </ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
                     {task.detail}
                   </ThemedText>
-                </ThemedView>
-              </Pressable>
-            ))}
-          </ThemedView>
+                  <ThemedText type="caption" themeColor="textMuted">
+                    ผู้รับผิดชอบ: {task.owner}
+                  </ThemedText>
+                </View>
 
-          <ThemedText type="smallBold" style={styles.sectionTitle}>
-            การดำเนินการด่วน
-          </ThemedText>
-          <ThemedView style={styles.quickActions}>
-            <Pressable
-              style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
-              onPress={() => {
-                updateTaskStatus('checkin', 'done');
-                Alert.alert('บันทึกสำเร็จ', 'จำลองการตรวจสอบสถานะเรียบร้อยแล้ว');
-              }}>
-              <ThemedText style={styles.buttonText}>✓ ตรวจสอบสถานะ</ThemedText>
+                <StatusBadge label={meta.label} tone={meta.tone} dot={false} />
+              </Card>
             </Pressable>
-            <Pressable style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]} onPress={() => router.push('/appointment-detail')}>
-              <ThemedText style={styles.buttonTextSecondary}>📅 ดูนัดหมาย</ThemedText>
-            </Pressable>
-          </ThemedView>
+          );
+        })}
+      </View>
 
-          <ThemedText type="smallBold" style={styles.sectionTitle}>
-            Family timeline
-          </ThemedText>
-          <ThemedView style={styles.timelineList}>
-            {timeline.map((item) => (
-              <ThemedView key={item.id} type="backgroundElement" style={styles.timelineItem}>
-                <ThemedText type="smallBold">{item.title}</ThemedText>
-                <ThemedText themeColor="textSecondary" type="small">
-                  {item.time}
-                </ThemedText>
-                <ThemedText themeColor="textSecondary" style={styles.timelineDetail}>
+      <SectionHeader title="การดำเนินการด่วน" />
+      <View style={styles.list}>
+        <AppButton
+          label="ตรวจสอบสถานะ"
+          icon="✓"
+          onPress={() => {
+            updateTaskStatus('checkin', 'done');
+            addTimelineEvent({ title: 'ตรวจสอบสถานะแล้ว', detail: `${user?.name ?? 'คุณ'}ตรวจสอบสถานะครอบครัว`, type: 'check-in' });
+            Alert.alert('บันทึกสำเร็จ', 'บันทึกการตรวจสอบสถานะเรียบร้อยแล้ว');
+          }}
+        />
+        <View style={styles.quickRow}>
+          <AppButton label="นัดหมาย" icon="📅" variant="secondary" style={styles.quickHalf} onPress={() => router.push('/appointments')} />
+          <AppButton label="รายการยา" icon="💊" variant="secondary" style={styles.quickHalf} onPress={() => router.push('/medications')} />
+        </View>
+      </View>
+
+      <SectionHeader title="ไทม์ไลน์ครอบครัว" />
+      <Card gap={0} padding={Spacing.three}>
+        {timeline.map((item, index) => {
+          const isLast = index === timeline.length - 1;
+          return (
+            <View key={item.id} style={styles.timelineRow}>
+              <View style={styles.timelineRail}>
+                <View style={[styles.timelineDot, { backgroundColor: theme.primarySoft }]}>
+                  <ThemedText style={[styles.timelineIcon, { color: theme.primaryText }]}>
+                    {timelineIcons[item.type]}
+                  </ThemedText>
+                </View>
+                {!isLast ? <View style={[styles.timelineLine, { backgroundColor: theme.border }]} /> : null}
+              </View>
+
+              <View style={[styles.timelineBody, isLast && styles.timelineBodyLast]}>
+                <View style={styles.timelineHead}>
+                  <ThemedText type="smallBold" style={styles.timelineTitle}>
+                    {item.title}
+                  </ThemedText>
+                  <ThemedText type="caption" themeColor="textMuted">
+                    {item.time}
+                  </ThemedText>
+                </View>
+                <ThemedText type="small" themeColor="textSecondary">
                   {item.detail}
                 </ThemedText>
-              </ThemedView>
-            ))}
-          </ThemedView>
-        </ScrollView>
-      </SafeAreaView>
-    </ThemedView>
+              </View>
+            </View>
+          );
+        })}
+      </Card>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F1F5F9' },
-  safeArea: { flex: 1, paddingHorizontal: Spacing.four, paddingBottom: BottomTabInset + Spacing.three, maxWidth: MaxContentWidth, alignSelf: 'center', width: '100%' },
-  scrollContent: { gap: Spacing.three, paddingTop: Spacing.three, paddingBottom: Spacing.five },
-  heroCard: { borderRadius: 20, padding: Spacing.four, gap: Spacing.two, backgroundColor: '#1E293B', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
-  heroHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  heroTitle: { fontSize: 26, fontWeight: '800', lineHeight: 32, color: '#FFFFFF', letterSpacing: 0.3 },
-  heroSubtitle: { fontSize: 15, lineHeight: 22, color: '#CBD5E1' },
-  logoutText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700', opacity: 0.85, backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: Spacing.two, paddingVertical: Spacing.one, borderRadius: 8 },
-  heroRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two, marginTop: Spacing.one },
-  statusPill: { borderRadius: 999, paddingHorizontal: Spacing.two, paddingVertical: Spacing.half, backgroundColor: 'rgba(255,255,255,0.1)' },
-  summaryCard: { borderRadius: 16, padding: Spacing.three, gap: Spacing.one, backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 2 },
-  alertCard: { borderRadius: 16, padding: Spacing.three, backgroundColor: '#FFFBEB', borderWidth: 1, borderColor: '#FCD34D', shadowColor: '#F59E0B', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 3 },
-  alertTitle: { fontSize: 15, fontWeight: '700', color: '#92400E' },
-  alertText: { marginTop: Spacing.half, color: '#92400E', fontSize: 14 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.two },
-  sectionTitle: { marginTop: Spacing.one, fontSize: 16, fontWeight: '700', color: '#1E293B' },
-  familyList: { gap: Spacing.two },
-  memberCard: { borderRadius: 16, overflow: 'hidden', backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 3 },
-  memberInner: { borderRadius: 16, padding: Spacing.three, gap: Spacing.two, flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF' },
-  memberInnerAttention: { borderWidth: 2, borderColor: '#F59E0B' },
-  avatarWrap: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#3B82F6', justifyContent: 'center', alignItems: 'center', shadowColor: '#3B82F6', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 },
-  avatarText: { color: '#FFFFFF', fontWeight: '800', fontSize: 18 },
-  memberBody: { flex: 1, gap: Spacing.one },
-  memberHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.two },
-  statusBadge: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: Spacing.two, paddingVertical: Spacing.one },
-  statusBadgeText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
-  chevron: { fontSize: 24, color: '#94A3B8', marginLeft: Spacing.one },
-  taskList: { gap: Spacing.two },
-  taskItem: { flexDirection: 'row', alignItems: 'center', borderRadius: 16, padding: Spacing.three, gap: Spacing.two, backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 2 },
-  taskIcon: { fontSize: 24 },
-  taskTextWrap: { flex: 1, gap: Spacing.half },
-  quickActions: { gap: Spacing.two },
-  primaryButton: { minHeight: 56, borderRadius: 16, backgroundColor: '#3B82F6', justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.three, shadowColor: '#3B82F6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 },
-  secondaryButton: { minHeight: 56, borderRadius: 16, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.three, borderWidth: 1, borderColor: '#E2E8F0' },
-  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-  buttonTextSecondary: { color: '#1E293B', fontSize: 16, fontWeight: '700' },
-  pressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
-  pushed: { opacity: 0.95 },
-  linkText: { fontSize: 13, fontWeight: '700', color: '#3B82F6' },
-  timelineList: { gap: Spacing.two },
-  timelineItem: { borderRadius: 16, padding: Spacing.three, gap: Spacing.half, backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 2 },
-  timelineDetail: { marginTop: Spacing.half },
+  heroTop: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.three },
+  heroGreeting: { flex: 1, gap: Spacing.half },
+  logout: {
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+  },
+  heroFooter: { borderTopWidth: 1, paddingTop: Spacing.two },
+
+  statRow: { flexDirection: 'row', gap: Spacing.two },
+
+  alertHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  alertIcon: { fontSize: 16, lineHeight: 22 },
+
+  list: { gap: Spacing.two },
+  quickRow: { flexDirection: 'row', gap: Spacing.two },
+  quickHalf: { flex: 1 },
+
+  memberCard: { flexDirection: 'row', alignItems: 'center' },
+  memberBody: { flex: 1, gap: Spacing.one + 2 },
+  memberHead: { gap: 1 },
+  memberName: { fontSize: 16, lineHeight: 22 },
+  chevron: { fontSize: 26, lineHeight: 30, fontWeight: '600' },
+
+  taskCard: { flexDirection: 'row', alignItems: 'center' },
+  taskBody: { flex: 1, gap: Spacing.half },
+  taskDone: { textDecorationLine: 'line-through' },
+  checkbox: {
+    width: HitSize.small - 12,
+    height: HitSize.small - 12,
+    borderRadius: Radius.sm,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkGlyph: { color: '#FFFFFF', fontSize: 15, lineHeight: 20, fontWeight: '800' },
+
+  timelineRow: { flexDirection: 'row', gap: Spacing.three },
+  timelineRail: { alignItems: 'center', width: 32 },
+  timelineDot: {
+    width: 32,
+    height: 32,
+    borderRadius: Radius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  timelineIcon: { fontSize: 14, lineHeight: 20, fontWeight: '700' },
+  timelineLine: { width: 2, flex: 1, marginVertical: Spacing.one },
+  timelineBody: { flex: 1, gap: Spacing.half, paddingBottom: Spacing.three },
+  timelineBodyLast: { paddingBottom: 0 },
+  timelineHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
+  timelineTitle: { flex: 1 },
+
+  pressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
 });

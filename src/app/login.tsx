@@ -1,112 +1,222 @@
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, TextInput } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { AppButton } from '@/components/ui/app-button';
+import { Card } from '@/components/ui/card';
+import { Screen } from '@/components/ui/screen';
+import { HitSize, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
+import { useTheme } from '@/hooks/use-theme';
+
+type Field = 'email' | 'password';
+
+const demoAccounts = [
+  { label: 'ผู้ดูแล', email: 'caregiver@gmail.com', icon: '👨‍👩‍👧' },
+  { label: 'ผู้สูงอายุ', email: 'elder@gmail.com', icon: '🧓' },
+  { label: 'ผู้ดูแลระบบ', email: 'admin@gmail.com', icon: '🛠️' },
+];
 
 export default function LoginScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const { login, isLoading } = useAuth();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [focused, setFocused] = useState<Field | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const inputStyle = (field: Field) => [
+    styles.input,
+    {
+      backgroundColor: theme.inputBackground,
+      color: theme.text,
+      borderColor: focused === field ? theme.primary : theme.border,
+      borderWidth: focused === field ? 2 : 1,
+    },
+  ];
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('กรุณากรอกข้อมูล', 'โปรดกรอกอีเมลและรหัสผ่าน');
+    if (!email.trim() || !password) {
+      setError('โปรดกรอกอีเมลและรหัสผ่านให้ครบถ้วน');
       return;
     }
 
+    setError(null);
+
     try {
-      await login(email, password);
+      await login(email.trim(), password);
       router.replace('/');
-    } catch (error) {
-      Alert.alert('เข้าสู่ระบบไม่สำเร็จ', error instanceof Error ? error.message : 'เกิดข้อผิดพลาด');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+      setError(message);
+      Alert.alert('เข้าสู่ระบบไม่สำเร็จ', message);
     }
   };
 
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          <ThemedView style={styles.header}>
-            <ThemedText style={styles.title}>Parent Care</ThemedText>
-            <ThemedText themeColor="textSecondary" style={styles.subtitle}>
-              ระบบดูแลผู้สูงอายุสำหรับครอบครัว
-            </ThemedText>
-          </ThemedView>
+    <Screen keyboardAvoiding gap={Spacing.four} contentContainerStyle={styles.content}>
+      <View style={styles.header}>
+        <View style={[styles.logo, { backgroundColor: theme.primarySoft }]}>
+          <ThemedText style={styles.logoGlyph}>💙</ThemedText>
+        </View>
+        <ThemedText type="display" style={styles.appName}>
+          Parent Care
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary" style={styles.tagline}>
+          ดูแลพ่อแม่ร่วมกันทั้งครอบครัว ในที่เดียว
+        </ThemedText>
+      </View>
 
-          <ThemedView style={styles.form}>
-            <ThemedText type="smallBold">อีเมล</ThemedText>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="อีเมลของคุณ"
-              placeholderTextColor="#94A3B8"
-              autoCapitalize="none"
-              keyboardType="email-address"
-              editable={!isLoading}
-            />
+      <Card gap={Spacing.three} padding={Spacing.four}>
+        <View style={styles.field}>
+          <ThemedText type="smallBold">อีเมล</ThemedText>
+          <TextInput
+            style={inputStyle('email')}
+            value={email}
+            onChangeText={(value) => {
+              setEmail(value);
+              if (error) setError(null);
+            }}
+            onFocus={() => setFocused('email')}
+            onBlur={() => setFocused(null)}
+            placeholder="you@example.com"
+            placeholderTextColor={theme.placeholder}
+            autoCapitalize="none"
+            autoComplete="email"
+            keyboardType="email-address"
+            editable={!isLoading}
+            accessibilityLabel="อีเมล"
+            returnKeyType="next"
+          />
+        </View>
 
-            <ThemedText type="smallBold" style={styles.passwordLabel}>
-              รหัสผ่าน
-            </ThemedText>
+        <View style={styles.field}>
+          <ThemedText type="smallBold">รหัสผ่าน</ThemedText>
+          <View style={styles.passwordWrap}>
             <TextInput
-              style={styles.input}
+              style={[...inputStyle('password'), styles.passwordInput]}
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(value) => {
+                setPassword(value);
+                if (error) setError(null);
+              }}
+              onFocus={() => setFocused('password')}
+              onBlur={() => setFocused(null)}
               placeholder="รหัสผ่าน"
-              placeholderTextColor="#94A3B8"
-              secureTextEntry
+              placeholderTextColor={theme.placeholder}
+              secureTextEntry={!showPassword}
               editable={!isLoading}
+              accessibilityLabel="รหัสผ่าน"
+              returnKeyType="go"
+              onSubmitEditing={handleLogin}
             />
-
             <Pressable
-              style={({ pressed }) => [styles.loginButton, pressed && styles.pressed, isLoading && styles.disabled]}
-              onPress={handleLogin}
-              disabled={isLoading}>
-              <ThemedText style={styles.loginButtonText}>
-                {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
+              onPress={() => setShowPassword((current) => !current)}
+              accessibilityRole="button"
+              accessibilityLabel={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
+              hitSlop={Spacing.two}
+              style={({ pressed }) => [styles.toggle, pressed && styles.pressed]}>
+              <ThemedText type="caption" themeColor="primary">
+                {showPassword ? 'ซ่อน' : 'แสดง'}
               </ThemedText>
             </Pressable>
+          </View>
+        </View>
 
-            <ThemedView style={styles.demoCard}>
-              <ThemedText style={styles.demoTitle}>📋 บัญชีทดสอบ</ThemedText>
-              <ThemedText themeColor="textSecondary" type="small">
-                Caregiver: caregiver@gmail.com / 1234
-              </ThemedText>
-              <ThemedText themeColor="textSecondary" type="small">
-                Elder: elder@gmail.com / 1234
-              </ThemedText>
-              <ThemedText themeColor="textSecondary" type="small">
-                Admin: admin@gmail.com / 1234
-              </ThemedText>
-            </ThemedView>
-          </ThemedView>
-        </ScrollView>
-      </SafeAreaView>
-    </ThemedView>
+        {error ? (
+          <View style={[styles.errorBox, { backgroundColor: theme.dangerSoft }]}>
+            <ThemedText type="small" style={{ color: theme.dangerText }}>
+              ⚠️ {error}
+            </ThemedText>
+          </View>
+        ) : null}
+
+        <AppButton
+          label="เข้าสู่ระบบ"
+          onPress={handleLogin}
+          loading={isLoading}
+          disabled={isLoading}
+          accessibilityHint="เข้าสู่ระบบด้วยอีเมลและรหัสผ่านที่กรอก"
+        />
+      </Card>
+
+      <Card tone="sunken" elevation="flat" gap={Spacing.two}>
+        <ThemedText type="smallBold">บัญชีทดสอบ · แตะเพื่อกรอกอัตโนมัติ</ThemedText>
+        <View style={styles.demoList}>
+          {demoAccounts.map((account) => (
+            <Pressable
+              key={account.email}
+              onPress={() => {
+                setEmail(account.email);
+                setPassword('1234');
+                setError(null);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`ใช้บัญชีทดสอบ ${account.label}`}
+              style={({ pressed }) => [
+                styles.demoChip,
+                { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+                email === account.email && { borderColor: theme.primary },
+                pressed && styles.pressed,
+              ]}>
+              <ThemedText style={styles.demoIcon}>{account.icon}</ThemedText>
+              <View style={styles.demoText}>
+                <ThemedText type="smallBold">{account.label}</ThemedText>
+                <ThemedText type="caption" themeColor="textMuted">
+                  {account.email}
+                </ThemedText>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+        <ThemedText type="caption" themeColor="textMuted">
+          ทุกบัญชีใช้รหัสผ่าน 1234
+        </ThemedText>
+      </Card>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  safeArea: { flex: 1, paddingHorizontal: Spacing.four, paddingBottom: BottomTabInset + Spacing.three, maxWidth: MaxContentWidth, alignSelf: 'center', width: '100%' },
-  scrollContent: { gap: Spacing.four, paddingTop: Spacing.four, paddingBottom: Spacing.five },
-  header: { gap: Spacing.one, alignItems: 'center', paddingTop: Spacing.six },
-  title: { fontSize: 32, fontWeight: '700' },
-  subtitle: { fontSize: 16, textAlign: 'center' },
-  form: { gap: Spacing.two },
-  input: { minHeight: 56, borderRadius: 12, backgroundColor: '#FFFFFF', paddingHorizontal: Spacing.three, fontSize: 16, borderWidth: 1, borderColor: '#E2E8F0' },
-  passwordLabel: { marginTop: Spacing.one },
-  loginButton: { minHeight: 56, borderRadius: 12, backgroundColor: '#2563EB', justifyContent: 'center', alignItems: 'center', marginTop: Spacing.two },
-  loginButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-  pressed: { opacity: 0.9 },
-  disabled: { opacity: 0.5 },
-  demoCard: { borderRadius: Spacing.three, padding: Spacing.three, gap: Spacing.half, backgroundColor: '#F1F5F9', marginTop: Spacing.two },
-  demoTitle: { fontSize: 14, fontWeight: '700' },
+  content: { justifyContent: 'center', paddingBottom: Spacing.five },
+  header: { alignItems: 'center', gap: Spacing.two, paddingTop: Spacing.four },
+  logo: {
+    width: 72,
+    height: 72,
+    borderRadius: Radius.xl,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoGlyph: { fontSize: 34, lineHeight: 42 },
+  appName: { textAlign: 'center' },
+  tagline: { textAlign: 'center', maxWidth: 300 },
+  field: { gap: Spacing.two },
+  input: {
+    minHeight: HitSize.large,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.three,
+    fontSize: 16,
+  },
+  passwordWrap: { justifyContent: 'center' },
+  passwordInput: { paddingRight: 64 },
+  toggle: { position: 'absolute', right: Spacing.three, paddingVertical: Spacing.two },
+  errorBox: { borderRadius: Radius.sm, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
+  demoList: { gap: Spacing.two },
+  demoChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    minHeight: HitSize.medium,
+  },
+  demoIcon: { fontSize: 20, lineHeight: 26 },
+  demoText: { flex: 1, gap: 1 },
+  pressed: { opacity: 0.7 },
 });
