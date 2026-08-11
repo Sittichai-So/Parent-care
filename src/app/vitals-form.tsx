@@ -30,8 +30,9 @@ export default function VitalsFormScreen() {
   const [sugar, setSugar] = useState('');
   const [weight, setWeight] = useState('');
   const [note, setNote] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const systolicValue = toNumber(systolic);
     const diastolicValue = toNumber(diastolic);
     const sugarValue = toNumber(sugar);
@@ -46,23 +47,33 @@ export default function VitalsFormScreen() {
       return;
     }
 
-    addVitalLog({
-      memberId,
-      recordedAt: new Date().toISOString(),
-      systolic: systolicValue,
-      diastolic: diastolicValue,
-      sugar: sugarValue,
-      weight: weightValue,
-      note: note.trim() || undefined,
-    });
-    router.back();
+    setIsSaving(true);
+    try {
+      await addVitalLog({
+        memberId,
+        recordedAt: new Date().toISOString(),
+        systolic: systolicValue,
+        diastolic: diastolicValue,
+        sugar: sugarValue,
+        weight: weightValue,
+        note: note.trim() || undefined,
+      });
+      router.back();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+      Alert.alert('บันทึกข้อมูลสุขภาพไม่สำเร็จ', message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
     <Screen
       keyboardAvoiding
       gap={Spacing.three}
-      footer={<AppButton label="บันทึกข้อมูลสุขภาพ" icon="✓" onPress={handleSave} />}>
+      footer={
+        <AppButton label="บันทึกข้อมูลสุขภาพ" icon="✓" onPress={handleSave} loading={isSaving} disabled={isSaving} />
+      }>
       <ScreenHeader title="บันทึกสุขภาพ" eyebrow={member ? `สำหรับ ${member.name}` : undefined} subtitle="กรอกค่าที่วัดได้วันนี้ อย่างน้อยหนึ่งรายการ" />
 
       <Card gap={Spacing.three}>

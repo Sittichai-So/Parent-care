@@ -14,6 +14,7 @@ import { TextField } from '@/components/ui/text-field';
 import { APPOINTMENT_TIME_OPTIONS } from '@/constants/schedule';
 import { Spacing } from '@/constants/theme';
 import { useFamilyContext } from '@/context/family-context';
+import { canScheduleLocalNotifications } from '@/services/notifications';
 import { todayKey } from '@/utils/date';
 
 export default function AppointmentFormScreen() {
@@ -47,11 +48,12 @@ export default function AppointmentFormScreen() {
   const [medicationNote, setMedicationNote] = useState(editing?.medicationNote ?? '');
   const [linkedMedicationIds, setLinkedMedicationIds] = useState<string[]>(editing?.linkedMedicationIds ?? []);
   const [reminderEnabled, setReminderEnabled] = useState(editing?.reminderEnabled ?? true);
+  const [isSaving, setIsSaving] = useState(false);
 
   const toggleMedication = (id: string) =>
     setLinkedMedicationIds((current) => (current.includes(id) ? current.filter((m) => m !== id) : [...current, id]));
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!title.trim() || !hospital.trim() || !date || time.length === 0) {
       Alert.alert('ข้อมูลไม่ครบ', 'กรุณากรอกชื่อนัดหมาย สถานที่ วันที่ และเวลาให้ครบถ้วน');
       return;
@@ -71,12 +73,20 @@ export default function AppointmentFormScreen() {
       reminderEnabled,
     };
 
-    if (editing) {
-      updateAppointment(editing.id, payload);
-      router.back();
-    } else {
-      const id = addAppointment(payload);
-      router.replace({ pathname: '/appointment-detail', params: { id } });
+    setIsSaving(true);
+    try {
+      if (editing) {
+        await updateAppointment(editing.id, payload);
+        router.back();
+      } else {
+        const id = await addAppointment(payload);
+        router.replace({ pathname: '/appointment-detail', params: { id } });
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+      Alert.alert('บันทึกนัดหมายไม่สำเร็จ', message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -88,8 +98,12 @@ export default function AppointmentFormScreen() {
         text: 'ลบ',
         style: 'destructive',
         onPress: () => {
-          removeAppointment(editing.id);
-          router.back();
+          removeAppointment(editing.id)
+            .then(() => router.back())
+            .catch((err) => {
+              const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+              Alert.alert('ลบนัดหมายไม่สำเร็จ', message);
+            });
         },
       },
     ]);
@@ -101,8 +115,15 @@ export default function AppointmentFormScreen() {
       gap={Spacing.three}
       footer={
         <>
-          <AppButton label={editing ? 'บันทึกการแก้ไข' : 'บันทึกนัดหมาย'} onPress={handleSave} />
-          {editing ? <AppButton label="ลบนัดหมาย" variant="danger" size="medium" onPress={handleDelete} /> : null}
+          <AppButton
+            label={editing ? 'บันทึกการแก้ไข' : 'บันทึกนัดหมาย'}
+            onPress={handleSave}
+            loading={isSaving}
+            disabled={isSaving}
+          />
+          {editing ? (
+            <AppButton label="ลบนัดหมาย" variant="danger" size="medium" onPress={handleDelete} disabled={isSaving} />
+          ) : null}
         </>
       }>
       <ScreenHeader
@@ -155,7 +176,11 @@ export default function AppointmentFormScreen() {
         <TextField label="หมายเหตุอื่น ๆ (ไม่บังคับ)" value={notes} onChangeText={setNotes} placeholder="เช่น งดอาหารก่อนตรวจ" multiline />
         <CheckRow
           label="เตือนก่อนถึงนัดหมาย"
-          description="ครอบครัวจะได้รับการแจ้งเตือนล่วงหน้า 1 วัน"
+          description={
+            canScheduleLocalNotifications
+              ? 'แจ้งเตือนอัตโนมัติ 1 วันก่อน และอีก 1 ชั่วโมงก่อนถึงเวลานัด'
+              : 'การแจ้งเตือนใช้ได้เฉพาะแอปมือถือ (iOS/Android)'
+          }
           checked={reminderEnabled}
           onToggle={() => setReminderEnabled((current) => !current)}
         />

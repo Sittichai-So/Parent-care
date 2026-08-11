@@ -13,7 +13,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { MemberStatusMeta, StatusPriority, TaskStatusMeta } from '@/constants/status';
 import { HitSize, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
-import { useFamilyContext, type FamilyEvent } from '@/context/family-context';
+import { useFamilyContext, type FamilyEvent, type FamilyTask } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
 
 const timelineIcons: Record<FamilyEvent['type'], string> = {
@@ -25,10 +25,12 @@ const timelineIcons: Record<FamilyEvent['type'], string> = {
   emergency: '🆘',
 };
 
-const taskIcons: Record<string, string> = {
+const taskIcons: Record<FamilyTask['relatedType'], string> = {
   checkin: '✓',
   medication: '💊',
   appointment: '🏥',
+  vitals: '📋',
+  custom: '•',
 };
 
 function greetingForNow() {
@@ -42,7 +44,7 @@ export default function CaregiverDashboardScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { user, logout } = useAuth();
-  const { familyMembers, tasks, timeline, setSelectedMemberId, updateTaskStatus, addTimelineEvent } =
+  const { familyMembers, tasks, timeline, currentHousehold, setSelectedMemberId, updateTaskStatus, checkIn } =
     useFamilyContext();
 
   const sortedMembers = useMemo(
@@ -118,6 +120,27 @@ export default function CaregiverDashboardScreen() {
           </ThemedText>
         </View>
       </Card>
+
+      {currentHousehold ? (
+        <Pressable
+          onPress={() =>
+            Alert.alert(
+              currentHousehold.name,
+              `รหัสเชิญ: ${currentHousehold.inviteCode}\n\nส่งรหัสนี้ให้สมาชิกคนอื่นเพื่อเข้าร่วมกลุ่มครอบครัวนี้`
+            )
+          }
+          accessibilityRole="button"
+          accessibilityLabel={`${currentHousehold.name} รหัสเชิญ ${currentHousehold.inviteCode}`}
+          accessibilityHint="แตะเพื่อดูรหัสเชิญแบบเต็มสำหรับส่งให้สมาชิกใหม่"
+          style={({ pressed }) => pressed && styles.pressed}>
+          <Card tone="sunken" elevation="flat" gap={Spacing.half} style={styles.inviteCard}>
+            <ThemedText type="caption" themeColor="textMuted">
+              {currentHousehold.name} · รหัสเชิญ
+            </ThemedText>
+            <ThemedText type="smallBold">{currentHousehold.inviteCode} · แตะเพื่อดู/แชร์</ThemedText>
+          </Card>
+        </Pressable>
+      ) : null}
 
       {/* At-a-glance counts. */}
       <View style={styles.statRow}>
@@ -198,7 +221,12 @@ export default function CaregiverDashboardScreen() {
           return (
             <Pressable
               key={task.id}
-              onPress={() => updateTaskStatus(task.id, isDone ? 'pending' : 'done')}
+              onPress={() => {
+                updateTaskStatus(task.id, isDone ? 'pending' : 'done').catch((err) => {
+                  const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                  Alert.alert('อัปเดตงานไม่สำเร็จ', message);
+                });
+              }}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: isDone }}
               accessibilityLabel={`${task.title} — ${meta.label}`}
@@ -220,7 +248,7 @@ export default function CaregiverDashboardScreen() {
                   <ThemedText
                     type="smallBold"
                     style={isDone ? [styles.taskDone, { color: theme.textMuted }] : undefined}>
-                    {taskIcons[task.id] ?? '•'} {task.title}
+                    {taskIcons[task.relatedType]} {task.title}
                   </ThemedText>
                   <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
                     {task.detail}
@@ -243,9 +271,12 @@ export default function CaregiverDashboardScreen() {
           label="ตรวจสอบสถานะ"
           icon="✓"
           onPress={() => {
-            updateTaskStatus('checkin', 'done');
-            addTimelineEvent({ title: 'ตรวจสอบสถานะแล้ว', detail: `${user?.name ?? 'คุณ'}ตรวจสอบสถานะครอบครัว`, type: 'check-in' });
-            Alert.alert('บันทึกสำเร็จ', 'บันทึกการตรวจสอบสถานะเรียบร้อยแล้ว');
+            checkIn()
+              .then(() => Alert.alert('บันทึกสำเร็จ', 'บันทึกการตรวจสอบสถานะเรียบร้อยแล้ว'))
+              .catch((err) => {
+                const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                Alert.alert('บันทึกไม่สำเร็จ', message);
+              });
           }}
         />
         <View style={styles.quickRow}>
@@ -299,6 +330,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
   },
   heroFooter: { borderTopWidth: 1, paddingTop: Spacing.two },
+  inviteCard: { alignItems: 'flex-start' },
 
   statRow: { flexDirection: 'row', gap: Spacing.two },
 

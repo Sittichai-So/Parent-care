@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
@@ -28,6 +28,7 @@ export default function AppointmentDetailScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const { appointments, medications, familyMembers, updateAppointment } = useFamilyContext();
   const [checked, setChecked] = useState<string[]>(['card']);
+  const [isTogglingReminder, setIsTogglingReminder] = useState(false);
 
   const appointment = appointments.find((apt) => apt.id === params.id);
   const member = appointment ? familyMembers.find((m) => m.id === appointment.memberId) : undefined;
@@ -72,7 +73,17 @@ export default function AppointmentDetailScreen() {
             label={appointment.reminderEnabled ? 'ปิดการเตือน' : 'เปิดการเตือน'}
             icon={appointment.reminderEnabled ? '🔕' : '🔔'}
             variant={appointment.reminderEnabled ? 'secondary' : 'primary'}
-            onPress={() => updateAppointment(appointment.id, { reminderEnabled: !appointment.reminderEnabled })}
+            loading={isTogglingReminder}
+            disabled={isTogglingReminder}
+            onPress={() => {
+              setIsTogglingReminder(true);
+              updateAppointment(appointment.id, { reminderEnabled: !appointment.reminderEnabled })
+                .catch((err) => {
+                  const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                  Alert.alert('อัปเดตการเตือนไม่สำเร็จ', message);
+                })
+                .finally(() => setIsTogglingReminder(false));
+            }}
           />
           <AppButton
             label="แก้ไขนัดหมาย"

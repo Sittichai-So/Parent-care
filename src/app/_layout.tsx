@@ -1,22 +1,33 @@
 import { useEffect, useMemo } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { Colors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/context/auth-context';
-import { FamilyProvider } from '@/context/family-context';
+import { FamilyProvider, useFamilyContext } from '@/context/family-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+// Deliberately not `import * as Notifications from 'expo-notifications'` here —
+// see the header comment in services/notifications.ts for why that crashes on
+// Expo Go/Android. addReminderResponseListener wraps it safely.
+import { addReminderResponseListener } from '@/services/notifications';
 
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isRestoring } = useAuth();
+  const { households, isLoadingHouseholds } = useFamilyContext();
+  const router = useRouter();
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
   const palette = Colors[isDark ? 'dark' : 'light'];
+
+  // isLoadingHouseholds only matters once we know there's a session to load
+  // households for — an unauthenticated user shouldn't wait on it.
+  const isLoading = isRestoring || (isAuthenticated && isLoadingHouseholds);
+  const hasHousehold = households.length > 0;
 
   /**
    * Navigation paints the area behind every screen. Deriving its theme from the
@@ -43,6 +54,22 @@ function RootLayoutNav() {
     }
   }, [isLoading]);
 
+  // Tapping a medication/appointment reminder opens the relevant screen directly,
+  // instead of just bringing the app to the foreground on its last screen.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const subscription = addReminderResponseListener((data) => {
+      if (data.kind === 'medication') {
+        router.push({ pathname: '/medication-confirm', params: { id: data.medicationId } });
+      } else {
+        router.push({ pathname: '/appointment-detail', params: { id: data.appointmentId } });
+      }
+    });
+
+    return () => subscription.remove();
+  }, [isAuthenticated, router]);
+
   if (isLoading) {
     return (
       <View style={{ flex: 1, backgroundColor: palette.background, justifyContent: 'center' }}>
@@ -60,11 +87,8 @@ function RootLayoutNav() {
           contentStyle: { backgroundColor: palette.background },
           animation: 'slide_from_right',
         }}>
-        <Stack.Protected guard={isAuthenticated}>
+        <Stack.Protected guard={isAuthenticated && hasHousehold}>
           <Stack.Screen name="(tabs)" />
-          {/* Legacy aliases of the tab routes — guarded so signed-out users can't reach them. */}
-          <Stack.Screen name="index" />
-          <Stack.Screen name="explore" />
           {/* Task flows open as sheets — they are decisions, not destinations. */}
           <Stack.Screen name="medication-confirm" options={{ presentation: 'modal' }} />
           <Stack.Screen name="medication-form" options={{ presentation: 'modal' }} />
@@ -80,8 +104,15 @@ function RootLayoutNav() {
           <Stack.Screen name="family-member" />
         </Stack.Protected>
 
+        {/* A signed-in account with no household yet — first launch after
+            register, or after leaving/being removed from every household. */}
+        <Stack.Protected guard={isAuthenticated && !hasHousehold}>
+          <Stack.Screen name="household-setup" options={{ animation: 'fade' }} />
+        </Stack.Protected>
+
         <Stack.Protected guard={!isAuthenticated}>
           <Stack.Screen name="login" options={{ animation: 'fade' }} />
+          <Stack.Screen name="register" />
         </Stack.Protected>
       </Stack>
     </ThemeProvider>

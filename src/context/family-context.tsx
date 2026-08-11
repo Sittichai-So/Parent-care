@@ -1,6 +1,25 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-import { addDays, formatTime, toDateKey } from '@/utils/date';
+import { useAuth } from '@/context/auth-context';
+import {
+  cancelAppointmentReminder,
+  cancelMedicationReminders,
+  syncAppointmentReminder,
+  syncMedicationReminders,
+} from '@/services/notifications';
+import * as appointmentsApi from '@/services/appointments-api';
+import type { ApiAppointment } from '@/services/appointments-api';
+import * as emergencyApi from '@/services/emergency-api';
+import * as householdsApi from '@/services/households-api';
+import type { ApiHouseholdMember, HouseholdRole } from '@/services/households-api';
+import * as medicinesApi from '@/services/medicines-api';
+import type { ApiMedicine } from '@/services/medicines-api';
+import * as tasksApi from '@/services/tasks-api';
+import type { ApiTask } from '@/services/tasks-api';
+import * as timelineApi from '@/services/timeline-api';
+import type { ApiTimelineEvent } from '@/services/timeline-api';
+import * as vitalsApi from '@/services/vitals-api';
+import type { ApiVital } from '@/services/vitals-api';
 
 export type MemberRole = 'Owner' | 'Caregiver' | 'Elder' | 'Viewer';
 export type MemberStatus = 'normal' | 'monitor' | 'urgent';
@@ -20,6 +39,9 @@ export type FamilyTask = {
   detail: string;
   status: 'pending' | 'in-progress' | 'done';
   owner: string;
+  /** Drives the task's icon — replaces the old lookup keyed on a
+   *  hardcoded task id, which only ever matched the 3 seeded demo tasks. */
+  relatedType: 'checkin' | 'medication' | 'appointment' | 'vitals' | 'custom';
 };
 
 export type FamilyEvent = {
@@ -42,7 +64,8 @@ export type Medication = {
   schedule: string[];
   notes?: string;
   active: boolean;
-  /** ISO timestamp of the last confirmed dose, if any. */
+  /** ISO timestamp of the last confirmed dose, if any — computed server-side
+   *  from MedicationLog, never stored directly. */
   lastTakenAt?: string;
 };
 
@@ -77,7 +100,37 @@ export type VitalLog = {
   note?: string;
 };
 
+/** One household this account belongs to, with its role in it. */
+export type HouseholdSummary = {
+  id: string;
+  name: string;
+  inviteCode: string;
+  role: MemberRole;
+  membershipId: string;
+};
+
 type FamilyContextValue = {
+  /** Every household this account belongs to — a user can be part of more
+   *  than one (e.g. caring for both sides of the family). */
+  households: HouseholdSummary[];
+  isLoadingHouseholds: boolean;
+  currentHouseholdId: string | null;
+  setCurrentHouseholdId: (id: string | null) => void;
+  /** Full record for currentHouseholdId — includes the invite code, so any
+   *  screen can offer "share this code" without a separate fetch. */
+  currentHousehold: HouseholdSummary | null;
+  /** The caller's own membership id / role *within* currentHouseholdId. */
+  currentMembershipId: string | null;
+  currentRole: MemberRole | null;
+  createHousehold: (name: string, displayName: string, relation: string) => Promise<HouseholdSummary>;
+  joinHousehold: (
+    inviteCode: string,
+    role: Exclude<HouseholdRole, 'owner'>,
+    displayName: string,
+    relation: string
+  ) => Promise<HouseholdSummary>;
+
+  isLoadingData: boolean;
   familyMembers: FamilyMember[];
   tasks: FamilyTask[];
   timeline: FamilyEvent[];
@@ -91,203 +144,418 @@ type FamilyContextValue = {
   selectedMemberId: string | null;
   setSelectedMemberId: (id: string | null) => void;
 
-  updateTaskStatus: (taskId: string, status: FamilyTask['status']) => void;
-  /** `time` is stamped automatically from the current clock — callers only supply what happened. */
-  addTimelineEvent: (event: Omit<FamilyEvent, 'id' | 'time'>) => void;
+  /** Self check-in ("ฉันสบายดี" / "ตรวจสอบสถานะ") — sets the caller's own
+   *  member status to normal and records a timeline event server-side. */
+  checkIn: () => Promise<void>;
+  updateTaskStatus: (taskId: string, status: FamilyTask['status']) => Promise<void>;
 
-  addMedication: (input: Omit<Medication, 'id' | 'lastTakenAt'>) => string;
-  updateMedication: (id: string, patch: Partial<Omit<Medication, 'id'>>) => void;
-  removeMedication: (id: string) => void;
-  confirmMedicationTaken: (id: string) => void;
+  addMedication: (input: Omit<Medication, 'id' | 'lastTakenAt'>) => Promise<string>;
+  updateMedication: (id: string, patch: Partial<Omit<Medication, 'id'>>) => Promise<void>;
+  removeMedication: (id: string) => Promise<void>;
+  confirmMedicationTaken: (id: string) => Promise<void>;
 
-  addAppointment: (input: Omit<Appointment, 'id'>) => string;
-  updateAppointment: (id: string, patch: Partial<Omit<Appointment, 'id'>>) => void;
-  removeAppointment: (id: string) => void;
+  addAppointment: (input: Omit<Appointment, 'id'>) => Promise<string>;
+  updateAppointment: (id: string, patch: Partial<Omit<Appointment, 'id'>>) => Promise<void>;
+  removeAppointment: (id: string) => Promise<void>;
 
-  addVitalLog: (input: Omit<VitalLog, 'id'>) => void;
+  addVitalLog: (input: Omit<VitalLog, 'id'>) => Promise<void>;
+
+  triggerEmergency: (message?: string) => Promise<void>;
 };
-
-const initialMembers: FamilyMember[] = [
-  { id: 'mom', name: 'แม่สมใจ', role: 'Elder', status: 'normal', detail: 'Check-in 08:32', relation: 'แม่' },
-  { id: 'dad', name: 'พ่อประสิทธิ์', role: 'Elder', status: 'monitor', detail: 'ยา 12:00 ยังไม่ยืนยัน', relation: 'พ่อ' },
-  { id: 'brother', name: 'พี่เกษม', role: 'Caregiver', status: 'normal', detail: 'รับผิดชอบดูแลวันนี้', relation: 'พี่' },
-];
-
-const initialTasks: FamilyTask[] = [
-  { id: 'checkin', title: 'Check-in', detail: 'แม่สมใจยืนยันแล้ว', status: 'done', owner: 'แม่สมใจ' },
-  { id: 'medication', title: 'Medication', detail: 'ยา 08:00 กำลังรอยืนยัน', status: 'pending', owner: 'พี่เกษม' },
-  { id: 'appointment', title: 'Appointment', detail: 'นัดตรวจ 14:00 พร้อม checklist', status: 'in-progress', owner: 'พี่เกษม' },
-];
-
-const initialTimeline: FamilyEvent[] = [
-  { id: 'event-1', title: 'Check-in completed', time: '08:32', detail: 'แม่สมใจยืนยันว่าปกติดี', type: 'check-in' },
-  { id: 'event-2', title: 'Medication confirmation', time: '08:45', detail: 'Photo confirmation ถูกเพิ่มแล้ว', type: 'medication' },
-  { id: 'event-3', title: 'Family task assigned', time: '10:20', detail: 'พี่เกษมรับผิดชอบจัดเตรียมโรงพยาบาล', type: 'task' },
-];
-
-const initialMedications: Medication[] = [
-  {
-    id: 'med-amlodipine',
-    memberId: 'mom',
-    name: 'Amlodipine',
-    dosage: '5 mg · 1 เม็ด',
-    reason: 'ควบคุมความดันโลหิต',
-    schedule: ['08:00'],
-    notes: 'ทานหลังอาหารเช้า',
-    active: true,
-  },
-  {
-    id: 'med-metformin',
-    memberId: 'mom',
-    name: 'Metformin',
-    dosage: '500 mg · 1 เม็ด',
-    reason: 'ควบคุมเบาหวาน',
-    schedule: ['08:00', '18:00'],
-    notes: 'ทานพร้อมอาหารเพื่อลดอาการระคายเคืองกระเพาะ',
-    active: true,
-  },
-  {
-    id: 'med-aspirin',
-    memberId: 'dad',
-    name: 'Aspirin',
-    dosage: '81 mg · 1 เม็ด',
-    reason: 'ป้องกันเส้นเลือดอุดตัน',
-    schedule: ['12:00'],
-    active: true,
-  },
-];
-
-const initialAppointments: Appointment[] = [
-  {
-    id: 'apt-checkup',
-    memberId: 'mom',
-    title: 'ตรวจสุขภาพประจำปี',
-    date: toDateKey(addDays(new Date(), 2)),
-    time: '09:00',
-    hospital: 'โรงพยาบาลกรุงเทพ ชั้น 4',
-    doctor: 'นพ. พงศ์',
-    department: 'อายุรกรรม',
-    medicationNote: 'แพทย์อาจปรับยาความดันหลังผลตรวจ',
-    linkedMedicationIds: ['med-amlodipine'],
-    reminderEnabled: true,
-  },
-  {
-    id: 'apt-dental',
-    memberId: 'dad',
-    title: 'ตรวจฟัน',
-    date: toDateKey(addDays(new Date(), 5)),
-    time: '13:00',
-    hospital: 'คลินิกทันตกรรมสุขใจ',
-    doctor: 'ทพญ. อร',
-    department: 'ทันตกรรม',
-    notes: 'งดอาหารก่อนตรวจ 1 ชั่วโมง',
-    linkedMedicationIds: [],
-    reminderEnabled: false,
-  },
-];
-
-const initialVitalLogs: VitalLog[] = [
-  {
-    id: 'vital-1',
-    memberId: 'mom',
-    recordedAt: addDays(new Date(), -1).toISOString(),
-    systolic: 128,
-    diastolic: 82,
-    sugar: 98,
-    note: 'รู้สึกปกติดี',
-  },
-];
-
-const createId = (prefix: string) => `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
 const FamilyContext = createContext<FamilyContextValue | undefined>(undefined);
 
-export function FamilyProvider({ children }: { children: React.ReactNode }) {
-  const [familyMembers] = useState(initialMembers);
-  const [tasks, setTasks] = useState(initialTasks);
-  const [timeline, setTimeline] = useState(initialTimeline);
-  const [medications, setMedications] = useState(initialMedications);
-  const [appointments, setAppointments] = useState(initialAppointments);
-  const [vitalLogs, setVitalLogs] = useState(initialVitalLogs);
-  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(initialMembers[0].id);
+const ROLE_TO_DISPLAY: Record<HouseholdRole, MemberRole> = {
+  owner: 'Owner',
+  caregiver: 'Caregiver',
+  elder: 'Elder',
+  viewer: 'Viewer',
+};
 
-  const primaryElderId = useMemo(
-    () => familyMembers.find((member) => member.role === 'Elder')?.id ?? familyMembers[0].id,
-    [familyMembers]
+const toFamilyMember = (member: ApiHouseholdMember): FamilyMember => ({
+  id: member._id,
+  name: member.displayName,
+  role: ROLE_TO_DISPLAY[member.role],
+  status: member.status,
+  detail: member.detail,
+  relation: member.relation,
+});
+
+const toMedication = (medicine: ApiMedicine): Medication => ({
+  id: medicine._id,
+  memberId: medicine.memberId,
+  name: medicine.name,
+  dosage: medicine.dosage,
+  reason: medicine.reason ?? undefined,
+  schedule: medicine.times,
+  notes: medicine.notes ?? undefined,
+  active: medicine.isActive,
+  lastTakenAt: medicine.lastTakenAt ?? undefined,
+});
+
+const toAppointment = (appointment: ApiAppointment): Appointment => ({
+  id: appointment._id,
+  memberId: appointment.memberId,
+  title: appointment.title,
+  date: appointment.date,
+  time: appointment.time,
+  hospital: appointment.hospital,
+  doctor: appointment.doctor ?? undefined,
+  department: appointment.department ?? undefined,
+  notes: appointment.notes ?? undefined,
+  medicationNote: appointment.medicationNote ?? undefined,
+  linkedMedicationIds: appointment.linkedMedicationIds,
+  reminderEnabled: appointment.reminderEnabled,
+});
+
+const toVitalLog = (vital: ApiVital): VitalLog => ({
+  id: vital._id,
+  memberId: vital.memberId,
+  recordedAt: vital.recordedAt,
+  systolic: vital.systolic ?? undefined,
+  diastolic: vital.diastolic ?? undefined,
+  sugar: vital.sugar ?? undefined,
+  weight: vital.weight ?? undefined,
+  note: vital.note ?? undefined,
+});
+
+const toTask = (task: ApiTask): FamilyTask => ({
+  id: task._id,
+  title: task.title,
+  detail: task.detail,
+  status: task.status,
+  owner: task.owner ?? '',
+  relatedType: task.relatedType,
+});
+
+const toTimelineEvent = (event: ApiTimelineEvent): FamilyEvent => ({
+  id: event._id,
+  title: event.title,
+  time: new Date(event.occurredAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+  detail: event.detail,
+  type: event.type,
+});
+
+const toSummary = ({ household, membership }: householdsApi.HouseholdWithMembership): HouseholdSummary => ({
+  id: household._id,
+  name: household.name,
+  inviteCode: household.inviteCode,
+  role: ROLE_TO_DISPLAY[membership.role],
+  membershipId: membership._id,
+});
+
+export function FamilyProvider({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated } = useAuth();
+
+  const [households, setHouseholds] = useState<HouseholdSummary[]>([]);
+  const [isLoadingHouseholds, setIsLoadingHouseholds] = useState(true);
+  const [currentHouseholdId, setCurrentHouseholdId] = useState<string | null>(null);
+
+  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+  const [tasks, setTasks] = useState<FamilyTask[]>([]);
+  const [timeline, setTimeline] = useState<FamilyEvent[]>([]);
+  const [medications, setMedications] = useState<Medication[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [vitalLogs, setVitalLogs] = useState<VitalLog[]>([]);
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+
+  const refreshHouseholds = useCallback(async () => {
+    setIsLoadingHouseholds(true);
+    try {
+      const mine = await householdsApi.listMyHouseholds();
+      const summaries = mine.map(toSummary);
+      setHouseholds(summaries);
+      // Default to the first household, or clear the selection if it's no
+      // longer in the list (removed, or account switched) — decided here,
+      // right where the fresh list is available, rather than in a second
+      // effect reacting to `households`.
+      setCurrentHouseholdId((current) => {
+        if (summaries.length === 0) return null;
+        if (current && summaries.some((household) => household.id === current)) return current;
+        return summaries[0].id;
+      });
+    } finally {
+      setIsLoadingHouseholds(false);
+    }
+  }, []);
+
+  // Load this account's households on login; clear everything on logout —
+  // stale data from account A must never leak into account B's session.
+  useEffect(() => {
+    if (isAuthenticated) {
+      refreshHouseholds();
+    } else {
+      setHouseholds([]);
+      setCurrentHouseholdId(null);
+      setFamilyMembers([]);
+      setTasks([]);
+      setTimeline([]);
+      setMedications([]);
+      setAppointments([]);
+      setVitalLogs([]);
+      setIsLoadingHouseholds(false);
+    }
+  }, [isAuthenticated, refreshHouseholds]);
+
+  const currentHousehold = households.find((household) => household.id === currentHouseholdId) ?? null;
+  const currentMembershipId = currentHousehold?.membershipId ?? null;
+  const currentRole = currentHousehold?.role ?? null;
+
+  const refreshAll = useCallback(async () => {
+    if (!currentHouseholdId) return;
+    setIsLoadingData(true);
+    try {
+      const [members, meds, appts, vitals, taskList, timelineList] = await Promise.all([
+        householdsApi.getMembers(currentHouseholdId),
+        medicinesApi.getMedicines(currentHouseholdId),
+        appointmentsApi.getAppointments(currentHouseholdId),
+        vitalsApi.getVitals(currentHouseholdId),
+        tasksApi.getTasks(currentHouseholdId),
+        timelineApi.getTimeline(currentHouseholdId),
+      ]);
+      const mappedMembers = members.map(toFamilyMember);
+      setFamilyMembers(mappedMembers);
+      // Re-point the selected member at something valid whenever the member
+      // list changes (household switch, member added/removed elsewhere) —
+      // decided here, right where the fresh list is available.
+      setSelectedMemberId((current) => {
+        if (mappedMembers.length === 0) return null;
+        if (current && mappedMembers.some((member) => member.id === current)) return current;
+        return mappedMembers[0].id;
+      });
+      setMedications(meds.map(toMedication));
+      setAppointments(appts.map(toAppointment));
+      setVitalLogs(vitals.map(toVitalLog));
+      setTasks(taskList.map(toTask));
+      setTimeline(timelineList.map(toTimelineEvent));
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, [currentHouseholdId]);
+
+  useEffect(() => {
+    if (currentHouseholdId) {
+      refreshAll();
+    } else {
+      setFamilyMembers([]);
+      setSelectedMemberId(null);
+      setTasks([]);
+      setTimeline([]);
+      setMedications([]);
+      setAppointments([]);
+      setVitalLogs([]);
+    }
+  }, [currentHouseholdId, refreshAll]);
+
+  const primaryElderId = useMemo(() => {
+    const elder = familyMembers.find((member) => member.role === 'Elder');
+    return elder?.id ?? familyMembers[0]?.id ?? '';
+  }, [familyMembers]);
+
+  // Keep device reminders in sync with whatever the household's data
+  // actually is — including changes fetched in from another member's edits,
+  // not just ones made from this device.
+  useEffect(() => {
+    medications.forEach((medication) => syncMedicationReminders(medication).catch(() => {}));
+  }, [medications]);
+
+  useEffect(() => {
+    appointments.forEach((appointment) => syncAppointmentReminder(appointment).catch(() => {}));
+  }, [appointments]);
+
+  const createHousehold = useCallback(
+    async (name: string, displayName: string, relation: string) => {
+      const result = await householdsApi.createHousehold(name, displayName, relation);
+      const summary = toSummary(result);
+      await refreshHouseholds();
+      setCurrentHouseholdId(summary.id);
+      return summary;
+    },
+    [refreshHouseholds]
   );
 
-  const updateTaskStatus = (taskId: string, status: FamilyTask['status']) => {
-    setTasks((current) => current.map((task) => (task.id === taskId ? { ...task, status } : task)));
-  };
+  const joinHousehold = useCallback(
+    async (inviteCode: string, role: Exclude<HouseholdRole, 'owner'>, displayName: string, relation: string) => {
+      const result = await householdsApi.joinHousehold(inviteCode, role, displayName, relation);
+      const summary = toSummary(result);
+      await refreshHouseholds();
+      setCurrentHouseholdId(summary.id);
+      return summary;
+    },
+    [refreshHouseholds]
+  );
 
-  const addTimelineEvent: FamilyContextValue['addTimelineEvent'] = (event) => {
-    setTimeline((current) => [{ ...event, id: createId('event'), time: formatTime(new Date()) }, ...current]);
-  };
+  const checkIn = useCallback(async () => {
+    if (!currentHouseholdId || !currentMembershipId) return;
+    await householdsApi.checkIn(currentHouseholdId, currentMembershipId);
+    await refreshAll();
+  }, [currentHouseholdId, currentMembershipId, refreshAll]);
 
-  const addMedication: FamilyContextValue['addMedication'] = (input) => {
-    const id = createId('med');
-    setMedications((current) => [...current, { ...input, id }]);
-    return id;
-  };
+  const updateTaskStatus = useCallback<FamilyContextValue['updateTaskStatus']>(
+    async (taskId, status) => {
+      if (!currentHouseholdId) return;
+      await tasksApi.updateTaskStatus(currentHouseholdId, taskId, status);
+      await refreshAll();
+    },
+    [currentHouseholdId, refreshAll]
+  );
 
-  const updateMedication: FamilyContextValue['updateMedication'] = (id, patch) => {
-    setMedications((current) => current.map((med) => (med.id === id ? { ...med, ...patch } : med)));
-  };
+  const addMedication = useCallback<FamilyContextValue['addMedication']>(
+    async (input) => {
+      if (!currentHouseholdId) throw new Error('ยังไม่ได้เลือกครอบครัว');
+      const created = await medicinesApi.createMedicine(currentHouseholdId, {
+        memberId: input.memberId,
+        name: input.name,
+        dosage: input.dosage,
+        reason: input.reason,
+        times: input.schedule,
+        notes: input.notes,
+        isActive: input.active,
+      });
+      await refreshAll();
+      return created._id;
+    },
+    [currentHouseholdId, refreshAll]
+  );
 
-  const removeMedication = (id: string) => {
-    setMedications((current) => current.filter((med) => med.id !== id));
-  };
+  const updateMedication = useCallback<FamilyContextValue['updateMedication']>(
+    async (id, patch) => {
+      if (!currentHouseholdId) return;
+      const { schedule, active, ...rest } = patch;
+      await medicinesApi.updateMedicine(currentHouseholdId, id, {
+        ...rest,
+        ...(schedule ? { times: schedule } : {}),
+        ...(active !== undefined ? { isActive: active } : {}),
+      });
+      await refreshAll();
+    },
+    [currentHouseholdId, refreshAll]
+  );
 
-  const confirmMedicationTaken = (id: string) => {
-    const target = medications.find((med) => med.id === id);
-    if (!target) return;
+  const removeMedication = useCallback<FamilyContextValue['removeMedication']>(
+    async (id) => {
+      if (!currentHouseholdId) return;
+      await medicinesApi.deleteMedicine(currentHouseholdId, id);
+      await cancelMedicationReminders(id);
+      await refreshAll();
+    },
+    [currentHouseholdId, refreshAll]
+  );
 
-    setMedications((current) =>
-      current.map((med) => (med.id === id ? { ...med, lastTakenAt: new Date().toISOString() } : med))
-    );
-    addTimelineEvent({
-      title: `ยืนยันทานยา: ${target.name}`,
-      detail: target.dosage,
-      type: 'medication',
-    });
-  };
+  const confirmMedicationTaken = useCallback<FamilyContextValue['confirmMedicationTaken']>(
+    async (id) => {
+      if (!currentHouseholdId) return;
+      await medicinesApi.logDose(currentHouseholdId, id, 'taken');
+      await refreshAll();
+    },
+    [currentHouseholdId, refreshAll]
+  );
 
-  const addAppointment: FamilyContextValue['addAppointment'] = (input) => {
-    const id = createId('apt');
-    setAppointments((current) => [...current, { ...input, id }]);
-    addTimelineEvent({
-      title: `เพิ่มนัดหมาย: ${input.title}`,
-      detail: `${input.hospital} · ${input.date}`,
-      type: 'appointment',
-    });
-    return id;
-  };
+  const addAppointment = useCallback<FamilyContextValue['addAppointment']>(
+    async (input) => {
+      if (!currentHouseholdId) throw new Error('ยังไม่ได้เลือกครอบครัว');
+      const created = await appointmentsApi.createAppointment(currentHouseholdId, input);
+      await refreshAll();
+      return created._id;
+    },
+    [currentHouseholdId, refreshAll]
+  );
 
-  const updateAppointment: FamilyContextValue['updateAppointment'] = (id, patch) => {
-    setAppointments((current) => current.map((apt) => (apt.id === id ? { ...apt, ...patch } : apt)));
-  };
+  const updateAppointment = useCallback<FamilyContextValue['updateAppointment']>(
+    async (id, patch) => {
+      if (!currentHouseholdId) return;
+      await appointmentsApi.updateAppointment(currentHouseholdId, id, patch);
+      await refreshAll();
+    },
+    [currentHouseholdId, refreshAll]
+  );
 
-  const removeAppointment = (id: string) => {
-    setAppointments((current) => current.filter((apt) => apt.id !== id));
-  };
+  const removeAppointment = useCallback<FamilyContextValue['removeAppointment']>(
+    async (id) => {
+      if (!currentHouseholdId) return;
+      await appointmentsApi.deleteAppointment(currentHouseholdId, id);
+      await cancelAppointmentReminder(id);
+      await refreshAll();
+    },
+    [currentHouseholdId, refreshAll]
+  );
 
-  const addVitalLog: FamilyContextValue['addVitalLog'] = (input) => {
-    setVitalLogs((current) => [{ ...input, id: createId('vital') }, ...current]);
-    addTimelineEvent({
-      title: 'บันทึกสุขภาพใหม่',
-      detail: [
-        input.systolic && input.diastolic ? `ความดัน ${input.systolic}/${input.diastolic}` : null,
-        input.sugar ? `น้ำตาล ${input.sugar}` : null,
-        input.weight ? `น้ำหนัก ${input.weight} กก.` : null,
-      ]
-        .filter(Boolean)
-        .join(' · '),
-      type: 'vitals',
-    });
-  };
+  const addVitalLog = useCallback<FamilyContextValue['addVitalLog']>(
+    async (input) => {
+      if (!currentHouseholdId) return;
+      await vitalsApi.createVital(currentHouseholdId, {
+        memberId: input.memberId,
+        systolic: input.systolic,
+        diastolic: input.diastolic,
+        sugar: input.sugar,
+        weight: input.weight,
+        note: input.note,
+      });
+      await refreshAll();
+    },
+    [currentHouseholdId, refreshAll]
+  );
 
-  const value = useMemo(
+  const triggerEmergency = useCallback<FamilyContextValue['triggerEmergency']>(
+    async (message) => {
+      if (!currentHouseholdId) return;
+      await emergencyApi.triggerEmergency(currentHouseholdId, message);
+      await refreshAll();
+    },
+    [currentHouseholdId, refreshAll]
+  );
+
+  const value = useMemo<FamilyContextValue>(
     () => ({
+      households,
+      isLoadingHouseholds,
+      currentHouseholdId,
+      setCurrentHouseholdId,
+      currentHousehold,
+      currentMembershipId,
+      currentRole,
+      createHousehold,
+      joinHousehold,
+
+      isLoadingData,
+      familyMembers,
+      tasks,
+      timeline,
+      medications,
+      appointments,
+      vitalLogs,
+
+      primaryElderId,
+      selectedMemberId,
+      setSelectedMemberId,
+
+      checkIn,
+      updateTaskStatus,
+
+      addMedication,
+      updateMedication,
+      removeMedication,
+      confirmMedicationTaken,
+
+      addAppointment,
+      updateAppointment,
+      removeAppointment,
+
+      addVitalLog,
+
+      triggerEmergency,
+    }),
+    [
+      households,
+      isLoadingHouseholds,
+      currentHouseholdId,
+      currentHousehold,
+      currentMembershipId,
+      currentRole,
+      createHousehold,
+      joinHousehold,
+      isLoadingData,
       familyMembers,
       tasks,
       timeline,
@@ -296,9 +564,8 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       vitalLogs,
       primaryElderId,
       selectedMemberId,
-      setSelectedMemberId,
+      checkIn,
       updateTaskStatus,
-      addTimelineEvent,
       addMedication,
       updateMedication,
       removeMedication,
@@ -307,8 +574,8 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       updateAppointment,
       removeAppointment,
       addVitalLog,
-    }),
-    [familyMembers, tasks, timeline, medications, appointments, vitalLogs, primaryElderId, selectedMemberId]
+      triggerEmergency,
+    ]
   );
 
   return <FamilyContext.Provider value={value}>{children}</FamilyContext.Provider>;

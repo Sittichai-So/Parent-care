@@ -5,6 +5,7 @@ import { useRouter, type Href } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
 import { Card } from '@/components/ui/card';
+import { NotificationBanner } from '@/components/ui/notification-banner';
 import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
 import { VitalsSummary } from '@/components/ui/vitals-summary';
@@ -29,7 +30,7 @@ export default function ElderHomeScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { user } = useAuth();
-  const { medications, appointments, primaryElderId, updateTaskStatus, addTimelineEvent } = useFamilyContext();
+  const { medications, appointments, primaryElderId, checkIn } = useFamilyContext();
 
   const myMedications = useMemo(
     () => medications.filter((med) => med.memberId === primaryElderId && med.active),
@@ -79,9 +80,12 @@ export default function ElderHomeScreen() {
   ];
 
   const handleCheckIn = () => {
-    updateTaskStatus('checkin', 'done');
-    addTimelineEvent({ title: 'Check-in completed', detail: `${user?.name ?? 'คุณ'}ยืนยันว่าปกติดี`, type: 'check-in' });
-    Alert.alert('ส่งแล้ว', 'บอกครอบครัวแล้วว่าคุณสบายดีวันนี้');
+    checkIn()
+      .then(() => Alert.alert('ส่งแล้ว', 'บอกครอบครัวแล้วว่าคุณสบายดีวันนี้'))
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+        Alert.alert('ส่งไม่สำเร็จ', message);
+      });
   };
 
   return (
@@ -94,6 +98,8 @@ export default function ElderHomeScreen() {
           สวัสดีค่ะ {user?.name ?? 'คุณแม่'}
         </ThemedText>
       </View>
+
+      <NotificationBanner />
 
       <Card tone="success" accented elevation="raised" padding={Spacing.four} gap={Spacing.two}>
         <ThemedText style={styles.statusEmoji}>🟢</ThemedText>

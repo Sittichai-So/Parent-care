@@ -10,15 +10,18 @@ import { HitSize, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useTheme } from '@/hooks/use-theme';
 
-type Field = 'email' | 'password';
+type Field = 'name' | 'email' | 'phone' | 'password' | 'confirmPassword';
 
-export default function LoginScreen() {
+export default function RegisterScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { login, isLoading } = useAuth();
+  const { register, isLoading } = useAuth();
 
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [focused, setFocused] = useState<Field | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,26 +36,33 @@ export default function LoginScreen() {
     },
   ];
 
-  const handleLogin = async () => {
-    if (!email.trim() || !password) {
-      setError('โปรดกรอกอีเมลและรหัสผ่านให้ครบถ้วน');
+  const handleRegister = async () => {
+    if (!name.trim() || !email.trim() || !password) {
+      setError('โปรดกรอกชื่อ อีเมล และรหัสผ่านให้ครบถ้วน');
+      return;
+    }
+    if (password.length < 4) {
+      setError('รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('รหัสผ่านทั้งสองช่องไม่ตรงกัน');
       return;
     }
 
     setError(null);
 
     try {
-      await login(email.trim(), password);
-      // Role (caregiver/elder/...) now lives on the household membership,
-      // not the account — the root layout guard sends a household-less
-      // account to household-setup, and the tab layout below that picks
-      // the right default tab from the current membership's role. Login
-      // itself no longer knows or needs to know which.
-      router.replace('/');
+      // household-setup (the next screen the root guard sends a fresh
+      // account to) reads useAuth().isAuthenticated, so no explicit
+      // navigation is needed here — replace covers the case where the
+      // guard hasn't re-evaluated yet on some platforms.
+      await register(name.trim(), email.trim(), password, phone.trim() || undefined);
+      router.replace('/household-setup');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
       setError(message);
-      Alert.alert('เข้าสู่ระบบไม่สำเร็จ', message);
+      Alert.alert('สมัครสมาชิกไม่สำเร็จ', message);
     }
   };
 
@@ -63,14 +73,33 @@ export default function LoginScreen() {
           <ThemedText style={styles.logoGlyph}>💙</ThemedText>
         </View>
         <ThemedText type="display" style={styles.appName}>
-          Parent Care
+          สร้างบัญชีใหม่
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary" style={styles.tagline}>
-          ดูแลพ่อแม่ร่วมกันทั้งครอบครัว ในที่เดียว
+          สมัครสมาชิกเพื่อสร้างหรือเข้าร่วมกลุ่มครอบครัว
         </ThemedText>
       </View>
 
       <Card gap={Spacing.three} padding={Spacing.four}>
+        <View style={styles.field}>
+          <ThemedText type="smallBold">ชื่อ-นามสกุล</ThemedText>
+          <TextInput
+            style={inputStyle('name')}
+            value={name}
+            onChangeText={(value) => {
+              setName(value);
+              if (error) setError(null);
+            }}
+            onFocus={() => setFocused('name')}
+            onBlur={() => setFocused(null)}
+            placeholder="เช่น คุณสมชาย ใจดี"
+            placeholderTextColor={theme.placeholder}
+            editable={!isLoading}
+            accessibilityLabel="ชื่อ-นามสกุล"
+            returnKeyType="next"
+          />
+        </View>
+
         <View style={styles.field}>
           <ThemedText type="smallBold">อีเมล</ThemedText>
           <TextInput
@@ -94,6 +123,23 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.field}>
+          <ThemedText type="smallBold">เบอร์โทร (ไม่บังคับ)</ThemedText>
+          <TextInput
+            style={inputStyle('phone')}
+            value={phone}
+            onChangeText={setPhone}
+            onFocus={() => setFocused('phone')}
+            onBlur={() => setFocused(null)}
+            placeholder="08X-XXX-XXXX"
+            placeholderTextColor={theme.placeholder}
+            keyboardType="phone-pad"
+            editable={!isLoading}
+            accessibilityLabel="เบอร์โทร"
+            returnKeyType="next"
+          />
+        </View>
+
+        <View style={styles.field}>
           <ThemedText type="smallBold">รหัสผ่าน</ThemedText>
           <View style={styles.passwordWrap}>
             <TextInput
@@ -105,13 +151,12 @@ export default function LoginScreen() {
               }}
               onFocus={() => setFocused('password')}
               onBlur={() => setFocused(null)}
-              placeholder="รหัสผ่าน"
+              placeholder="อย่างน้อย 4 ตัวอักษร"
               placeholderTextColor={theme.placeholder}
               secureTextEntry={!showPassword}
               editable={!isLoading}
               accessibilityLabel="รหัสผ่าน"
-              returnKeyType="go"
-              onSubmitEditing={handleLogin}
+              returnKeyType="next"
             />
             <Pressable
               onPress={() => setShowPassword((current) => !current)}
@@ -126,6 +171,27 @@ export default function LoginScreen() {
           </View>
         </View>
 
+        <View style={styles.field}>
+          <ThemedText type="smallBold">ยืนยันรหัสผ่าน</ThemedText>
+          <TextInput
+            style={inputStyle('confirmPassword')}
+            value={confirmPassword}
+            onChangeText={(value) => {
+              setConfirmPassword(value);
+              if (error) setError(null);
+            }}
+            onFocus={() => setFocused('confirmPassword')}
+            onBlur={() => setFocused(null)}
+            placeholder="กรอกรหัสผ่านอีกครั้ง"
+            placeholderTextColor={theme.placeholder}
+            secureTextEntry={!showPassword}
+            editable={!isLoading}
+            accessibilityLabel="ยืนยันรหัสผ่าน"
+            returnKeyType="go"
+            onSubmitEditing={handleRegister}
+          />
+        </View>
+
         {error ? (
           <View style={[styles.errorBox, { backgroundColor: theme.dangerSoft }]}>
             <ThemedText type="small" style={{ color: theme.dangerText }}>
@@ -135,20 +201,20 @@ export default function LoginScreen() {
         ) : null}
 
         <AppButton
-          label="เข้าสู่ระบบ"
-          onPress={handleLogin}
+          label="สมัครสมาชิก"
+          onPress={handleRegister}
           loading={isLoading}
           disabled={isLoading}
-          accessibilityHint="เข้าสู่ระบบด้วยอีเมลและรหัสผ่านที่กรอก"
+          accessibilityHint="สร้างบัญชีใหม่ด้วยข้อมูลที่กรอก"
         />
       </Card>
 
       <Pressable
-        onPress={() => router.replace('/register')}
+        onPress={() => router.replace('/login')}
         accessibilityRole="button"
-        style={({ pressed }) => [styles.registerLink, pressed && styles.pressed]}>
+        style={({ pressed }) => [styles.loginLink, pressed && styles.pressed]}>
         <ThemedText type="small" themeColor="textSecondary">
-          ยังไม่มีบัญชี? <ThemedText type="smallBold" themeColor="primary">สมัครสมาชิก</ThemedText>
+          มีบัญชีอยู่แล้ว? <ThemedText type="smallBold" themeColor="primary">เข้าสู่ระบบ</ThemedText>
         </ThemedText>
       </Pressable>
     </Screen>
@@ -179,6 +245,6 @@ const styles = StyleSheet.create({
   passwordInput: { paddingRight: 64 },
   toggle: { position: 'absolute', right: Spacing.three, paddingVertical: Spacing.two },
   errorBox: { borderRadius: Radius.sm, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
-  registerLink: { alignItems: 'center', paddingVertical: Spacing.two },
+  loginLink: { alignItems: 'center', paddingVertical: Spacing.two },
   pressed: { opacity: 0.7 },
 });

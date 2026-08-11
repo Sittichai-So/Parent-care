@@ -13,6 +13,7 @@ import { TextField } from '@/components/ui/text-field';
 import { MEDICATION_TIME_OPTIONS } from '@/constants/schedule';
 import { Spacing } from '@/constants/theme';
 import { useFamilyContext } from '@/context/family-context';
+import { canScheduleLocalNotifications } from '@/services/notifications';
 
 /** Add or edit a medication. Editing is detected by an `id` param; creating a
  *  new one targets `memberId` (defaults to the family's Elder). */
@@ -32,11 +33,12 @@ export default function MedicationFormScreen() {
   const [notes, setNotes] = useState(editing?.notes ?? '');
   const [schedule, setSchedule] = useState<string[]>(editing?.schedule ?? []);
   const [active, setActive] = useState(editing?.active ?? true);
+  const [isSaving, setIsSaving] = useState(false);
 
   const toggleTime = (value: string) =>
     setSchedule((current) => (current.includes(value) ? current.filter((t) => t !== value) : [...current, value].sort()));
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim() || !dosage.trim()) {
       Alert.alert('ข้อมูลไม่ครบ', 'กรุณากรอกชื่อยาและขนาดยา');
       return;
@@ -56,12 +58,20 @@ export default function MedicationFormScreen() {
       active,
     };
 
-    if (editing) {
-      updateMedication(editing.id, payload);
-    } else {
-      addMedication(payload);
+    setIsSaving(true);
+    try {
+      if (editing) {
+        await updateMedication(editing.id, payload);
+      } else {
+        await addMedication(payload);
+      }
+      router.back();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+      Alert.alert('บันทึกรายการยาไม่สำเร็จ', message);
+    } finally {
+      setIsSaving(false);
     }
-    router.back();
   };
 
   const handleDelete = () => {
@@ -72,8 +82,12 @@ export default function MedicationFormScreen() {
         text: 'ลบ',
         style: 'destructive',
         onPress: () => {
-          removeMedication(editing.id);
-          router.back();
+          removeMedication(editing.id)
+            .then(() => router.back())
+            .catch((err) => {
+              const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+              Alert.alert('ลบรายการยาไม่สำเร็จ', message);
+            });
         },
       },
     ]);
@@ -85,8 +99,15 @@ export default function MedicationFormScreen() {
       gap={Spacing.three}
       footer={
         <>
-          <AppButton label={editing ? 'บันทึกการแก้ไข' : 'บันทึกรายการยา'} onPress={handleSave} />
-          {editing ? <AppButton label="ลบรายการยา" variant="danger" size="medium" onPress={handleDelete} /> : null}
+          <AppButton
+            label={editing ? 'บันทึกการแก้ไข' : 'บันทึกรายการยา'}
+            onPress={handleSave}
+            loading={isSaving}
+            disabled={isSaving}
+          />
+          {editing ? (
+            <AppButton label="ลบรายการยา" variant="danger" size="medium" onPress={handleDelete} disabled={isSaving} />
+          ) : null}
         </>
       }>
       <ScreenHeader
@@ -103,6 +124,11 @@ export default function MedicationFormScreen() {
       <Card gap={Spacing.two}>
         <ThemedText type="smallBold">เวลาทานยา *</ThemedText>
         <ChipSelect options={MEDICATION_TIME_OPTIONS} selected={schedule} onToggle={toggleTime} />
+        <ThemedText type="caption" themeColor="textMuted">
+          {canScheduleLocalNotifications
+            ? '🔔 ระบบจะแจ้งเตือนอัตโนมัติทุกวันตามเวลาที่เลือก'
+            : 'การแจ้งเตือนใช้ได้เฉพาะแอปมือถือ (iOS/Android)'}
+        </ThemedText>
       </Card>
 
       <Card gap={Spacing.three}>

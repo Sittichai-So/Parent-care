@@ -15,15 +15,24 @@ type Phase = 'ask' | 'sending' | 'sent';
 export default function EmergencyScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { familyMembers } = useFamilyContext();
+  const { familyMembers, triggerEmergency } = useFamilyContext();
   const [phase, setPhase] = useState<Phase>('ask');
+  const [error, setError] = useState<string | null>(null);
 
   const contacts = familyMembers.filter((member) => member.role !== 'Elder');
   const recipients = contacts.length > 0 ? contacts : familyMembers;
 
-  const sendRequest = () => {
+  const sendRequest = async () => {
+    setError(null);
     setPhase('sending');
-    setTimeout(() => setPhase('sent'), 900);
+    try {
+      await triggerEmergency();
+      setPhase('sent');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+      setError(message);
+      setPhase('ask');
+    }
   };
 
   if (phase === 'sent') {
@@ -75,6 +84,14 @@ export default function EmergencyScreen() {
         ))}
       </Card>
 
+      {error ? (
+        <View style={[styles.errorBox, { backgroundColor: theme.dangerSoft }]}>
+          <ThemedText type="small" style={{ color: theme.dangerText }}>
+            ⚠️ {error}
+          </ThemedText>
+        </View>
+      ) : null}
+
       <View style={styles.actions}>
         <AppButton
           label="ใช่ ต้องการความช่วยเหลือ"
@@ -117,5 +134,6 @@ const styles = StyleSheet.create({
   contactGlyph: { fontSize: 16, lineHeight: 22 },
   contactText: { flex: 1, gap: 1 },
 
+  errorBox: { borderRadius: Radius.sm, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
   actions: { gap: Spacing.two },
 });

@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
 import { Card } from '@/components/ui/card';
+import { NotificationBanner } from '@/components/ui/notification-banner';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SectionHeader } from '@/components/ui/section-header';
@@ -52,6 +53,8 @@ export default function AppointmentsScreen() {
         />
       }>
       <ScreenHeader title="นัดหมาย" subtitle={member ? `ของ ${member.name}` : 'นัดหมายทั้งหมดของครอบครัว'} />
+
+      <NotificationBanner />
 
       {scoped.length === 0 ? (
         <Card tone="sunken" elevation="flat" gap={Spacing.two}>

@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
 import { Card } from '@/components/ui/card';
+import { NotificationBanner } from '@/components/ui/notification-banner';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -57,6 +58,8 @@ export default function MedicationsScreen() {
         eyebrow={isOverview ? 'ภาพรวมทั้งบ้าน' : undefined}
         subtitle={targetMember ? `ของ ${targetMember.name}` : isOverview ? 'ยาของทุกคนในบ้าน' : undefined}
       />
+
+      <NotificationBanner />
 
       {grouped.length === 0 ? (
         <Card tone="sunken" elevation="flat" gap={Spacing.two}>

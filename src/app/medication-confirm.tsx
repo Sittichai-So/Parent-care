@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
@@ -25,6 +25,7 @@ export default function MedicationConfirmScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const { medications, primaryElderId, confirmMedicationTaken } = useFamilyContext();
   const [photoCaptured, setPhotoCaptured] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const medication = useMemo(() => {
     if (params.id) return medications.find((med) => med.id === params.id);
@@ -34,10 +35,18 @@ export default function MedicationConfirmScreen() {
   const takenToday = medication?.lastTakenAt ? isToday(medication.lastTakenAt.slice(0, 10)) : false;
   const currentStep = takenToday ? 2 : photoCaptured ? 1 : 0;
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!medication) return;
-    confirmMedicationTaken(medication.id);
-    router.back();
+    setIsConfirming(true);
+    try {
+      await confirmMedicationTaken(medication.id);
+      router.back();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+      Alert.alert('ยืนยันการทานยาไม่สำเร็จ', message);
+    } finally {
+      setIsConfirming(false);
+    }
   };
 
   if (!medication) {
@@ -65,11 +74,12 @@ export default function MedicationConfirmScreen() {
             icon={takenToday ? '✓' : '💊'}
             size="xlarge"
             variant={takenToday ? 'success' : 'primary'}
-            disabled={!photoCaptured || takenToday}
+            disabled={!photoCaptured || takenToday || isConfirming}
+            loading={isConfirming}
             onPress={handleConfirm}
             accessibilityHint={photoCaptured ? 'บันทึกว่าคุณทานยาแล้ว' : 'ต้องถ่ายรูปยืนยันก่อนจึงจะกดได้'}
           />
-          <AppButton label="ยกเลิก" variant="ghost" size="medium" onPress={() => router.back()} />
+          <AppButton label="ยกเลิก" variant="ghost" size="medium" onPress={() => router.back()} disabled={isConfirming} />
         </>
       }>
       <ScreenHeader
