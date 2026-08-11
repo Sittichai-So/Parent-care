@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 
@@ -30,7 +30,15 @@ export default function ElderHomeScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { user } = useAuth();
-  const { medications, appointments, primaryElderId, checkIn } = useFamilyContext();
+  const { medications, appointments, primaryElderId, currentRole, checkIn } = useFamilyContext();
+
+  // Mirrors the guard in (tabs)/index.tsx — a pure-Caregiver role has no
+  // "explore" trigger in the tab bar, so bounce them back to their own screen.
+  useEffect(() => {
+    if (currentRole === 'Caregiver') {
+      router.replace('/');
+    }
+  }, [currentRole, router]);
 
   const myMedications = useMemo(
     () => medications.filter((med) => med.memberId === primaryElderId && med.active),

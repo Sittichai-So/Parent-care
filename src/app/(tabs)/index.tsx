@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -44,8 +44,26 @@ export default function CaregiverDashboardScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { user, logout } = useAuth();
-  const { familyMembers, tasks, timeline, currentHousehold, setSelectedMemberId, updateTaskStatus, checkIn } =
-    useFamilyContext();
+  const {
+    familyMembers,
+    tasks,
+    timeline,
+    currentHousehold,
+    currentRole,
+    setSelectedMemberId,
+    updateTaskStatus,
+    checkIn,
+  } = useFamilyContext();
+
+  // This route ("/") is the (tabs) group's default screen regardless of
+  // which NativeTabs.Trigger the tab layout renders — a pure-Elder role
+  // never gets an "index" trigger there, so landing here would show a tab
+  // that doesn't exist in their tab bar. Bounce them to their own screen.
+  useEffect(() => {
+    if (currentRole === 'Elder') {
+      router.replace('/explore');
+    }
+  }, [currentRole, router]);
 
   const sortedMembers = useMemo(
     () =>
