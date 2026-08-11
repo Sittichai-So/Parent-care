@@ -22,6 +22,16 @@ type ElderAction = {
   route: Href;
 };
 
+/** One row in "ตารางวันนี้" — tappable, so it doubles as the shortcut into
+ *  the photo-confirm flow (medication) or the visit details (appointment). */
+type ScheduleItem = {
+  key: string;
+  time: string;
+  title: string;
+  detail: string;
+  done: boolean;
+} & ({ kind: 'medication'; medicationId: string } | { kind: 'appointment'; appointmentId: string });
+
 function getTodayLabel() {
   return new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long' });
 }
@@ -65,14 +75,16 @@ export default function ElderHomeScreen() {
    *  the next appointment if there is one — this is deliberately whole-day
    *  granularity (done if taken at all today), not per-slot, to match what the
    *  data model actually tracks. */
-  const todaySchedule = useMemo(() => {
-    const medItems = myMedications.flatMap((med) =>
+  const todaySchedule = useMemo<ScheduleItem[]>(() => {
+    const medItems: ScheduleItem[] = myMedications.flatMap((med) =>
       med.schedule.map((time) => ({
         key: `${med.id}-${time}`,
         time,
         title: med.name,
         detail: med.dosage,
         done: med.lastTakenAt ? isToday(med.lastTakenAt.slice(0, 10)) : false,
+        kind: 'medication',
+        medicationId: med.id,
       }))
     );
     const items = [...medItems];
@@ -83,6 +95,8 @@ export default function ElderHomeScreen() {
         title: `นัดหมาย: ${nextAppointment.title}`,
         detail: nextAppointment.hospital,
         done: false,
+        kind: 'appointment',
+        appointmentId: nextAppointment.id,
       });
     }
     return items.sort((a, b) => a.time.localeCompare(b.time));
@@ -180,23 +194,36 @@ export default function ElderHomeScreen() {
       ) : (
         <Card gap={0} padding={Spacing.three}>
           {todaySchedule.map((item, index) => (
-            <View
+            <Pressable
               key={item.key}
-              style={[
-                styles.scheduleRow,
-                index < todaySchedule.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.border },
-              ]}>
-              <ThemedText style={[styles.scheduleTime, { color: theme.textSecondary }]}>{item.time}</ThemedText>
-              <View style={styles.scheduleBody}>
-                <ThemedText style={styles.scheduleTitle}>{item.title}</ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {item.detail}
+              onPress={() => {
+                if (item.kind === 'medication') {
+                  router.push({ pathname: '/medication-confirm', params: { id: item.medicationId } });
+                } else {
+                  router.push({ pathname: '/appointment-detail', params: { id: item.appointmentId } });
+                }
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.title} เวลา ${item.time} ${item.done ? 'ทำแล้ว' : 'ยังไม่ทำ'}`}
+              accessibilityHint={item.kind === 'medication' ? 'เปิดหน้าถ่ายรูปและยืนยันการทานยา' : 'ดูรายละเอียดนัดหมาย'}
+              style={({ pressed }) => pressed && styles.pressed}>
+              <View
+                style={[
+                  styles.scheduleRow,
+                  index < todaySchedule.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.border },
+                ]}>
+                <ThemedText style={[styles.scheduleTime, { color: theme.textSecondary }]}>{item.time}</ThemedText>
+                <View style={styles.scheduleBody}>
+                  <ThemedText style={styles.scheduleTitle}>{item.title}</ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {item.detail}
+                  </ThemedText>
+                </View>
+                <ThemedText style={[styles.scheduleMark, { color: item.done ? theme.success : theme.textMuted }]}>
+                  {item.done ? '✓' : '○'}
                 </ThemedText>
               </View>
-              <ThemedText style={[styles.scheduleMark, { color: item.done ? theme.success : theme.textMuted }]}>
-                {item.done ? '✓' : '○'}
-              </ThemedText>
-            </View>
+            </Pressable>
           ))}
         </Card>
       )}
