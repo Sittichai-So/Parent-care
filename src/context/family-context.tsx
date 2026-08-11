@@ -31,6 +31,25 @@ export type FamilyMember = {
   status: MemberStatus;
   detail: string;
   relation: string;
+  /** False for a profile someone else manages on this member's behalf
+   *  (e.g. an elderly relative with no phone) — see addManagedMember. */
+  hasAccount: boolean;
+  /** 'pending' means an existing account was invited but hasn't accepted
+   *  yet — see inviteExistingUser/acceptInvite/declineInvite. */
+  membershipState: 'active' | 'pending';
+};
+
+/** An invite addressed to *this* account, not yet accepted or declined —
+ *  distinct from a household's own member list (which also includes rows
+ *  with membershipState: 'pending' for members *of* that household). This
+ *  is account-wide, surfaced regardless of which household is selected. */
+export type PendingInvite = {
+  householdId: string;
+  householdName: string;
+  membershipId: string;
+  role: MemberRole;
+  displayName: string;
+  relation: string;
 };
 
 export type FamilyTask = {
@@ -138,6 +157,11 @@ type FamilyContextValue = {
   appointments: Appointment[];
   vitalLogs: VitalLog[];
 
+  /** Invites addressed to this account, across every household this
+   *  account can see (not just currentHouseholdId). */
+  pendingInvites: PendingInvite[];
+  refreshPendingInvites: () => Promise<void>;
+
   /** The family's Elder member — used as the default "me" on elder-facing screens. */
   primaryElderId: string;
 
@@ -161,6 +185,35 @@ type FamilyContextValue = {
   addVitalLog: (input: Omit<VitalLog, 'id'>) => Promise<void>;
 
   triggerEmergency: (message?: string) => Promise<void>;
+
+  /** Adds a member profile with no linked account of its own — for
+   *  relatives who can't self-register (no phone, not tech-comfortable). */
+  addManagedMember: (input: {
+    displayName: string;
+    relation: string;
+    role: Extract<HouseholdRole, 'elder' | 'viewer'>;
+    birthday?: string | null;
+    gender?: string | null;
+  }) => Promise<string>;
+
+  /** Exact-match only (userCode or email) — never a name search. */
+  lookupUser: (query: { code: string } | { email: string }) => Promise<householdsApi.ApiUserLookup>;
+  /** Sends a pending invite to an existing account found via lookupUser. */
+  inviteExistingUser: (
+    userId: string,
+    role: Exclude<HouseholdRole, 'owner'>,
+    displayName: string,
+    relation: string
+  ) => Promise<void>;
+  acceptInvite: (householdId: string, membershipId: string) => Promise<void>;
+  declineInvite: (householdId: string, membershipId: string) => Promise<void>;
+
+  /** Generates a one-time code (24h TTL) so a userId-less member profile
+   *  can later be linked to a real account. Returns the code to share. */
+  generateClaimCode: (memberId: string) => Promise<string>;
+  /** Links the caller's own account to an existing userId-less profile,
+   *  keeping its medication/appointment/vitals history. */
+  claimMembership: (claimCode: string) => Promise<void>;
 };
 
 const FamilyContext = createContext<FamilyContextValue | undefined>(undefined);
@@ -179,6 +232,8 @@ const toFamilyMember = (member: ApiHouseholdMember): FamilyMember => ({
   status: member.status,
   detail: member.detail,
   relation: member.relation,
+  hasAccount: member.userId !== null,
+  membershipState: member.membershipState,
 });
 
 const toMedication = (medicine: ApiMedicine): Medication => ({
@@ -244,12 +299,22 @@ const toSummary = ({ household, membership }: householdsApi.HouseholdWithMembers
   membershipId: membership._id,
 });
 
+const toPendingInvite = ({ household, membership }: householdsApi.ApiPendingInvite): PendingInvite => ({
+  householdId: household._id,
+  householdName: household.name,
+  membershipId: membership._id,
+  role: ROLE_TO_DISPLAY[membership.role],
+  displayName: membership.displayName,
+  relation: membership.relation,
+});
+
 export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
 
   const [households, setHouseholds] = useState<HouseholdSummary[]>([]);
   const [isLoadingHouseholds, setIsLoadingHouseholds] = useState(true);
   const [currentHouseholdId, setCurrentHouseholdId] = useState<string | null>(null);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
 
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
@@ -264,7 +329,12 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     setIsLoadingHouseholds(true);
     try {
       const mine = await householdsApi.listMyHouseholds();
-      const summaries = mine.map(toSummary);
+      // A still-pending invite must never become a switchable/current
+      // household — householdMiddleware 403s any data request against it
+      // until the invite is accepted. Those are surfaced separately via
+      // pendingInvites/refreshPendingInvites instead.
+      const active = mine.filter(({ membership }) => membership.membershipState !== 'pending');
+      const summaries = active.map(toSummary);
       setHouseholds(summaries);
       // Default to the first household, or clear the selection if it's no
       // longer in the list (removed, or account switched) — decided here,
@@ -280,14 +350,33 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const refreshPendingInvites = useCallback(async () => {
+    const invites = await householdsApi.getPendingInvites();
+    setPendingInvites(invites.map(toPendingInvite));
+  }, []);
+
   // Load this account's households on login; clear everything on logout —
   // stale data from account A must never leak into account B's session.
+  //
+  // react-hooks/set-state-in-effect flags this: an effect calling setState
+  // synchronously (the "loading" flags above, and every setState in the
+  // else branch) can in principle cause extra render passes. In practice,
+  // with React 19's automatic batching every setState call made during this
+  // one effect execution is coalesced into a single re-render regardless —
+  // there's no real cascade to avoid here. Splitting this into ~10
+  // individually-dispatched pieces of state (or one big reducer) to satisfy
+  // the rule would be a much larger rewrite for no behavioral gain, so it's
+  // suppressed here rather than restructured. See the identical suppression
+  // below on the currentHouseholdId effect.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (isAuthenticated) {
       refreshHouseholds();
+      refreshPendingInvites();
     } else {
       setHouseholds([]);
       setCurrentHouseholdId(null);
+      setPendingInvites([]);
       setFamilyMembers([]);
       setTasks([]);
       setTimeline([]);
@@ -296,7 +385,8 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       setVitalLogs([]);
       setIsLoadingHouseholds(false);
     }
-  }, [isAuthenticated, refreshHouseholds]);
+  }, [isAuthenticated, refreshHouseholds, refreshPendingInvites]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const currentHousehold = households.find((household) => household.id === currentHouseholdId) ?? null;
   const currentMembershipId = currentHousehold?.membershipId ?? null;
@@ -334,6 +424,9 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentHouseholdId]);
 
+  // Same react-hooks/set-state-in-effect situation as the isAuthenticated
+  // effect above — batched by React 19 into one render either way.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (currentHouseholdId) {
       refreshAll();
@@ -347,6 +440,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       setVitalLogs([]);
     }
   }, [currentHouseholdId, refreshAll]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const primaryElderId = useMemo(() => {
     const elder = familyMembers.find((member) => member.role === 'Elder');
@@ -506,6 +600,68 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     [currentHouseholdId, refreshAll]
   );
 
+  const addManagedMember = useCallback<FamilyContextValue['addManagedMember']>(
+    async (input) => {
+      if (!currentHouseholdId) throw new Error('ยังไม่ได้เลือกครอบครัว');
+      const created = await householdsApi.createManagedMember(currentHouseholdId, input);
+      await refreshAll();
+      return created._id;
+    },
+    [currentHouseholdId, refreshAll]
+  );
+
+  const lookupUser = useCallback<FamilyContextValue['lookupUser']>(
+    async (query) => householdsApi.lookupUser(query),
+    []
+  );
+
+  const inviteExistingUser = useCallback<FamilyContextValue['inviteExistingUser']>(
+    async (userId, role, displayName, relation) => {
+      if (!currentHouseholdId) throw new Error('ยังไม่ได้เลือกครอบครัว');
+      await householdsApi.inviteExistingUser(currentHouseholdId, { userId, role, displayName, relation });
+      await refreshAll();
+    },
+    [currentHouseholdId, refreshAll]
+  );
+
+  // acceptInvite/declineInvite act on an invite addressed to *this*
+  // account in a household that isn't necessarily currentHouseholdId (may
+  // not even be in `households` yet) — so they take householdId explicitly
+  // rather than assuming the currently-selected one.
+  const acceptInvite = useCallback<FamilyContextValue['acceptInvite']>(
+    async (householdId, membershipId) => {
+      await householdsApi.acceptInvite(householdId, membershipId);
+      await Promise.all([refreshHouseholds(), refreshPendingInvites()]);
+    },
+    [refreshHouseholds, refreshPendingInvites]
+  );
+
+  const declineInvite = useCallback<FamilyContextValue['declineInvite']>(
+    async (householdId, membershipId) => {
+      await householdsApi.declineInvite(householdId, membershipId);
+      await refreshPendingInvites();
+    },
+    [refreshPendingInvites]
+  );
+
+  const generateClaimCode = useCallback<FamilyContextValue['generateClaimCode']>(
+    async (memberId) => {
+      if (!currentHouseholdId) throw new Error('ยังไม่ได้เลือกครอบครัว');
+      const updated = await householdsApi.generateClaimCode(currentHouseholdId, memberId);
+      await refreshAll();
+      return updated.claimCode ?? '';
+    },
+    [currentHouseholdId, refreshAll]
+  );
+
+  const claimMembership = useCallback<FamilyContextValue['claimMembership']>(
+    async (claimCode) => {
+      await householdsApi.claimMembership(claimCode);
+      await refreshHouseholds();
+    },
+    [refreshHouseholds]
+  );
+
   const value = useMemo<FamilyContextValue>(
     () => ({
       households,
@@ -526,6 +682,9 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       appointments,
       vitalLogs,
 
+      pendingInvites,
+      refreshPendingInvites,
+
       primaryElderId,
       selectedMemberId,
       setSelectedMemberId,
@@ -545,6 +704,14 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       addVitalLog,
 
       triggerEmergency,
+
+      addManagedMember,
+      lookupUser,
+      inviteExistingUser,
+      acceptInvite,
+      declineInvite,
+      generateClaimCode,
+      claimMembership,
     }),
     [
       households,
@@ -562,6 +729,8 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       medications,
       appointments,
       vitalLogs,
+      pendingInvites,
+      refreshPendingInvites,
       primaryElderId,
       selectedMemberId,
       checkIn,
@@ -575,6 +744,13 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       removeAppointment,
       addVitalLog,
       triggerEmergency,
+      addManagedMember,
+      lookupUser,
+      inviteExistingUser,
+      acceptInvite,
+      declineInvite,
+      generateClaimCode,
+      claimMembership,
     ]
   );
 

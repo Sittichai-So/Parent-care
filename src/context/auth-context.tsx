@@ -13,6 +13,9 @@ export type User = {
   id: string;
   name: string;
   email: string;
+  /** Shareable lookup code — lets another account find and invite this one
+   *  (see family-context.tsx#lookupUser) without an open name search. */
+  userCode: string | null;
 };
 
 type AuthContextValue = {
@@ -39,6 +42,7 @@ const toUser = (apiUser: authApi.ApiUser): User => ({
   id: apiUser._id,
   name: apiUser.name,
   email: apiUser.email,
+  userCode: apiUser.userCode,
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

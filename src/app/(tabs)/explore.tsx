@@ -30,7 +30,8 @@ export default function ElderHomeScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { user } = useAuth();
-  const { medications, appointments, primaryElderId, currentRole, checkIn } = useFamilyContext();
+  const { medications, appointments, primaryElderId, currentMembershipId, currentRole, checkIn } =
+    useFamilyContext();
 
   // Mirrors the guard in (tabs)/index.tsx — a pure-Caregiver role has no
   // "explore" trigger in the tab bar, so bounce them back to their own screen.
@@ -40,16 +41,24 @@ export default function ElderHomeScreen() {
     }
   }, [currentRole, router]);
 
+  // "Me" here means the *caller's own* membership when the caller is
+  // themself an Elder — households can have more than one Elder member, and
+  // `primaryElderId` (the first Elder found) would show a second elder their
+  // housemate's medications/vitals instead of their own. Non-elder roles
+  // (caregiver/owner/viewer) still fall back to `primaryElderId`, since for
+  // them this screen means "check in on the family's elder", not "myself".
+  const selfMemberId = currentRole === 'Elder' && currentMembershipId ? currentMembershipId : primaryElderId;
+
   const myMedications = useMemo(
-    () => medications.filter((med) => med.memberId === primaryElderId && med.active),
-    [medications, primaryElderId]
+    () => medications.filter((med) => med.memberId === selfMemberId && med.active),
+    [medications, selfMemberId]
   );
   const nextAppointment = useMemo(
     () =>
       appointments
-        .filter((apt) => apt.memberId === primaryElderId && daysFromToday(apt.date) >= 0)
+        .filter((apt) => apt.memberId === selfMemberId && daysFromToday(apt.date) >= 0)
         .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))[0],
-    [appointments, primaryElderId]
+    [appointments, selfMemberId]
   );
 
   /** Each active medication's daily schedule flattened into a single list, plus
@@ -82,9 +91,9 @@ export default function ElderHomeScreen() {
   const pendingCount = todaySchedule.filter((item) => !item.done).length;
 
   const elderActions: ElderAction[] = [
-    { label: 'ยาของฉัน', detail: 'ดูและยืนยันการทานยา', icon: '💊', route: { pathname: '/medications', params: { memberId: primaryElderId } } },
-    { label: 'นัดหมาย', detail: 'ดูวันตรวจและสถานที่', icon: '🏥', route: { pathname: '/appointments', params: { memberId: primaryElderId } } },
-    { label: 'บันทึกสุขภาพ', detail: 'บันทึกความดัน น้ำตาล หรือน้ำหนัก', icon: '📋', route: { pathname: '/vitals-form', params: { memberId: primaryElderId } } },
+    { label: 'ยาของฉัน', detail: 'ดูและยืนยันการทานยา', icon: '💊', route: { pathname: '/medications', params: { memberId: selfMemberId } } },
+    { label: 'นัดหมาย', detail: 'ดูวันตรวจและสถานที่', icon: '🏥', route: { pathname: '/appointments', params: { memberId: selfMemberId } } },
+    { label: 'บันทึกสุขภาพ', detail: 'บันทึกความดัน น้ำตาล หรือน้ำหนัก', icon: '📋', route: { pathname: '/vitals-form', params: { memberId: selfMemberId } } },
   ];
 
   const handleCheckIn = () => {
@@ -193,7 +202,7 @@ export default function ElderHomeScreen() {
       )}
 
       <SectionHeader title="สุขภาพของฉัน" />
-      <VitalsSummary memberId={primaryElderId} />
+      <VitalsSummary memberId={selfMemberId} />
 
       <View style={[styles.divider, { backgroundColor: theme.border }]} />
       <Card tone="danger" accented elevation="flat" padding={Spacing.four} gap={Spacing.three}>

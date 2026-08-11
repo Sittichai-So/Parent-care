@@ -50,9 +50,12 @@ export default function CaregiverDashboardScreen() {
     timeline,
     currentHousehold,
     currentRole,
+    pendingInvites,
     setSelectedMemberId,
     updateTaskStatus,
     checkIn,
+    acceptInvite,
+    declineInvite,
   } = useFamilyContext();
 
   // This route ("/") is the (tabs) group's default screen regardless of
@@ -76,6 +79,22 @@ export default function CaregiverDashboardScreen() {
   const normalCount = familyMembers.filter((member) => member.status === 'normal').length;
   const attentionMembers = sortedMembers.filter((member) => member.status !== 'normal');
   const openTasks = tasks.filter((task) => task.status !== 'done');
+
+  const handleAcceptInvite = (householdId: string, membershipId: string, householdName: string) => {
+    acceptInvite(householdId, membershipId)
+      .then(() => Alert.alert('เข้าร่วมกลุ่มแล้ว', `เข้าร่วมกลุ่ม "${householdName}" เรียบร้อยแล้ว`))
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+        Alert.alert('เข้าร่วมกลุ่มไม่สำเร็จ', message);
+      });
+  };
+
+  const handleDeclineInvite = (householdId: string, membershipId: string) => {
+    declineInvite(householdId, membershipId).catch((err) => {
+      const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+      Alert.alert('ปฏิเสธคำขอไม่สำเร็จ', message);
+    });
+  };
 
   const confirmLogout = () => {
     Alert.alert('ออกจากระบบ', 'ต้องการออกจากระบบใช่หรือไม่?', [
@@ -139,23 +158,53 @@ export default function CaregiverDashboardScreen() {
         </View>
       </Card>
 
+      {pendingInvites.length > 0 ? (
+        <Card tone="primary" accented elevation="flat" gap={Spacing.two}>
+          <ThemedText type="smallBold" style={{ color: theme.primaryText }}>
+            📨 มีคำขอเข้าร่วมกลุ่มรออยู่
+          </ThemedText>
+          {pendingInvites.map((invite) => (
+            <View key={invite.membershipId} style={styles.inviteRow}>
+              <View style={styles.inviteBody}>
+                <ThemedText type="small" style={{ color: theme.primaryText }}>
+                  {invite.householdName} · {invite.role}
+                </ThemedText>
+              </View>
+              <View style={styles.inviteActions}>
+                <Pressable
+                  onPress={() => handleDeclineInvite(invite.householdId, invite.membershipId)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`ปฏิเสธคำขอเข้าร่วม ${invite.householdName}`}
+                  style={({ pressed }) => [styles.inviteDecline, { borderColor: theme.border }, pressed && styles.pressed]}>
+                  <ThemedText type="caption">ปฏิเสธ</ThemedText>
+                </Pressable>
+                <Pressable
+                  onPress={() => handleAcceptInvite(invite.householdId, invite.membershipId, invite.householdName)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`ยอมรับคำขอเข้าร่วม ${invite.householdName}`}
+                  style={({ pressed }) => [styles.inviteAccept, { backgroundColor: theme.primary }, pressed && styles.pressed]}>
+                  <ThemedText type="caption" style={{ color: theme.onPrimary, fontWeight: '700' }}>
+                    ยอมรับ
+                  </ThemedText>
+                </Pressable>
+              </View>
+            </View>
+          ))}
+        </Card>
+      ) : null}
+
       {currentHousehold ? (
         <Pressable
-          onPress={() =>
-            Alert.alert(
-              currentHousehold.name,
-              `รหัสเชิญ: ${currentHousehold.inviteCode}\n\nส่งรหัสนี้ให้สมาชิกคนอื่นเพื่อเข้าร่วมกลุ่มครอบครัวนี้`
-            )
-          }
+          onPress={() => router.push('/add-member')}
           accessibilityRole="button"
-          accessibilityLabel={`${currentHousehold.name} รหัสเชิญ ${currentHousehold.inviteCode}`}
-          accessibilityHint="แตะเพื่อดูรหัสเชิญแบบเต็มสำหรับส่งให้สมาชิกใหม่"
+          accessibilityLabel={`${currentHousehold.name} เพิ่มสมาชิก`}
+          accessibilityHint="เปิดหน้าเพิ่มสมาชิกเข้ากลุ่มครอบครัว"
           style={({ pressed }) => pressed && styles.pressed}>
           <Card tone="sunken" elevation="flat" gap={Spacing.half} style={styles.inviteCard}>
             <ThemedText type="caption" themeColor="textMuted">
-              {currentHousehold.name} · รหัสเชิญ
+              {currentHousehold.name}
             </ThemedText>
-            <ThemedText type="smallBold">{currentHousehold.inviteCode} · แตะเพื่อดู/แชร์</ThemedText>
+            <ThemedText type="smallBold">+ เพิ่มสมาชิกเข้ากลุ่ม</ThemedText>
           </Card>
         </Pressable>
       ) : null}
@@ -214,7 +263,11 @@ export default function CaregiverDashboardScreen() {
                       {member.relation} · {member.role}
                     </ThemedText>
                   </View>
-                  <StatusBadge label={status.label} tone={status.tone} />
+                  <View style={styles.memberBadges}>
+                    <StatusBadge label={status.label} tone={status.tone} />
+                    {!member.hasAccount ? <StatusBadge label="ไม่มีบัญชี" tone="neutral" /> : null}
+                    {member.membershipState === 'pending' ? <StatusBadge label="รอการยืนยัน" tone="warning" /> : null}
+                  </View>
                   <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
                     {member.detail}
                   </ThemedText>
@@ -335,6 +388,15 @@ export default function CaregiverDashboardScreen() {
           );
         })}
       </Card>
+
+      <Pressable
+        onPress={() => router.push('/household-setup')}
+        accessibilityRole="button"
+        style={({ pressed }) => pressed && styles.pressed}>
+        <ThemedText type="linkPrimary" style={styles.claimLink}>
+          มีรหัสผูกบัญชีจากผู้ดูแลคนอื่น? กดที่นี่
+        </ThemedText>
+      </Pressable>
     </Screen>
   );
 }
@@ -350,6 +412,23 @@ const styles = StyleSheet.create({
   heroFooter: { borderTopWidth: 1, paddingTop: Spacing.two },
   inviteCard: { alignItems: 'flex-start' },
 
+  inviteRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  inviteBody: { flex: 1 },
+  inviteActions: { flexDirection: 'row', gap: Spacing.two },
+  inviteDecline: {
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one + 2,
+  },
+  inviteAccept: {
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one + 2,
+  },
+
+  claimLink: { textAlign: 'center', paddingVertical: Spacing.one },
+
   statRow: { flexDirection: 'row', gap: Spacing.two },
 
   alertHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
@@ -363,6 +442,7 @@ const styles = StyleSheet.create({
   memberBody: { flex: 1, gap: Spacing.one + 2 },
   memberHead: { gap: 1 },
   memberName: { fontSize: 16, lineHeight: 22 },
+  memberBadges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.one },
   chevron: { fontSize: 26, lineHeight: 30, fontWeight: '600' },
 
   taskCard: { flexDirection: 'row', alignItems: 'center' },

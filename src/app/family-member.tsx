@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Alert, Pressable, Share, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
@@ -21,8 +21,9 @@ import { daysFromToday, formatDateKey } from '@/utils/date';
 export default function FamilyMemberScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { selectedMemberId, familyMembers, medications, appointments } = useFamilyContext();
+  const { selectedMemberId, familyMembers, medications, appointments, generateClaimCode } = useFamilyContext();
   const member = familyMembers.find((item) => item.id === selectedMemberId) ?? familyMembers[0];
+  const [isGeneratingClaim, setIsGeneratingClaim] = useState(false);
 
   const memberMedications = useMemo(
     () => (member ? medications.filter((med) => med.memberId === member.id && med.active) : []),
@@ -53,6 +54,21 @@ export default function FamilyMemberScreen() {
   }
 
   const status = MemberStatusMeta[member.status];
+
+  const handleGenerateClaimCode = async () => {
+    setIsGeneratingClaim(true);
+    try {
+      const code = await generateClaimCode(member.id);
+      await Share.share({
+        message: `ผูกบัญชีของคุณกับโปรไฟล์ "${member.name}" ในแอป Parent Care ด้วยรหัส: ${code}\n\n(รหัสหมดอายุใน 24 ชั่วโมง — ไปที่หน้าเริ่มต้นใช้งาน แล้วเลือก "ผูกบัญชีเดิม")`,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+      Alert.alert('สร้างรหัสไม่สำเร็จ', message);
+    } finally {
+      setIsGeneratingClaim(false);
+    }
+  };
 
   return (
     <Screen
@@ -88,8 +104,30 @@ export default function FamilyMemberScreen() {
         <ThemedText type="small" themeColor="textSecondary">
           {member.relation} · {member.role}
         </ThemedText>
-        <StatusBadge label={status.label} tone={status.tone} />
+        <View style={styles.badgeRow}>
+          <StatusBadge label={status.label} tone={status.tone} />
+          {!member.hasAccount ? <StatusBadge label="ไม่มีบัญชี" tone="neutral" /> : null}
+          {member.membershipState === 'pending' ? <StatusBadge label="รอการยืนยัน" tone="warning" /> : null}
+        </View>
       </Card>
+
+      {!member.hasAccount ? (
+        <Card tone="sunken" elevation="flat" gap={Spacing.two}>
+          <ThemedText type="smallBold">สมาชิกคนนี้ยังไม่มีบัญชีของตัวเอง</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            สร้างรหัสผูกบัญชี แล้วส่งให้ {member.name} ไปสมัครบัญชีและกรอกรหัสนี้ เพื่อให้เขาเข้าถึงข้อมูลของตัวเองได้ในภายหลัง
+            โดยประวัติยา/นัดหมาย/สุขภาพเดิมจะยังอยู่ครบ
+          </ThemedText>
+          <AppButton
+            label="สร้างรหัสผูกบัญชี"
+            icon="🔗"
+            variant="secondary"
+            onPress={handleGenerateClaimCode}
+            loading={isGeneratingClaim}
+            disabled={isGeneratingClaim}
+          />
+        </Card>
+      ) : null}
 
       <Card gap={Spacing.three}>
         <InfoRow icon="📌" label="สถานะล่าสุด" value={member.detail} />
@@ -173,6 +211,7 @@ export default function FamilyMemberScreen() {
 const styles = StyleSheet.create({
   profile: { alignItems: 'center' },
   profileName: { textAlign: 'center' },
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.one, justifyContent: 'center' },
   separator: { height: 1 },
   list: { gap: Spacing.two },
   viewAll: { textAlign: 'center', paddingVertical: Spacing.one },

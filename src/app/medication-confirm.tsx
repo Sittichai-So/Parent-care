@@ -23,14 +23,21 @@ export default function MedicationConfirmScreen() {
   const router = useRouter();
   const theme = useTheme();
   const params = useLocalSearchParams<{ id?: string }>();
-  const { medications, primaryElderId, confirmMedicationTaken } = useFamilyContext();
+  const { medications, primaryElderId, currentMembershipId, currentRole, confirmMedicationTaken } =
+    useFamilyContext();
   const [photoCaptured, setPhotoCaptured] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
+  // Same reasoning as (tabs)/explore.tsx's selfMemberId — an Elder opening
+  // this screen without an explicit medicine id (e.g. a stale deep link)
+  // should fall back to *their own* medicine, not the first Elder's in a
+  // multi-elder household.
+  const selfMemberId = currentRole === 'Elder' && currentMembershipId ? currentMembershipId : primaryElderId;
+
   const medication = useMemo(() => {
     if (params.id) return medications.find((med) => med.id === params.id);
-    return medications.find((med) => med.memberId === primaryElderId && med.active);
-  }, [medications, params.id, primaryElderId]);
+    return medications.find((med) => med.memberId === selfMemberId && med.active);
+  }, [medications, params.id, selfMemberId]);
 
   const takenToday = medication?.lastTakenAt ? isToday(medication.lastTakenAt.slice(0, 10)) : false;
   const currentStep = takenToday ? 2 : photoCaptured ? 1 : 0;
@@ -59,7 +66,10 @@ export default function MedicationConfirmScreen() {
             เพิ่มรายการยาก่อน เพื่อให้สามารถยืนยันการทานยาได้
           </ThemedText>
         </Card>
-        <AppButton label="เพิ่มรายการยา" onPress={() => router.replace('/medication-form')} />
+        <AppButton
+          label="เพิ่มรายการยา"
+          onPress={() => router.replace({ pathname: '/medication-form', params: { memberId: selfMemberId } })}
+        />
       </Screen>
     );
   }

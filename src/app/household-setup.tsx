@@ -14,12 +14,18 @@ import { useAuth } from '@/context/auth-context';
 import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
 
-type Mode = 'create' | 'join';
+type Mode = 'create' | 'join' | 'claim';
 
 const roleOptions = [
   { value: 'caregiver', label: 'ผู้ดูแล' },
   { value: 'elder', label: 'ผู้สูงอายุ' },
   { value: 'viewer', label: 'ดูอย่างเดียว' },
+] as const;
+
+const modeOptions = [
+  { value: 'create', label: 'สร้างกลุ่ม' },
+  { value: 'join', label: 'เข้าร่วม' },
+  { value: 'claim', label: 'ผูกบัญชี' },
 ] as const;
 
 /**
@@ -32,7 +38,11 @@ export default function HouseholdSetupScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { logout } = useAuth();
-  const { createHousehold, joinHousehold } = useFamilyContext();
+  const { households, createHousehold, joinHousehold, claimMembership } = useFamilyContext();
+  // A signed-in account with at least one household lands here on demand
+  // (e.g. "มีรหัสผูกบัญชี?" on the dashboard), not as a forced landing
+  // screen — so let them back out instead of only offering logout.
+  const canGoBack = households.length > 0;
 
   const [mode, setMode] = useState<Mode>('create');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,6 +54,8 @@ export default function HouseholdSetupScreen() {
 
   const [inviteCode, setInviteCode] = useState('');
   const [role, setRole] = useState<(typeof roleOptions)[number]['value']>('caregiver');
+
+  const [claimCode, setClaimCode] = useState('');
 
   const handleCreate = async () => {
     if (!householdName.trim() || !displayName.trim() || !relation.trim()) {
@@ -90,39 +102,52 @@ export default function HouseholdSetupScreen() {
     }
   };
 
+  const handleClaim = async () => {
+    if (!claimCode.trim()) {
+      setError('กรุณากรอกรหัสผูกบัญชี');
+      return;
+    }
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      await claimMembership(claimCode.trim().toUpperCase());
+      router.replace('/');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+      setError(message);
+      Alert.alert('ผูกบัญชีไม่สำเร็จ', message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Screen keyboardAvoiding gap={Spacing.four}>
       <ScreenHeader
         title="เริ่มต้นใช้งาน"
-        subtitle="สร้างกลุ่มครอบครัวใหม่ หรือเข้าร่วมกลุ่มที่มีอยู่แล้วด้วยรหัสเชิญ"
-        showBack={false}
+        subtitle="สร้างกลุ่มครอบครัวใหม่ เข้าร่วมด้วยรหัสเชิญ หรือผูกบัญชีกับโปรไฟล์ที่มีอยู่แล้ว"
+        showBack={canGoBack}
       />
 
       <View style={[styles.toggle, { backgroundColor: theme.surfaceSunken, borderColor: theme.border }]}>
-        <Pressable
-          onPress={() => {
-            setMode('create');
-            setError(null);
-          }}
-          accessibilityRole="button"
-          accessibilityState={{ selected: mode === 'create' }}
-          style={[styles.toggleOption, mode === 'create' && { backgroundColor: theme.primary }]}>
-          <ThemedText type="smallBold" style={{ color: mode === 'create' ? theme.onPrimary : theme.text }}>
-            สร้างกลุ่มใหม่
-          </ThemedText>
-        </Pressable>
-        <Pressable
-          onPress={() => {
-            setMode('join');
-            setError(null);
-          }}
-          accessibilityRole="button"
-          accessibilityState={{ selected: mode === 'join' }}
-          style={[styles.toggleOption, mode === 'join' && { backgroundColor: theme.primary }]}>
-          <ThemedText type="smallBold" style={{ color: mode === 'join' ? theme.onPrimary : theme.text }}>
-            เข้าร่วมด้วยรหัส
-          </ThemedText>
-        </Pressable>
+        {modeOptions.map((option) => (
+          <Pressable
+            key={option.value}
+            onPress={() => {
+              setMode(option.value);
+              setError(null);
+            }}
+            accessibilityRole="button"
+            accessibilityState={{ selected: mode === option.value }}
+            style={[styles.toggleOption, mode === option.value && { backgroundColor: theme.primary }]}>
+            <ThemedText
+              type="smallBold"
+              numberOfLines={1}
+              style={{ color: mode === option.value ? theme.onPrimary : theme.text }}>
+              {option.label}
+            </ThemedText>
+          </Pressable>
+        ))}
       </View>
 
       {mode === 'create' ? (
@@ -152,7 +177,9 @@ export default function HouseholdSetupScreen() {
             คุณจะเป็นเจ้าของกลุ่มนี้ และได้รหัสเชิญไว้ส่งให้สมาชิกคนอื่น
           </ThemedText>
         </Card>
-      ) : (
+      ) : null}
+
+      {mode === 'join' ? (
         <Card gap={Spacing.three}>
           <TextField
             label="รหัสเชิญ"
@@ -180,7 +207,23 @@ export default function HouseholdSetupScreen() {
             required
           />
         </Card>
-      )}
+      ) : null}
+
+      {mode === 'claim' ? (
+        <Card gap={Spacing.three}>
+          <TextField
+            label="รหัสผูกบัญชี"
+            value={claimCode}
+            onChangeText={(value) => setClaimCode(value.toUpperCase())}
+            placeholder="เช่น GG4W2ZD5PP25"
+            required
+          />
+          <ThemedText type="caption" themeColor="textMuted">
+            ใช้เมื่อผู้ดูแลเคยเพิ่มคุณเป็นสมาชิกไว้ล่วงหน้าแบบไม่มีบัญชี แล้วตอนนี้อยากผูกบัญชีของคุณเองเข้ากับโปรไฟล์นั้น
+            ประวัติยา/นัดหมาย/สุขภาพเดิมจะยังอยู่ครบ ไม่ใช่การเริ่มโปรไฟล์ใหม่
+          </ThemedText>
+        </Card>
+      ) : null}
 
       {error ? (
         <View style={[styles.errorBox, { backgroundColor: theme.dangerSoft }]}>
@@ -191,8 +234,8 @@ export default function HouseholdSetupScreen() {
       ) : null}
 
       <AppButton
-        label={mode === 'create' ? 'สร้างกลุ่มครอบครัว' : 'เข้าร่วมกลุ่มครอบครัว'}
-        onPress={mode === 'create' ? handleCreate : handleJoin}
+        label={mode === 'create' ? 'สร้างกลุ่มครอบครัว' : mode === 'join' ? 'เข้าร่วมกลุ่มครอบครัว' : 'ผูกบัญชี'}
+        onPress={mode === 'create' ? handleCreate : mode === 'join' ? handleJoin : handleClaim}
         loading={isSubmitting}
         disabled={isSubmitting}
       />

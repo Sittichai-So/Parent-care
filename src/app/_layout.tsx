@@ -102,11 +102,15 @@ function RootLayoutNav() {
             options={{ presentation: 'modal', animation: 'fade_from_bottom' }}
           />
           <Stack.Screen name="family-member" />
+          <Stack.Screen name="add-member" options={{ presentation: 'modal' }} />
         </Stack.Protected>
 
-        {/* A signed-in account with no household yet — first launch after
-            register, or after leaving/being removed from every household. */}
-        <Stack.Protected guard={isAuthenticated && !hasHousehold}>
+        {/* household-setup also covers "ผูกบัญชี" (claim), which an account
+            that already has a household may still need — e.g. linking to a
+            managed profile a relative pre-added in a *different* household.
+            So it's reachable regardless of hasHousehold, not nested in the
+            !hasHousehold-only block below. */}
+        <Stack.Protected guard={isAuthenticated}>
           <Stack.Screen name="household-setup" options={{ animation: 'fade' }} />
         </Stack.Protected>
 
