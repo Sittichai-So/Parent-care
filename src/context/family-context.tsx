@@ -69,6 +69,10 @@ export type FamilyEvent = {
   time: string;
   detail: string;
   type: 'check-in' | 'medication' | 'task' | 'appointment' | 'vitals' | 'emergency';
+  /** Full ISO timestamp `time` was derived from — kept alongside the display-only
+   *  `time` (already formatted to HH:mm) so callers that need the calendar day
+   *  (e.g. grouping activity into a report chart) don't have to re-parse it. */
+  occurredAt: string;
 };
 
 /** A medication a family member takes, self-managed or entered on their behalf. */
@@ -289,6 +293,7 @@ const toTimelineEvent = (event: ApiTimelineEvent): FamilyEvent => ({
   time: new Date(event.occurredAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
   detail: event.detail,
   type: event.type,
+  occurredAt: event.occurredAt,
 });
 
 const toSummary = ({ household, membership }: householdsApi.HouseholdWithMembership): HouseholdSummary => ({

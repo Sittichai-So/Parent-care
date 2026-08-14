@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
-import { Radius, Spacing } from '@/constants/theme';
+import { Elevation, Radius, Spacing } from '@/constants/theme';
 import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -21,10 +21,6 @@ type TabButtonProps = {
   badge?: number;
 };
 
-/** Reads its own focus state via `useTabTrigger` (documented and reliable)
- *  rather than depending on whatever props `TabTrigger`'s `asChild` may or
- *  may not forward — expo-router/ui's headless tabs are new enough in this
- *  SDK that the docs don't spell that part out. */
 function TabButton({ name, activeIcon, inactiveIcon, label, badge }: TabButtonProps) {
   const theme = useTheme();
   const { trigger, triggerProps } = useTabTrigger({ name });
@@ -49,6 +45,9 @@ function TabButton({ name, activeIcon, inactiveIcon, label, badge }: TabButtonPr
       <ThemedText type="caption" style={{ color, fontWeight: focused ? '800' : '600' }}>
         {label}
       </ThemedText>
+      {/* Small brand-gradient pill instead of a flat colour underline — the
+       *  one place in the nav that carries the logo's blue→teal identity. */}
+      <View style={[styles.activeDot, focused && { experimental_backgroundImage: theme.brandGradient }]} />
     </Pressable>
   );
 }
@@ -62,38 +61,22 @@ export default function TabsLayout() {
   /** Surfaced on the tab bar so attention items are visible from any screen. */
   const attentionCount = familyMembers.filter((member) => member.status !== 'normal').length;
 
-  // Caregivers and elders each get one tailored home screen — showing both would
-  // let an elder browse every family member's private status, and a caregiver
-  // land on the elder's simplified self-care screen by mistake. Owner/viewer
-  // oversee everything, so both stay visible. Role is per-household now (this
-  // account's membership in the *current* household), not a global account flag.
   const showCaregiverTab = currentRole !== 'Elder';
   const showElderTab = currentRole !== 'Caregiver';
 
   return (
     <Tabs style={styles.root}>
       <TabSlot />
-
-      {/* `TabList` must be reachable from `Tabs`'s children through only
-       *  Fragments/other `TabList`s — expo-router/ui's trigger scanner
-       *  (`parseTriggersFromChildren`) only unwraps those two, so a plain
-       *  `View` wrapping it (as this used to have, for the bar's
-       *  background/border) makes the scanner find zero screens and throws
-       *  "Couldn't find any screens for the navigator." So the bar's visual
-       *  container has to be `TabList`'s own `asChild` target, and the FAB
-       *  has to live *inside* that same target (as a non-trigger sibling —
-       *  the scanner walks past non-`TabTrigger` children harmlessly)
-       *  instead of wrapping it from outside. */}
-      <TabList
-        asChild
-        style={StyleSheet.flatten([
-          styles.bar,
-          { backgroundColor: theme.backgroundElement, borderTopColor: theme.border, paddingBottom: insets.bottom },
-        ])}>
+      <TabList asChild>
         <View
           style={StyleSheet.flatten([
             styles.bar,
-            { backgroundColor: theme.backgroundElement, borderTopColor: theme.border, paddingBottom: insets.bottom },
+            {
+              backgroundColor: theme.backgroundElement,
+              borderColor: theme.border,
+              shadowColor: theme.hero,
+              marginBottom: insets.bottom + Spacing.two,
+            },
           ])}>
           {showCaregiverTab ? (
             <TabTrigger name="index" href="/" asChild>
@@ -118,9 +101,12 @@ export default function TabsLayout() {
             </TabTrigger>
           ) : null}
 
-          {/* A shortcut into the same /emergency screen the "ขอความช่วยเหลือ"
-           *  button on the self-service tab already opens — this is purely a
-           *  faster path to it, not a new permission or behavior. */}
+          {/* Every role gets a report — its content differs per role (see
+           *  (tabs)/report.tsx), but the tab itself is never hidden. */}
+          <TabTrigger name="report" href="/report" asChild>
+            <TabButton name="report" activeIcon="stats-chart" inactiveIcon="stats-chart-outline" label="รายงาน" />
+          </TabTrigger>
+
           <Pressable
             onPress={() => router.push('/emergency')}
             accessibilityRole="button"
@@ -141,10 +127,17 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  // Floating pill nav, per the reference design — margin on every side (instead
+  // of the old full-bleed, top-border-only bar) plus an all-around shadow tinted
+  // with the brand navy rather than the flat top hairline this used to have.
   bar: {
     flexDirection: 'row',
-    borderTopWidth: StyleSheet.hairlineWidth * 2,
+    marginHorizontal: Spacing.three,
+    borderRadius: Radius.xl,
+    borderWidth: StyleSheet.hairlineWidth * 2,
     paddingTop: Spacing.two,
+    ...Elevation.high,
+    shadowOpacity: 0.25,
   },
   tabItem: {
     flex: 1,
@@ -152,6 +145,7 @@ const styles = StyleSheet.create({
     gap: Spacing.half,
     paddingVertical: Spacing.one,
   },
+  activeDot: { width: 18, height: 4, borderRadius: Radius.full, marginTop: 1 },
   iconWrap: { position: 'relative' },
   badge: {
     position: 'absolute',
@@ -167,12 +161,6 @@ const styles = StyleSheet.create({
   },
   badgeLabel: { fontSize: 10, lineHeight: 12, fontWeight: '800' },
 
-  // Raised, floating above the bar rather than sitting inline with the other
-  // tab items — the one deliberately heavier element on the bar, matching
-  // how the rest of the app treats the emergency action as visually distinct.
-  // `alignSelf: 'center'` centers on the cross axis (vertical, since `bar`
-  // is a row) — an absolutely positioned child needs `left: '50%'` +
-  // negative `marginLeft` to actually center horizontally instead.
   fab: {
     position: 'absolute',
     top: -22,
