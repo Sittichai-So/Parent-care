@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
 import { Card } from '@/components/ui/card';
@@ -40,10 +42,12 @@ export default function EmergencyScreen() {
       <Screen center gap={Spacing.four}>
         <Card tone="success" accented padding={Spacing.five} gap={Spacing.three} style={styles.centerCard}>
           <View style={[styles.glyphWrap, { backgroundColor: theme.success }]}>
-            <ThemedText style={styles.glyph}>✓</ThemedText>
+            <Ionicons name="checkmark-circle" size={40} color={theme.onPrimary} />
           </View>
-          <ThemedText style={[styles.title, { color: theme.successText }]}>ส่งคำขอแล้ว</ThemedText>
-          <ThemedText style={[styles.body, { color: theme.successText }]}>
+          <ThemedText type="display" style={{ color: theme.successText, textAlign: 'center' }}>
+            ส่งคำขอแล้ว
+          </ThemedText>
+          <ThemedText type="body" style={{ color: theme.successText, textAlign: 'center' }}>
             ครอบครัวของคุณได้รับแจ้งเรียบร้อยแล้ว อยู่กับที่และรอสักครู่นะคะ
           </ThemedText>
         </Card>
@@ -57,12 +61,12 @@ export default function EmergencyScreen() {
     <Screen gap={Spacing.four} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View style={[styles.glyphWrap, { backgroundColor: theme.dangerSoft }]}>
-          <ThemedText style={styles.glyph}>🆘</ThemedText>
+          <Ionicons name="alert-circle" size={44} color={theme.danger} />
         </View>
-        <ThemedText style={styles.title} accessibilityRole="header">
+        <ThemedText type="display" style={{ textAlign: 'center' }} accessibilityRole="header">
           ต้องการความช่วยเหลือ?
         </ThemedText>
-        <ThemedText style={[styles.body, { color: theme.textSecondary }]}>
+        <ThemedText type="body" style={{ color: theme.textSecondary, textAlign: 'center' }}>
           เมื่อกดยืนยัน ครอบครัวจะได้รับแจ้งเตือนทันที พร้อมตำแหน่งล่าสุดของคุณ
         </ThemedText>
       </View>
@@ -72,7 +76,7 @@ export default function EmergencyScreen() {
         {recipients.map((member) => (
           <View key={member.id} style={styles.contact}>
             <View style={[styles.contactDot, { backgroundColor: theme.primarySoft }]}>
-              <ThemedText style={[styles.contactGlyph, { color: theme.primaryText }]}>👤</ThemedText>
+              <Ionicons name="person-outline" size={18} color={theme.primaryText} />
             </View>
             <View style={styles.contactText}>
               <ThemedText type="smallBold">{member.name}</ThemedText>
@@ -85,9 +89,10 @@ export default function EmergencyScreen() {
       </Card>
 
       {error ? (
-        <View style={[styles.errorBox, { backgroundColor: theme.dangerSoft }]}>
+        <View style={[styles.errorBox, { backgroundColor: theme.dangerSoft, flexDirection: 'row', alignItems: 'center', gap: Spacing.two }]}>
+          <Ionicons name="alert-circle-outline" size={16} color={theme.dangerText} />
           <ThemedText type="small" style={{ color: theme.dangerText }}>
-            ⚠️ {error}
+            {error}
           </ThemedText>
         </View>
       ) : null}
@@ -95,7 +100,7 @@ export default function EmergencyScreen() {
       <View style={styles.actions}>
         <AppButton
           label="ใช่ ต้องการความช่วยเหลือ"
-          icon="🆘"
+          icon="alert-circle"
           variant="danger"
           size="xlarge"
           loading={phase === 'sending'}
@@ -125,13 +130,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  glyph: { fontSize: 38, lineHeight: 48, color: '#FFFFFF' },
-  title: { fontSize: 26, lineHeight: 34, fontWeight: '800', textAlign: 'center' },
-  body: { fontSize: 16, lineHeight: 24, fontWeight: '500', textAlign: 'center' },
-
   contact: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   contactDot: { width: 40, height: 40, borderRadius: Radius.full, justifyContent: 'center', alignItems: 'center' },
-  contactGlyph: { fontSize: 16, lineHeight: 22 },
   contactText: { flex: 1, gap: 1 },
 
   errorBox: { borderRadius: Radius.sm, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },

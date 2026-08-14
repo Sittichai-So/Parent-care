@@ -9,7 +9,9 @@ export type ThemedTextType =
   | 'display'
   | 'heading'
   | 'sectionTitle'
+  | 'body'
   | 'small'
+  | 'smallRegular'
   | 'smallBold'
   | 'caption'
   | 'subtitle'
@@ -45,6 +47,14 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     fontWeight: '500',
   },
+  /** Regular-weight paragraph copy — taglines, longer hints. Everything else
+   *  in this scale is medium-to-heavy; this is the one deliberately lighter
+   *  variant, for text that should recede rather than announce itself. */
+  body: {
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '400',
+  },
   /** Reserved for splash / marketing moments. */
   title: {
     fontSize: 44,
@@ -77,6 +87,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '500',
+  },
+  /** Regular-weight detail line under a `smallBold` label — dates, locations,
+   *  sub-lines — so label vs. detail reads as bold-vs-regular, not bold-vs-medium. */
+  smallRegular: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '400',
   },
   smallBold: {
     fontSize: 14,

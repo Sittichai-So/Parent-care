@@ -2,15 +2,19 @@ import { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
+import { AppointmentDateBlock } from '@/components/ui/appointment-date-block';
 import { Card } from '@/components/ui/card';
+import { CheckRow } from '@/components/ui/check-row';
 import { InfoRow } from '@/components/ui/info-row';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SectionHeader } from '@/components/ui/section-header';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { Radius, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
 import { daysFromToday, formatDateKey, relativeDayLabel } from '@/utils/date';
@@ -71,7 +75,7 @@ export default function AppointmentDetailScreen() {
         <>
           <AppButton
             label={appointment.reminderEnabled ? 'ปิดการเตือน' : 'เปิดการเตือน'}
-            icon={appointment.reminderEnabled ? '🔕' : '🔔'}
+            icon={appointment.reminderEnabled ? 'notifications-off-outline' : 'notifications-outline'}
             variant={appointment.reminderEnabled ? 'secondary' : 'primary'}
             loading={isTogglingReminder}
             disabled={isTogglingReminder}
@@ -97,17 +101,7 @@ export default function AppointmentDetailScreen() {
 
       <Card elevation="raised" padding={Spacing.four} gap={Spacing.three}>
         <View style={styles.hero}>
-          <View style={[styles.dateBlock, { backgroundColor: theme.primarySoft }]}>
-            <ThemedText type="caption" style={{ color: theme.primaryText }}>
-              {formatDateKey(appointment.date, { month: 'short' })}
-            </ThemedText>
-            <ThemedText style={[styles.dateNumber, { color: theme.primaryText }]}>
-              {appointment.date.slice(-2)}
-            </ThemedText>
-            <ThemedText type="caption" style={{ color: theme.primaryText }}>
-              {formatDateKey(appointment.date, { weekday: 'short' })}
-            </ThemedText>
-          </View>
+          <AppointmentDateBlock date={appointment.date} size="large" />
 
           <View style={styles.heroText}>
             <StatusBadge label={relativeDayLabel(appointment.date)} tone="primary" />
@@ -120,16 +114,19 @@ export default function AppointmentDetailScreen() {
 
         <View style={[styles.separator, { backgroundColor: theme.border }]} />
 
-        <InfoRow icon="🏥" label="สถานที่" value={appointment.hospital} />
-        {appointment.doctor ? <InfoRow icon="👨‍⚕️" label="แพทย์" value={appointment.doctor} /> : null}
-        {appointment.department ? <InfoRow icon="🗂️" label="แผนก" value={appointment.department} /> : null}
+        <InfoRow icon="business-outline" label="สถานที่" value={appointment.hospital} />
+        {appointment.doctor ? <InfoRow icon="person-outline" label="แพทย์" value={appointment.doctor} /> : null}
+        {appointment.department ? <InfoRow icon="folder-outline" label="แผนก" value={appointment.department} /> : null}
       </Card>
 
       {appointment.medicationNote || linkedMedications.length > 0 ? (
         <Card tone="primary" elevation="flat" gap={Spacing.two}>
-          <ThemedText type="smallBold" style={{ color: theme.primaryText }}>
-            💊 เรื่องยาสำหรับนัดนี้
-          </ThemedText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.one }}>
+            <Ionicons name="medical-outline" size={16} color={theme.primaryText} />
+            <ThemedText type="smallBold" style={{ color: theme.primaryText }}>
+              เรื่องยาสำหรับนัดนี้
+            </ThemedText>
+          </View>
           {appointment.medicationNote ? (
             <ThemedText type="small" style={{ color: theme.primaryText }}>
               {appointment.medicationNote}
@@ -153,38 +150,14 @@ export default function AppointmentDetailScreen() {
       ) : null}
 
       <SectionHeader title="สิ่งที่ต้องเตรียม" count={preparationChecklist.length} />
-      <Card gap={0} padding={Spacing.three}>
-        {preparationChecklist.map((item, index) => (
-          <Pressable
+      <Card gap={Spacing.one} padding={Spacing.three}>
+        {preparationChecklist.map((item) => (
+          <CheckRow
             key={item.id}
-            onPress={() => toggleCheck(item.id)}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: checked.includes(item.id) }}
-            accessibilityLabel={item.label}
-            style={({ pressed }) => [
-              styles.checkRow,
-              index < preparationChecklist.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.border },
-              pressed && styles.pressed,
-            ]}>
-            <View
-              style={[
-                styles.checkbox,
-                {
-                  borderColor: checked.includes(item.id) ? theme.success : theme.borderStrong,
-                  backgroundColor: checked.includes(item.id) ? theme.success : 'transparent',
-                },
-              ]}>
-              <ThemedText style={styles.checkGlyph}>{checked.includes(item.id) ? '✓' : ''}</ThemedText>
-            </View>
-            <ThemedText
-              type="small"
-              style={[
-                styles.checkLabel,
-                checked.includes(item.id) && { color: theme.textMuted, textDecorationLine: 'line-through' },
-              ]}>
-              {item.label}
-            </ThemedText>
-          </Pressable>
+            label={item.label}
+            checked={checked.includes(item.id)}
+            onToggle={() => toggleCheck(item.id)}
+          />
         ))}
       </Card>
 
@@ -215,22 +188,8 @@ export default function AppointmentDetailScreen() {
 
 const styles = StyleSheet.create({
   hero: { flexDirection: 'row', gap: Spacing.three, alignItems: 'center' },
-  dateBlock: { width: 72, borderRadius: Radius.lg, paddingVertical: Spacing.two, alignItems: 'center' },
-  dateNumber: { fontSize: 30, lineHeight: 36, fontWeight: '800' },
   heroText: { flex: 1, gap: Spacing.one + 2 },
   separator: { height: 1 },
-
-  checkRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.three },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: Radius.sm,
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkGlyph: { color: '#FFFFFF', fontSize: 14, lineHeight: 18, fontWeight: '800' },
-  checkLabel: { flex: 1 },
 
   otherList: { gap: Spacing.two },
   pressed: { opacity: 0.7 },

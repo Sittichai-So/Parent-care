@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { ThemedText } from '@/components/themed-text';
 import { HitSize, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -52,7 +54,7 @@ export function ScreenHeader({
               { backgroundColor: theme.backgroundElement, borderColor: theme.border },
               pressed && styles.pressed,
             ]}>
-            <ThemedText style={[styles.backGlyph, { color: theme.text }]}>‹</ThemedText>
+            <Ionicons name="chevron-back-outline" size={24} color={theme.text} />
           </Pressable>
         ) : null}
 
@@ -90,7 +92,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backGlyph: { fontSize: 26, lineHeight: 30, fontWeight: '700', marginTop: -2 },
   titleWrap: { flex: 1, gap: Spacing.half },
   action: { marginLeft: 'auto' },
   subtitle: { paddingLeft: HitSize.small + Spacing.three },

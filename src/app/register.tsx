@@ -1,16 +1,17 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+
+import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
 import { Card } from '@/components/ui/card';
 import { Screen } from '@/components/ui/screen';
-import { HitSize, Radius, Spacing } from '@/constants/theme';
+import { TextField } from '@/components/ui/text-field';
+import { Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useTheme } from '@/hooks/use-theme';
-
-type Field = 'name' | 'email' | 'phone' | 'password' | 'confirmPassword';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -22,19 +23,7 @@ export default function RegisterScreen() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [focused, setFocused] = useState<Field | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const inputStyle = (field: Field) => [
-    styles.input,
-    {
-      backgroundColor: theme.inputBackground,
-      color: theme.text,
-      borderColor: focused === field ? theme.primary : theme.border,
-      borderWidth: focused === field ? 2 : 1,
-    },
-  ];
 
   const handleRegister = async () => {
     if (!name.trim() || !email.trim() || !password) {
@@ -70,7 +59,7 @@ export default function RegisterScreen() {
     <Screen keyboardAvoiding gap={Spacing.four} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View style={[styles.logo, { backgroundColor: theme.primarySoft }]}>
-          <ThemedText style={styles.logoGlyph}>💙</ThemedText>
+          <Ionicons name="heart" size={32} color={theme.primary} />
         </View>
         <ThemedText type="display" style={styles.appName}>
           สร้างบัญชีใหม่
@@ -81,121 +70,62 @@ export default function RegisterScreen() {
       </View>
 
       <Card gap={Spacing.three} padding={Spacing.four}>
-        <View style={styles.field}>
-          <ThemedText type="smallBold">ชื่อ-นามสกุล</ThemedText>
-          <TextInput
-            style={inputStyle('name')}
-            value={name}
-            onChangeText={(value) => {
-              setName(value);
-              if (error) setError(null);
-            }}
-            onFocus={() => setFocused('name')}
-            onBlur={() => setFocused(null)}
-            placeholder="เช่น คุณสมชาย ใจดี"
-            placeholderTextColor={theme.placeholder}
-            editable={!isLoading}
-            accessibilityLabel="ชื่อ-นามสกุล"
-            returnKeyType="next"
-          />
-        </View>
-
-        <View style={styles.field}>
-          <ThemedText type="smallBold">อีเมล</ThemedText>
-          <TextInput
-            style={inputStyle('email')}
-            value={email}
-            onChangeText={(value) => {
-              setEmail(value);
-              if (error) setError(null);
-            }}
-            onFocus={() => setFocused('email')}
-            onBlur={() => setFocused(null)}
-            placeholder="you@example.com"
-            placeholderTextColor={theme.placeholder}
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            editable={!isLoading}
-            accessibilityLabel="อีเมล"
-            returnKeyType="next"
-          />
-        </View>
-
-        <View style={styles.field}>
-          <ThemedText type="smallBold">เบอร์โทร (ไม่บังคับ)</ThemedText>
-          <TextInput
-            style={inputStyle('phone')}
-            value={phone}
-            onChangeText={setPhone}
-            onFocus={() => setFocused('phone')}
-            onBlur={() => setFocused(null)}
-            placeholder="08X-XXX-XXXX"
-            placeholderTextColor={theme.placeholder}
-            keyboardType="phone-pad"
-            editable={!isLoading}
-            accessibilityLabel="เบอร์โทร"
-            returnKeyType="next"
-          />
-        </View>
-
-        <View style={styles.field}>
-          <ThemedText type="smallBold">รหัสผ่าน</ThemedText>
-          <View style={styles.passwordWrap}>
-            <TextInput
-              style={[...inputStyle('password'), styles.passwordInput]}
-              value={password}
-              onChangeText={(value) => {
-                setPassword(value);
-                if (error) setError(null);
-              }}
-              onFocus={() => setFocused('password')}
-              onBlur={() => setFocused(null)}
-              placeholder="อย่างน้อย 4 ตัวอักษร"
-              placeholderTextColor={theme.placeholder}
-              secureTextEntry={!showPassword}
-              editable={!isLoading}
-              accessibilityLabel="รหัสผ่าน"
-              returnKeyType="next"
-            />
-            <Pressable
-              onPress={() => setShowPassword((current) => !current)}
-              accessibilityRole="button"
-              accessibilityLabel={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
-              hitSlop={Spacing.two}
-              style={({ pressed }) => [styles.toggle, pressed && styles.pressed]}>
-              <ThemedText type="caption" themeColor="primary">
-                {showPassword ? 'ซ่อน' : 'แสดง'}
-              </ThemedText>
-            </Pressable>
-          </View>
-        </View>
-
-        <View style={styles.field}>
-          <ThemedText type="smallBold">ยืนยันรหัสผ่าน</ThemedText>
-          <TextInput
-            style={inputStyle('confirmPassword')}
-            value={confirmPassword}
-            onChangeText={(value) => {
-              setConfirmPassword(value);
-              if (error) setError(null);
-            }}
-            onFocus={() => setFocused('confirmPassword')}
-            onBlur={() => setFocused(null)}
-            placeholder="กรอกรหัสผ่านอีกครั้ง"
-            placeholderTextColor={theme.placeholder}
-            secureTextEntry={!showPassword}
-            editable={!isLoading}
-            accessibilityLabel="ยืนยันรหัสผ่าน"
-            returnKeyType="go"
-            onSubmitEditing={handleRegister}
-          />
-        </View>
+        <TextField
+          label="ชื่อ-นามสกุล"
+          value={name}
+          onChangeText={(value) => {
+            setName(value);
+            if (error) setError(null);
+          }}
+          placeholder="เช่น คุณสมชาย ใจดี"
+          required
+        />
+        <TextField
+          label="อีเมล"
+          value={email}
+          onChangeText={(value) => {
+            setEmail(value);
+            if (error) setError(null);
+          }}
+          placeholder="you@example.com"
+          keyboardType="email-address"
+          required
+        />
+        <TextField
+          label="เบอร์โทร (ไม่บังคับ)"
+          value={phone}
+          onChangeText={setPhone}
+          placeholder="08X-XXX-XXXX"
+          keyboardType="phone-pad"
+        />
+        <TextField
+          label="รหัสผ่าน"
+          value={password}
+          onChangeText={(value) => {
+            setPassword(value);
+            if (error) setError(null);
+          }}
+          placeholder="อย่างน้อย 4 ตัวอักษร"
+          secureTextEntry
+          required
+        />
+        <TextField
+          label="ยืนยันรหัสผ่าน"
+          value={confirmPassword}
+          onChangeText={(value) => {
+            setConfirmPassword(value);
+            if (error) setError(null);
+          }}
+          placeholder="กรอกรหัสผ่านอีกครั้ง"
+          secureTextEntry
+          required
+        />
 
         {error ? (
           <View style={[styles.errorBox, { backgroundColor: theme.dangerSoft }]}>
-            <ThemedText type="small" style={{ color: theme.dangerText }}>
-              ⚠️ {error}
+            <Ionicons name="alert-circle-outline" size={16} color={theme.dangerText} />
+            <ThemedText type="small" style={{ color: theme.dangerText, flex: 1 }}>
+              {error}
             </ThemedText>
           </View>
         ) : null}
@@ -231,20 +161,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  logoGlyph: { fontSize: 34, lineHeight: 42 },
   appName: { textAlign: 'center' },
   tagline: { textAlign: 'center', maxWidth: 300 },
-  field: { gap: Spacing.two },
-  input: {
-    minHeight: HitSize.large,
-    borderRadius: Radius.md,
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.sm,
     paddingHorizontal: Spacing.three,
-    fontSize: 16,
+    paddingVertical: Spacing.two,
   },
-  passwordWrap: { justifyContent: 'center' },
-  passwordInput: { paddingRight: 64 },
-  toggle: { position: 'absolute', right: Spacing.three, paddingVertical: Spacing.two },
-  errorBox: { borderRadius: Radius.sm, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
   loginLink: { alignItems: 'center', paddingVertical: Spacing.two },
   pressed: { opacity: 0.7 },
 });

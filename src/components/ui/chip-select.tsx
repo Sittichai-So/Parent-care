@@ -1,5 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { ThemedText } from '@/components/themed-text';
 import { HitSize, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -48,12 +50,14 @@ export function ChipSelect({ options, selected, onToggle, size = 'default' }: Ch
               },
               pressed && styles.pressed,
             ]}>
-            <ThemedText
-              type={large ? 'default' : 'small'}
-              style={{ color: active ? theme.onPrimary : theme.text, fontWeight: '700' }}>
-              {large && active ? '✓ ' : ''}
-              {option.label}
-            </ThemedText>
+            <View style={styles.labelRow}>
+              {large && active ? <Ionicons name="checkmark" size={16} color={theme.onPrimary} /> : null}
+              <ThemedText
+                type={large ? 'default' : 'small'}
+                style={{ color: active ? theme.onPrimary : theme.text, fontWeight: '700' }}>
+                {option.label}
+              </ThemedText>
+            </View>
           </Pressable>
         );
       })}
@@ -80,5 +84,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: Spacing.three,
   },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one, justifyContent: 'center' },
   pressed: { opacity: 0.85 },
 });

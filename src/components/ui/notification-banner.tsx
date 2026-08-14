@@ -1,3 +1,7 @@
+import { View } from 'react-native';
+
+import { Ionicons } from '@expo/vector-icons';
+
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
 import { Card } from '@/components/ui/card';
@@ -17,9 +21,12 @@ export function NotificationBanner() {
 
   return (
     <Card tone="warning" elevation="flat" gap={Spacing.two}>
-      <ThemedText type="smallBold" style={{ color: theme.warningText }}>
-        🔔 ยังไม่ได้เปิดการแจ้งเตือน
-      </ThemedText>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two }}>
+        <Ionicons name="notifications-off-outline" size={18} color={theme.warningText} />
+        <ThemedText type="smallBold" style={{ color: theme.warningText }}>
+          ยังไม่ได้เปิดการแจ้งเตือน
+        </ThemedText>
+      </View>
       <ThemedText type="small" style={{ color: theme.warningText }}>
         เปิดการแจ้งเตือนเพื่อไม่พลาดเวลาทานยาและนัดหมาย
       </ThemedText>

@@ -1,4 +1,7 @@
+import type { ComponentProps } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+
+import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { Elevation, HitSize, Radius, Spacing } from '@/constants/theme';
@@ -6,14 +9,15 @@ import { useTheme } from '@/hooks/use-theme';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'success' | 'ghost';
 export type ButtonSize = 'medium' | 'large' | 'xlarge';
+export type IconName = ComponentProps<typeof Ionicons>['name'];
 
 type AppButtonProps = {
   label: string;
   onPress?: () => void;
   variant?: ButtonVariant;
   size?: ButtonSize;
-  /** Leading emoji/glyph. Marked as decorative for screen readers. */
-  icon?: string;
+  /** Leading icon. Marked as decorative for screen readers. */
+  icon?: IconName;
   disabled?: boolean;
   loading?: boolean;
   /** Supporting line under the label — helps elder-facing actions read clearly. */
@@ -40,8 +44,8 @@ export function AppButton({
   const palette: Record<ButtonVariant, { background: string; text: string; border: string }> = {
     primary: { background: theme.primary, text: theme.onPrimary, border: theme.primary },
     secondary: { background: theme.backgroundElement, text: theme.text, border: theme.borderStrong },
-    danger: { background: theme.danger, text: '#FFFFFF', border: theme.danger },
-    success: { background: theme.success, text: '#FFFFFF', border: theme.success },
+    danger: { background: theme.danger, text: theme.onPrimary, border: theme.danger },
+    success: { background: theme.success, text: theme.onPrimary, border: theme.success },
     ghost: { background: 'transparent', text: theme.primary, border: 'transparent' },
   };
 
@@ -81,12 +85,13 @@ export function AppButton({
         <View style={styles.content}>
           <View style={styles.labelRow}>
             {icon ? (
-              <ThemedText
+              <Ionicons
+                name={icon}
+                size={size === 'xlarge' ? 22 : 18}
+                color={text}
                 accessibilityElementsHidden
                 importantForAccessibility="no"
-                style={[styles.icon, size === 'xlarge' && styles.iconLarge]}>
-                {icon}
-              </ThemedText>
+              />
             ) : null}
             <ThemedText
               numberOfLines={2}
@@ -107,7 +112,7 @@ export function AppButton({
 
 const styles = StyleSheet.create({
   button: {
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -115,8 +120,6 @@ const styles = StyleSheet.create({
   },
   content: { alignItems: 'center', gap: Spacing.half },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  icon: { fontSize: 18, lineHeight: 24 },
-  iconLarge: { fontSize: 22, lineHeight: 28 },
   label: { fontSize: 16, lineHeight: 22, fontWeight: '700', textAlign: 'center' },
   labelLarge: { fontSize: 18, lineHeight: 26 },
   hint: { fontSize: 13, lineHeight: 18, fontWeight: '500', opacity: 0.85, textAlign: 'center' },

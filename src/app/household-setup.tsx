@@ -2,12 +2,15 @@ import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
 import { Card } from '@/components/ui/card';
 import { ChipSelect } from '@/components/ui/chip-select';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { SegmentedToggle } from '@/components/ui/segmented-toggle';
 import { TextField } from '@/components/ui/text-field';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
@@ -129,26 +132,14 @@ export default function HouseholdSetupScreen() {
         showBack={canGoBack}
       />
 
-      <View style={[styles.toggle, { backgroundColor: theme.surfaceSunken, borderColor: theme.border }]}>
-        {modeOptions.map((option) => (
-          <Pressable
-            key={option.value}
-            onPress={() => {
-              setMode(option.value);
-              setError(null);
-            }}
-            accessibilityRole="button"
-            accessibilityState={{ selected: mode === option.value }}
-            style={[styles.toggleOption, mode === option.value && { backgroundColor: theme.primary }]}>
-            <ThemedText
-              type="smallBold"
-              numberOfLines={1}
-              style={{ color: mode === option.value ? theme.onPrimary : theme.text }}>
-              {option.label}
-            </ThemedText>
-          </Pressable>
-        ))}
-      </View>
+      <SegmentedToggle
+        options={modeOptions}
+        value={mode}
+        onChange={(value) => {
+          setMode(value);
+          setError(null);
+        }}
+      />
 
       {mode === 'create' ? (
         <Card gap={Spacing.three}>
@@ -226,9 +217,10 @@ export default function HouseholdSetupScreen() {
       ) : null}
 
       {error ? (
-        <View style={[styles.errorBox, { backgroundColor: theme.dangerSoft }]}>
-          <ThemedText type="small" style={{ color: theme.dangerText }}>
-            ⚠️ {error}
+        <View style={[styles.errorBox, { backgroundColor: theme.dangerSoft, flexDirection: 'row', alignItems: 'center', gap: Spacing.two }]}>
+          <Ionicons name="alert-circle-outline" size={16} color={theme.dangerText} />
+          <ThemedText type="small" style={{ color: theme.dangerText, flex: 1 }}>
+            {error}
           </ThemedText>
         </View>
       ) : null}
@@ -253,19 +245,6 @@ export default function HouseholdSetupScreen() {
 }
 
 const styles = StyleSheet.create({
-  toggle: {
-    flexDirection: 'row',
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    padding: 4,
-    gap: 4,
-  },
-  toggleOption: {
-    flex: 1,
-    borderRadius: Radius.sm,
-    paddingVertical: Spacing.two,
-    alignItems: 'center',
-  },
   field: { gap: Spacing.two },
   errorBox: { borderRadius: Radius.sm, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
   logoutLink: { alignItems: 'center', paddingVertical: Spacing.two },

@@ -1,11 +1,14 @@
+import type { ComponentProps } from 'react';
 import { StyleSheet, View } from 'react-native';
+
+import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type InfoRowProps = {
-  icon: string;
+  icon: ComponentProps<typeof Ionicons>['name'];
   label: string;
   value: string;
 };
@@ -17,7 +20,7 @@ export function InfoRow({ icon, label, value }: InfoRowProps) {
   return (
     <View accessible accessibilityLabel={`${label}: ${value}`} style={styles.row}>
       <View style={[styles.iconWrap, { backgroundColor: theme.surfaceSunken }]}>
-        <ThemedText style={styles.icon}>{icon}</ThemedText>
+        <Ionicons name={icon} size={18} color={theme.textSecondary} />
       </View>
       <View style={styles.textWrap}>
         <ThemedText type="caption" themeColor="textMuted">
@@ -38,6 +41,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  icon: { fontSize: 18, lineHeight: 24 },
   textWrap: { flex: 1, gap: 1 },
 });

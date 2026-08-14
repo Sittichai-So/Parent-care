@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
 import { Card } from '@/components/ui/card';
@@ -47,7 +49,7 @@ export default function MedicationsScreen() {
       footer={
         <AppButton
           label="เพิ่มรายการยา"
-          icon="＋"
+          icon="add-outline"
           onPress={() =>
             router.push({ pathname: '/medication-form', params: memberId ? { memberId } : { memberId: primaryElderId } })
           }
@@ -90,7 +92,7 @@ export default function MedicationsScreen() {
                   <Card gap={Spacing.two} style={!med.active && styles.inactive}>
                     <View style={styles.row}>
                       <View style={[styles.icon, { backgroundColor: theme.primarySoft }]}>
-                        <ThemedText style={styles.iconGlyph}>💊</ThemedText>
+                        <Ionicons name="medical-outline" size={20} color={theme.primaryText} />
                       </View>
                       <View style={styles.body}>
                         <ThemedText type="smallBold">{med.name}</ThemedText>
@@ -144,7 +146,6 @@ const styles = StyleSheet.create({
   groupTitle: { marginTop: Spacing.one },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   icon: { width: 44, height: 44, borderRadius: Radius.md, justifyContent: 'center', alignItems: 'center' },
-  iconGlyph: { fontSize: 20, lineHeight: 26 },
   body: { flex: 1, gap: Spacing.half },
   scheduleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.one },
   timeChip: { borderRadius: Radius.full, paddingHorizontal: Spacing.two, paddingVertical: Spacing.half },

@@ -4,20 +4,19 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
+import { AppointmentDateBlock } from '@/components/ui/appointment-date-block';
 import { Card } from '@/components/ui/card';
 import { NotificationBanner } from '@/components/ui/notification-banner';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SectionHeader } from '@/components/ui/section-header';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { Radius, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { useFamilyContext } from '@/context/family-context';
-import { useTheme } from '@/hooks/use-theme';
 import { daysFromToday, formatDateKey, relativeDayLabel } from '@/utils/date';
 
 export default function AppointmentsScreen() {
   const router = useRouter();
-  const theme = useTheme();
   const params = useLocalSearchParams<{ memberId?: string }>();
   const { appointments, familyMembers, primaryElderId } = useFamilyContext();
 
@@ -46,7 +45,7 @@ export default function AppointmentsScreen() {
       footer={
         <AppButton
           label="เพิ่มนัดหมาย"
-          icon="＋"
+          icon="add-outline"
           onPress={() =>
             router.push({ pathname: '/appointment-form', params: memberId ? { memberId } : { memberId: primaryElderId } })
           }
@@ -80,14 +79,7 @@ export default function AppointmentsScreen() {
                   accessibilityLabel={`${apt.title} ${formatDateKey(apt.date)}`}
                   style={({ pressed }) => pressed && styles.pressed}>
                   <Card style={styles.row} gap={Spacing.three}>
-                    <View style={[styles.dateBlock, { backgroundColor: theme.primarySoft }]}>
-                      <ThemedText type="caption" style={{ color: theme.primaryText }}>
-                        {formatDateKey(apt.date, { month: 'short' })}
-                      </ThemedText>
-                      <ThemedText style={[styles.dateNumber, { color: theme.primaryText }]}>
-                        {apt.date.slice(-2)}
-                      </ThemedText>
-                    </View>
+                    <AppointmentDateBlock date={apt.date} />
                     <View style={styles.body}>
                       <ThemedText type="smallBold" numberOfLines={1}>
                         {apt.title}
@@ -120,12 +112,7 @@ export default function AppointmentsScreen() {
                     accessibilityLabel={`${apt.title} ${formatDateKey(apt.date)}`}
                     style={({ pressed }) => pressed && styles.pressed}>
                     <Card elevation="flat" tone="sunken" style={styles.row} gap={Spacing.three}>
-                      <View style={[styles.dateBlock, { backgroundColor: theme.surfaceSunken }]}>
-                        <ThemedText type="caption" themeColor="textMuted">
-                          {formatDateKey(apt.date, { month: 'short' })}
-                        </ThemedText>
-                        <ThemedText style={styles.dateNumber}>{apt.date.slice(-2)}</ThemedText>
-                      </View>
+                      <AppointmentDateBlock date={apt.date} tone="muted" />
                       <View style={styles.body}>
                         <ThemedText type="smallBold" numberOfLines={1} themeColor="textSecondary">
                           {apt.title}
@@ -149,8 +136,6 @@ export default function AppointmentsScreen() {
 const styles = StyleSheet.create({
   list: { gap: Spacing.two },
   row: { flexDirection: 'row', alignItems: 'center' },
-  dateBlock: { width: 52, borderRadius: Radius.md, paddingVertical: Spacing.one, alignItems: 'center' },
-  dateNumber: { fontSize: 18, lineHeight: 22, fontWeight: '800' },
   body: { flex: 1, gap: 1 },
   pressed: { opacity: 0.85 },
 });

@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+
+import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
@@ -13,12 +15,14 @@ import { TextField } from '@/components/ui/text-field';
 import { MEDICATION_TIME_OPTIONS } from '@/constants/schedule';
 import { Spacing } from '@/constants/theme';
 import { useFamilyContext } from '@/context/family-context';
+import { useTheme } from '@/hooks/use-theme';
 import { canScheduleLocalNotifications } from '@/services/notifications';
 
 /** Add or edit a medication. Editing is detected by an `id` param; creating a
  *  new one targets `memberId` (defaults to the family's Elder). */
 export default function MedicationFormScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const params = useLocalSearchParams<{ id?: string; memberId?: string }>();
   const { medications, familyMembers, primaryElderId, addMedication, updateMedication, removeMedication } =
     useFamilyContext();
@@ -124,11 +128,16 @@ export default function MedicationFormScreen() {
       <Card gap={Spacing.two}>
         <ThemedText type="smallBold">เวลาทานยา *</ThemedText>
         <ChipSelect options={MEDICATION_TIME_OPTIONS} selected={schedule} onToggle={toggleTime} size="large" />
-        <ThemedText type="caption" themeColor="textMuted">
-          {canScheduleLocalNotifications
-            ? '🔔 ระบบจะแจ้งเตือนอัตโนมัติทุกวันตามเวลาที่เลือก'
-            : 'การแจ้งเตือนใช้ได้เฉพาะแอปมือถือ (iOS/Android)'}
-        </ThemedText>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.one }}>
+          {canScheduleLocalNotifications ? (
+            <Ionicons name="notifications-outline" size={14} color={theme.textMuted} />
+          ) : null}
+          <ThemedText type="caption" themeColor="textMuted">
+            {canScheduleLocalNotifications
+              ? 'ระบบจะแจ้งเตือนอัตโนมัติทุกวันตามเวลาที่เลือก'
+              : 'การแจ้งเตือนใช้ได้เฉพาะแอปมือถือ (iOS/Android)'}
+          </ThemedText>
+        </View>
       </Card>
 
       <Card gap={Spacing.three}>

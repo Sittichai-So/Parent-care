@@ -29,7 +29,9 @@ export function StatTile({ value, label, tone = 'neutral' }: StatTileProps) {
       accessible
       accessibilityLabel={`${label} ${value}`}
       style={[styles.tile, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-      <ThemedText style={[styles.value, { color: tones[tone] }]}>{value}</ThemedText>
+      <ThemedText type="display" style={{ color: tones[tone] }}>
+        {value}
+      </ThemedText>
       <ThemedText type="caption" themeColor="textSecondary" numberOfLines={2} style={styles.label}>
         {label}
       </ThemedText>
@@ -47,6 +49,5 @@ const styles = StyleSheet.create({
     gap: Spacing.half,
     alignItems: 'center',
   },
-  value: { fontSize: 24, lineHeight: 30, fontWeight: '800' },
   label: { textAlign: 'center' },
 });

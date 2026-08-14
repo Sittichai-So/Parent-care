@@ -1,6 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+
+import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
@@ -8,6 +10,17 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
 import { formatDateKey, toDateKey } from '@/utils/date';
+
+/** Small inline icon + text pair, sized to sit on one line with the reading's value. */
+function Reading({ icon, children }: { icon: 'pulse-outline' | 'water-outline' | 'scale-outline'; children: ReactNode }) {
+  const theme = useTheme();
+  return (
+    <View style={styles.reading}>
+      <Ionicons name={icon} size={14} color={theme.textSecondary} />
+      <ThemedText type="small">{children}</ThemedText>
+    </View>
+  );
+}
 
 type VitalsSummaryProps = {
   memberId: string;
@@ -60,10 +73,12 @@ export function VitalsSummary({ memberId, showAddButton = true }: VitalsSummaryP
             </ThemedText>
             <View style={styles.readings}>
               {log.systolic && log.diastolic ? (
-                <ThemedText type="small">🩺 {log.systolic}/{log.diastolic}</ThemedText>
+                <Reading icon="pulse-outline">
+                  {log.systolic}/{log.diastolic}
+                </Reading>
               ) : null}
-              {log.sugar ? <ThemedText type="small">🍬 {log.sugar} mg/dL</ThemedText> : null}
-              {log.weight ? <ThemedText type="small">⚖️ {log.weight} กก.</ThemedText> : null}
+              {log.sugar ? <Reading icon="water-outline">{log.sugar} mg/dL</Reading> : null}
+              {log.weight ? <Reading icon="scale-outline">{log.weight} กก.</Reading> : null}
               {log.note ? (
                 <ThemedText type="caption" themeColor="textMuted" numberOfLines={1}>
                   {log.note}
@@ -83,5 +98,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: Spacing.three, paddingTop: Spacing.two, borderTopWidth: StyleSheet.hairlineWidth },
   date: { width: 64 },
   readings: { flex: 1, gap: Spacing.half, flexDirection: 'row', flexWrap: 'wrap', columnGap: Spacing.three },
+  reading: { flexDirection: 'row', alignItems: 'center', gap: Spacing.half },
   pressed: { opacity: 0.7 },
 });

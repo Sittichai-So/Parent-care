@@ -2,8 +2,11 @@ import { useEffect, useMemo } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
+import type { IconName } from '@/components/ui/app-button';
 import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { Screen } from '@/components/ui/screen';
@@ -16,21 +19,21 @@ import { useAuth } from '@/context/auth-context';
 import { useFamilyContext, type FamilyEvent, type FamilyTask } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
 
-const timelineIcons: Record<FamilyEvent['type'], string> = {
-  'check-in': '✓',
-  medication: '💊',
-  task: '👥',
-  appointment: '🏥',
-  vitals: '📋',
-  emergency: '🆘',
+const timelineIcons: Record<FamilyEvent['type'], IconName> = {
+  'check-in': 'checkmark',
+  medication: 'medical-outline',
+  task: 'people-outline',
+  appointment: 'calendar-outline',
+  vitals: 'clipboard-outline',
+  emergency: 'alert-circle-outline',
 };
 
-const taskIcons: Record<FamilyTask['relatedType'], string> = {
-  checkin: '✓',
-  medication: '💊',
-  appointment: '🏥',
-  vitals: '📋',
-  custom: '•',
+const taskIcons: Record<FamilyTask['relatedType'], IconName> = {
+  checkin: 'checkmark',
+  medication: 'medical-outline',
+  appointment: 'calendar-outline',
+  vitals: 'clipboard-outline',
+  custom: 'ellipse',
 };
 
 function greetingForNow() {
@@ -160,9 +163,12 @@ export default function CaregiverDashboardScreen() {
 
       {pendingInvites.length > 0 ? (
         <Card tone="primary" accented elevation="flat" gap={Spacing.two}>
-          <ThemedText type="smallBold" style={{ color: theme.primaryText }}>
-            📨 มีคำขอเข้าร่วมกลุ่มรออยู่
-          </ThemedText>
+          <View style={styles.alertHead}>
+            <Ionicons name="mail-unread-outline" size={18} color={theme.primaryText} />
+            <ThemedText type="smallBold" style={{ color: theme.primaryText }}>
+              มีคำขอเข้าร่วมกลุ่มรออยู่
+            </ThemedText>
+          </View>
           {pendingInvites.map((invite) => (
             <View key={invite.membershipId} style={styles.inviteRow}>
               <View style={styles.inviteBody}>
@@ -219,14 +225,14 @@ export default function CaregiverDashboardScreen() {
       {attentionMembers.length > 0 ? (
         <Card tone="warning" accented elevation="flat" gap={Spacing.two}>
           <View style={styles.alertHead}>
-            <ThemedText style={styles.alertIcon}>⚠️</ThemedText>
+            <Ionicons name="alert-circle-outline" size={18} color={theme.warningText} />
             <ThemedText type="smallBold" style={{ color: theme.warningText }}>
               ต้องติดตามก่อน
             </ThemedText>
           </View>
           {attentionMembers.map((member) => (
             <ThemedText key={member.id} type="small" style={{ color: theme.warningText }}>
-              • {member.name} — {member.detail}
+              {member.name} — {member.detail}
             </ThemedText>
           ))}
         </Card>
@@ -273,7 +279,7 @@ export default function CaregiverDashboardScreen() {
                   </ThemedText>
                 </View>
 
-                <ThemedText style={[styles.chevron, { color: theme.textMuted }]}>›</ThemedText>
+                <Ionicons name="chevron-forward-outline" size={22} color={theme.textMuted} />
               </Card>
             </Pressable>
           );
@@ -312,15 +318,22 @@ export default function CaregiverDashboardScreen() {
                       backgroundColor: isDone ? theme.success : 'transparent',
                     },
                   ]}>
-                  <ThemedText style={styles.checkGlyph}>{isDone ? '✓' : ''}</ThemedText>
+                  {isDone ? <Ionicons name="checkmark" size={14} color={theme.onPrimary} /> : null}
                 </View>
 
                 <View style={styles.taskBody}>
-                  <ThemedText
-                    type="smallBold"
-                    style={isDone ? [styles.taskDone, { color: theme.textMuted }] : undefined}>
-                    {taskIcons[task.relatedType]} {task.title}
-                  </ThemedText>
+                  <View style={styles.taskTitleRow}>
+                    <Ionicons
+                      name={taskIcons[task.relatedType]}
+                      size={14}
+                      color={isDone ? theme.textMuted : theme.textSecondary}
+                    />
+                    <ThemedText
+                      type="smallBold"
+                      style={isDone ? [styles.taskDone, { color: theme.textMuted }] : undefined}>
+                      {task.title}
+                    </ThemedText>
+                  </View>
                   <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
                     {task.detail}
                   </ThemedText>
@@ -340,7 +353,7 @@ export default function CaregiverDashboardScreen() {
       <View style={styles.list}>
         <AppButton
           label="ตรวจสอบสถานะ"
-          icon="✓"
+          icon="checkmark-outline"
           onPress={() => {
             checkIn()
               .then(() => Alert.alert('บันทึกสำเร็จ', 'บันทึกการตรวจสอบสถานะเรียบร้อยแล้ว'))
@@ -351,8 +364,8 @@ export default function CaregiverDashboardScreen() {
           }}
         />
         <View style={styles.quickRow}>
-          <AppButton label="นัดหมาย" icon="📅" variant="secondary" style={styles.quickHalf} onPress={() => router.push('/appointments')} />
-          <AppButton label="รายการยา" icon="💊" variant="secondary" style={styles.quickHalf} onPress={() => router.push('/medications')} />
+          <AppButton label="นัดหมาย" icon="calendar-outline" variant="secondary" style={styles.quickHalf} onPress={() => router.push('/appointments')} />
+          <AppButton label="รายการยา" icon="medical-outline" variant="secondary" style={styles.quickHalf} onPress={() => router.push('/medications')} />
         </View>
       </View>
 
@@ -364,9 +377,7 @@ export default function CaregiverDashboardScreen() {
             <View key={item.id} style={styles.timelineRow}>
               <View style={styles.timelineRail}>
                 <View style={[styles.timelineDot, { backgroundColor: theme.primarySoft }]}>
-                  <ThemedText style={[styles.timelineIcon, { color: theme.primaryText }]}>
-                    {timelineIcons[item.type]}
-                  </ThemedText>
+                  <Ionicons name={timelineIcons[item.type]} size={14} color={theme.primaryText} />
                 </View>
                 {!isLast ? <View style={[styles.timelineLine, { backgroundColor: theme.border }]} /> : null}
               </View>
@@ -432,7 +443,6 @@ const styles = StyleSheet.create({
   statRow: { flexDirection: 'row', gap: Spacing.two },
 
   alertHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  alertIcon: { fontSize: 16, lineHeight: 22 },
 
   list: { gap: Spacing.two },
   quickRow: { flexDirection: 'row', gap: Spacing.two },
@@ -443,10 +453,10 @@ const styles = StyleSheet.create({
   memberHead: { gap: 1 },
   memberName: { fontSize: 16, lineHeight: 22 },
   memberBadges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.one },
-  chevron: { fontSize: 26, lineHeight: 30, fontWeight: '600' },
 
   taskCard: { flexDirection: 'row', alignItems: 'center' },
   taskBody: { flex: 1, gap: Spacing.half },
+  taskTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
   taskDone: { textDecorationLine: 'line-through' },
   checkbox: {
     width: HitSize.small - 12,
@@ -456,7 +466,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  checkGlyph: { color: '#FFFFFF', fontSize: 15, lineHeight: 20, fontWeight: '800' },
 
   timelineRow: { flexDirection: 'row', gap: Spacing.three },
   timelineRail: { alignItems: 'center', width: 32 },
@@ -467,7 +476,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  timelineIcon: { fontSize: 14, lineHeight: 20, fontWeight: '700' },
   timelineLine: { width: 2, flex: 1, marginVertical: Spacing.one },
   timelineBody: { flex: 1, gap: Spacing.half, paddingBottom: Spacing.three },
   timelineBodyLast: { paddingBottom: 0 },

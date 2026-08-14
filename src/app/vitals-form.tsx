@@ -72,7 +72,7 @@ export default function VitalsFormScreen() {
       keyboardAvoiding
       gap={Spacing.three}
       footer={
-        <AppButton label="บันทึกข้อมูลสุขภาพ" icon="✓" onPress={handleSave} loading={isSaving} disabled={isSaving} />
+        <AppButton label="บันทึกข้อมูลสุขภาพ" icon="checkmark-outline" onPress={handleSave} loading={isSaving} disabled={isSaving} />
       }>
       <ScreenHeader title="บันทึกสุขภาพ" eyebrow={member ? `สำหรับ ${member.name}` : undefined} subtitle="กรอกค่าที่วัดได้วันนี้ อย่างน้อยหนึ่งรายการ" />
 

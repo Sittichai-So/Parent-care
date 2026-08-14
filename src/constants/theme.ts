@@ -31,10 +31,10 @@ export const Colors = {
     borderStrong: '#CBD5E1',
 
     /* Brand */
-    primary: '#2563EB',
-    primaryPressed: '#1D4ED8',
+    primary: '#3D63E3',
+    primaryPressed: '#2C4CC4',
     primarySoft: '#E7EFFE',
-    primaryText: '#1E40AF',
+    primaryText: '#2C4CC4',
     onPrimary: '#FFFFFF',
 
     /* Status — `*Soft` is a background, `*Text` is legible on that background */

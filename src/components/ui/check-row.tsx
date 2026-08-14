@@ -1,5 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -31,7 +33,7 @@ export function CheckRow({ label, description, checked, onToggle }: CheckRowProp
             backgroundColor: checked ? theme.primary : 'transparent',
           },
         ]}>
-        <ThemedText style={styles.glyph}>{checked ? '✓' : ''}</ThemedText>
+        {checked ? <Ionicons name="checkmark" size={16} color={theme.onPrimary} /> : null}
       </View>
       <View style={styles.text}>
         <ThemedText type="smallBold">{label}</ThemedText>
@@ -55,7 +57,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  glyph: { color: '#FFFFFF', fontSize: 14, lineHeight: 18, fontWeight: '800' },
   text: { flex: 1, gap: 1 },
   pressed: { opacity: 0.7 },
 });

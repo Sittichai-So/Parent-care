@@ -45,14 +45,26 @@ export function Card({
         ? { ...Elevation.low, shadowColor: theme.shadow }
         : null;
 
+  // `background` and `backgroundElement` are close in value by design (a
+  // light, airy page), so on Android a `raised` card's native elevation
+  // shadow alone reads as almost nothing — the hairline border is what
+  // actually defines the card's edge there, the shadow just adds lift.
+  // `floating` is the exception: it's only ever used for the hero card,
+  // which has its own strongly-contrasting background colour and a heavy
+  // shadow, so it reads as a distinct surface without a border too.
+  // `accented` always wins — a colored border flagging something that
+  // needs attention.
+  const borderWidth = accented ? 2 : elevation === 'floating' ? 0 : StyleSheet.hairlineWidth * 2;
+
   return (
     <View
       style={[
         styles.card,
+        elevation === 'floating' && styles.cardFloating,
         {
           backgroundColor: tones[tone].background,
           borderColor: tones[tone].border,
-          borderWidth: accented ? 2 : StyleSheet.hairlineWidth * 2,
+          borderWidth,
           padding,
           gap,
         },
@@ -67,5 +79,8 @@ export function Card({
 const styles = StyleSheet.create({
   card: {
     borderRadius: Radius.lg,
+  },
+  cardFloating: {
+    borderRadius: Radius.xl,
   },
 });

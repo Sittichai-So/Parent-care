@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { Alert, Pressable, Share, StyleSheet, View } from 'react-native';
+import { Alert, Share, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+
+import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
@@ -8,6 +10,7 @@ import { Card } from '@/components/ui/card';
 import { ChipSelect } from '@/components/ui/chip-select';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { SegmentedToggle } from '@/components/ui/segmented-toggle';
 import { TextField } from '@/components/ui/text-field';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFamilyContext } from '@/context/family-context';
@@ -136,23 +139,7 @@ export default function AddMemberScreen() {
     <Screen keyboardAvoiding gap={Spacing.four}>
       <ScreenHeader title="เพิ่มสมาชิก" subtitle="เลือกวิธีที่เหมาะกับสมาชิกแต่ละคน" />
 
-      <View style={[styles.toggle, { backgroundColor: theme.surfaceSunken, borderColor: theme.border }]}>
-        {modeOptions.map((option) => (
-          <Pressable
-            key={option.value}
-            onPress={() => setMode(option.value)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: mode === option.value }}
-            style={[styles.toggleOption, mode === option.value && { backgroundColor: theme.primary }]}>
-            <ThemedText
-              type="caption"
-              style={{ color: mode === option.value ? theme.onPrimary : theme.text, fontWeight: '700' }}
-              numberOfLines={1}>
-              {option.label}
-            </ThemedText>
-          </Pressable>
-        ))}
-      </View>
+      <SegmentedToggle options={modeOptions} value={mode} onChange={setMode} />
 
       {mode === 'invite-code' ? (
         <Card gap={Spacing.three}>
@@ -162,7 +149,7 @@ export default function AddMemberScreen() {
           <View style={[styles.codeBox, { backgroundColor: theme.surfaceSunken, borderColor: theme.border }]}>
             <ThemedText type="display">{currentHousehold?.inviteCode ?? '—'}</ThemedText>
           </View>
-          <AppButton label="แชร์รหัสเชิญ" icon="📤" onPress={handleShareInviteCode} />
+          <AppButton label="แชร์รหัสเชิญ" icon="share-social-outline" onPress={handleShareInviteCode} />
         </Card>
       ) : null}
 
@@ -208,9 +195,10 @@ export default function AddMemberScreen() {
           />
 
           {searchError ? (
-            <View style={[styles.errorBox, { backgroundColor: theme.dangerSoft }]}>
-              <ThemedText type="small" style={{ color: theme.dangerText }}>
-                ⚠️ {searchError}
+            <View style={[styles.errorBox, { backgroundColor: theme.dangerSoft, flexDirection: 'row', alignItems: 'center', gap: Spacing.two }]}>
+              <Ionicons name="alert-circle-outline" size={16} color={theme.dangerText} />
+              <ThemedText type="small" style={{ color: theme.dangerText, flex: 1 }}>
+                {searchError}
               </ThemedText>
             </View>
           ) : null}
@@ -242,8 +230,6 @@ export default function AddMemberScreen() {
 }
 
 const styles = StyleSheet.create({
-  toggle: { flexDirection: 'row', borderRadius: Radius.md, borderWidth: 1, padding: 4, gap: 4 },
-  toggleOption: { flex: 1, borderRadius: Radius.sm, paddingVertical: Spacing.two, alignItems: 'center' },
   field: { gap: Spacing.two },
   codeBox: {
     borderRadius: Radius.md,

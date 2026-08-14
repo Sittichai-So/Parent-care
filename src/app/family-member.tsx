@@ -77,12 +77,12 @@ export default function FamilyMemberScreen() {
         <>
           <AppButton
             label="ส่งข้อความเตือน"
-            icon="💬"
+            icon="chatbubble-outline"
             onPress={() => Alert.alert('ส่งข้อความแล้ว', `ระบบส่งข้อความเตือนถึง ${member.name} เรียบร้อยแล้ว`)}
           />
           <AppButton
             label="โทรหา"
-            icon="📞"
+            icon="call-outline"
             variant="secondary"
             onPress={() => Alert.alert('กำลังโทร', `ระบบจำลองการโทรหา ${member.name}`)}
           />
@@ -120,7 +120,7 @@ export default function FamilyMemberScreen() {
           </ThemedText>
           <AppButton
             label="สร้างรหัสผูกบัญชี"
-            icon="🔗"
+            icon="link-outline"
             variant="secondary"
             onPress={handleGenerateClaimCode}
             loading={isGeneratingClaim}
@@ -130,11 +130,11 @@ export default function FamilyMemberScreen() {
       ) : null}
 
       <Card gap={Spacing.three}>
-        <InfoRow icon="📌" label="สถานะล่าสุด" value={member.detail} />
+        <InfoRow icon="information-circle-outline" label="สถานะล่าสุด" value={member.detail} />
         <View style={[styles.separator, { backgroundColor: theme.border }]} />
-        <InfoRow icon="🧑‍🤝‍🧑" label="ความสัมพันธ์" value={member.relation} />
+        <InfoRow icon="people-outline" label="ความสัมพันธ์" value={member.relation} />
         <View style={[styles.separator, { backgroundColor: theme.border }]} />
-        <InfoRow icon="🔑" label="สิทธิ์ในระบบ" value={member.role} />
+        <InfoRow icon="key-outline" label="สิทธิ์ในระบบ" value={member.role} />
       </Card>
 
       <SectionHeader

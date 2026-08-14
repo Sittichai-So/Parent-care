@@ -2,12 +2,16 @@ import { useEffect, useMemo } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
+import type { IconName } from '@/components/ui/app-button';
 import { Card } from '@/components/ui/card';
 import { NotificationBanner } from '@/components/ui/notification-banner';
 import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { VitalsSummary } from '@/components/ui/vitals-summary';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
@@ -18,7 +22,7 @@ import { daysFromToday, isToday } from '@/utils/date';
 type ElderAction = {
   label: string;
   detail: string;
-  icon: string;
+  icon: IconName;
   route: Href;
 };
 
@@ -104,9 +108,9 @@ export default function ElderHomeScreen() {
   const pendingCount = todaySchedule.filter((item) => !item.done).length;
 
   const elderActions: ElderAction[] = [
-    { label: 'ยาของฉัน', detail: 'ดูและยืนยันการทานยา', icon: '💊', route: { pathname: '/medications', params: { memberId: selfMemberId } } },
-    { label: 'นัดหมาย', detail: 'ดูวันตรวจและสถานที่', icon: '🏥', route: { pathname: '/appointments', params: { memberId: selfMemberId } } },
-    { label: 'บันทึกสุขภาพ', detail: 'บันทึกความดัน น้ำตาล หรือน้ำหนัก', icon: '📋', route: { pathname: '/vitals-form', params: { memberId: selfMemberId } } },
+    { label: 'ยาของฉัน', detail: 'ดูและยืนยันการทานยา', icon: 'medical-outline', route: { pathname: '/medications', params: { memberId: selfMemberId } } },
+    { label: 'นัดหมาย', detail: 'ดูวันตรวจและสถานที่', icon: 'calendar-outline', route: { pathname: '/appointments', params: { memberId: selfMemberId } } },
+    { label: 'บันทึกสุขภาพ', detail: 'บันทึกความดัน น้ำตาล หรือน้ำหนัก', icon: 'clipboard-outline', route: { pathname: '/vitals-form', params: { memberId: selfMemberId } } },
   ];
 
   const handleCheckIn = () => {
@@ -132,7 +136,7 @@ export default function ElderHomeScreen() {
       <NotificationBanner />
 
       <Card tone="success" accented elevation="raised" padding={Spacing.four} gap={Spacing.two}>
-        <ThemedText style={styles.statusEmoji}>🟢</ThemedText>
+        <Ionicons name="checkmark-circle" size={34} color={theme.success} />
         <ThemedText style={[styles.statusTitle, { color: theme.successText }]}>วันนี้ปกติดี</ThemedText>
         <ThemedText style={[styles.statusBody, { color: theme.successText }]}>
           {pendingCount > 0 ? `เหลืออีก ${pendingCount} รายการที่ต้องทำวันนี้` : 'ทำครบทุกอย่างวันนี้แล้ว เยี่ยมมาก!'}
@@ -146,7 +150,7 @@ export default function ElderHomeScreen() {
         style={({ pressed }) => pressed && styles.pressed}>
         <Card gap={Spacing.two} padding={Spacing.four} style={styles.checkinCard}>
           <View style={[styles.actionIconWrap, { backgroundColor: theme.primarySoft }]}>
-            <ThemedText style={styles.actionIcon}>👋</ThemedText>
+            <Ionicons name="hand-left-outline" size={26} color={theme.primaryText} />
           </View>
           <View style={styles.actionText}>
             <ThemedText style={styles.actionLabel}>ฉันสบายดี</ThemedText>
@@ -169,7 +173,7 @@ export default function ElderHomeScreen() {
             style={({ pressed }) => pressed && styles.pressed}>
             <Card gap={Spacing.three} padding={Spacing.four} style={styles.actionCard}>
               <View style={[styles.actionIconWrap, { backgroundColor: theme.primarySoft }]}>
-                <ThemedText style={styles.actionIcon}>{action.icon}</ThemedText>
+                <Ionicons name={action.icon} size={26} color={theme.primaryText} />
               </View>
               <View style={styles.actionText}>
                 <ThemedText style={styles.actionLabel}>{action.label}</ThemedText>
@@ -177,7 +181,7 @@ export default function ElderHomeScreen() {
                   {action.detail}
                 </ThemedText>
               </View>
-              <ThemedText style={[styles.chevron, { color: theme.textMuted }]}>›</ThemedText>
+              <Ionicons name="chevron-forward-outline" size={24} color={theme.textMuted} />
             </Card>
           </Pressable>
         ))}
@@ -218,9 +222,7 @@ export default function ElderHomeScreen() {
                     {item.detail}
                   </ThemedText>
                 </View>
-                <ThemedText style={[styles.scheduleMark, { color: item.done ? theme.success : theme.textMuted }]}>
-                  {item.done ? '✓' : '○'}
-                </ThemedText>
+                <StatusBadge label={item.done ? 'ทำแล้ว' : 'ยังไม่ทำ'} tone={item.done ? 'success' : 'neutral'} />
               </View>
             </Pressable>
           ))}
@@ -238,7 +240,7 @@ export default function ElderHomeScreen() {
         </ThemedText>
         <AppButton
           label="ขอความช่วยเหลือ"
-          icon="🆘"
+          icon="alert-circle-outline"
           variant="danger"
           size="xlarge"
           onPress={() => router.push('/emergency')}
@@ -252,7 +254,6 @@ export default function ElderHomeScreen() {
 const styles = StyleSheet.create({
   greeting: { gap: Spacing.half },
 
-  statusEmoji: { fontSize: 34, lineHeight: 42 },
   statusTitle: { fontSize: 24, lineHeight: 32, fontWeight: '800' },
   statusBody: { fontSize: 16, lineHeight: 24, fontWeight: '500' },
 
@@ -266,10 +267,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  actionIcon: { fontSize: 26, lineHeight: 34 },
   actionText: { flex: 1, gap: Spacing.half },
   actionLabel: { fontSize: 19, lineHeight: 26, fontWeight: '700' },
-  chevron: { fontSize: 28, lineHeight: 32, fontWeight: '600' },
 
   scheduleRow: {
     flexDirection: 'row',
@@ -280,7 +279,6 @@ const styles = StyleSheet.create({
   scheduleTime: { fontSize: 15, lineHeight: 22, fontWeight: '800', width: 52 },
   scheduleBody: { flex: 1, gap: Spacing.half },
   scheduleTitle: { fontSize: 17, lineHeight: 24, fontWeight: '700' },
-  scheduleMark: { fontSize: 22, lineHeight: 28, fontWeight: '800' },
 
   divider: { height: 1, marginTop: Spacing.two },
   helpTitle: { fontSize: 20, lineHeight: 28, fontWeight: '800' },

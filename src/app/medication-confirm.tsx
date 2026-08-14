@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
 import { Card } from '@/components/ui/card';
@@ -80,7 +82,7 @@ export default function MedicationConfirmScreen() {
         <>
           <AppButton
             label={takenToday ? 'ยืนยันแล้ววันนี้' : 'ทานแล้ว และยืนยัน'}
-            icon={takenToday ? '✓' : '💊'}
+            icon={takenToday ? 'checkmark-outline' : 'medical-outline'}
             size="xlarge"
             variant={takenToday ? 'success' : 'primary'}
             disabled={!photoCaptured || takenToday || isConfirming}
@@ -111,9 +113,13 @@ export default function MedicationConfirmScreen() {
                     borderColor: isDone ? theme.success : isActive ? theme.primary : theme.border,
                   },
                 ]}>
-                <ThemedText style={[styles.stepGlyph, { color: isDone || isActive ? '#FFFFFF' : theme.textMuted }]}>
-                  {isDone ? '✓' : String(index + 1)}
-                </ThemedText>
+                {isDone ? (
+                  <Ionicons name="checkmark" size={16} color={theme.onPrimary} />
+                ) : (
+                  <ThemedText style={[styles.stepGlyph, { color: isActive ? theme.onPrimary : theme.textMuted }]}>
+                    {String(index + 1)}
+                  </ThemedText>
+                )}
               </View>
               <ThemedText type="caption" themeColor={isDone || isActive ? 'text' : 'textMuted'} numberOfLines={1}>
                 {step.label}
@@ -129,7 +135,7 @@ export default function MedicationConfirmScreen() {
       <Card gap={Spacing.three} padding={Spacing.four}>
         <View style={styles.pillHead}>
           <View style={[styles.pillIcon, { backgroundColor: theme.primarySoft }]}>
-            <ThemedText style={styles.pillGlyph}>💊</ThemedText>
+            <Ionicons name="medical-outline" size={20} color={theme.primaryText} />
           </View>
           <View style={styles.pillText}>
             <ThemedText type="heading">{medication.name}</ThemedText>
@@ -141,9 +147,9 @@ export default function MedicationConfirmScreen() {
 
         <View style={[styles.separator, { backgroundColor: theme.border }]} />
 
-        <InfoRow icon="⏰" label="เวลาที่กำหนด" value={medication.schedule.join(', ') + ' น.'} />
-        {medication.reason ? <InfoRow icon="🩺" label="ใช้เพื่อ" value={medication.reason} /> : null}
-        {medication.notes ? <InfoRow icon="📝" label="หมายเหตุ" value={medication.notes} /> : null}
+        <InfoRow icon="time-outline" label="เวลาที่กำหนด" value={medication.schedule.join(', ') + ' น.'} />
+        {medication.reason ? <InfoRow icon="document-text-outline" label="ใช้เพื่อ" value={medication.reason} /> : null}
+        {medication.notes ? <InfoRow icon="document-outline" label="หมายเหตุ" value={medication.notes} /> : null}
       </Card>
 
       <Card tone={takenToday ? 'success' : photoCaptured ? 'primary' : 'sunken'} elevation="flat" gap={Spacing.two}>
@@ -163,7 +169,7 @@ export default function MedicationConfirmScreen() {
       {photoCaptured ? (
         <Card gap={Spacing.two} style={styles.preview}>
           <View style={[styles.previewFrame, { backgroundColor: theme.surfaceSunken, borderColor: theme.border }]}>
-            <ThemedText style={styles.previewEmoji}>🩺</ThemedText>
+            <Ionicons name="camera-outline" size={40} color={theme.textMuted} />
           </View>
           <ThemedText type="smallBold">ภาพยืนยันพร้อมส่ง</ThemedText>
           <ThemedText type="caption" themeColor="textMuted" style={styles.previewCaption}>
@@ -174,7 +180,7 @@ export default function MedicationConfirmScreen() {
       ) : (
         <AppButton
           label="ถ่ายรูปยืนยัน"
-          icon="📷"
+          icon="camera-outline"
           variant="secondary"
           size="xlarge"
           onPress={() => setPhotoCaptured(true)}
@@ -201,7 +207,6 @@ const styles = StyleSheet.create({
 
   pillHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   pillIcon: { width: 52, height: 52, borderRadius: Radius.lg, justifyContent: 'center', alignItems: 'center' },
-  pillGlyph: { fontSize: 24, lineHeight: 32 },
   pillText: { flex: 1, gap: Spacing.half },
   separator: { height: 1 },
 
@@ -215,6 +220,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  previewEmoji: { fontSize: 40, lineHeight: 48 },
   previewCaption: { textAlign: 'center' },
 });
