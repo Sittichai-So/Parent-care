@@ -151,7 +151,7 @@ export default function AppointmentFormScreen() {
 
       <Card gap={Spacing.two}>
         <ThemedText type="smallBold">เวลา *</ThemedText>
-        <ChipSelect options={APPOINTMENT_TIME_OPTIONS} selected={time} onToggle={(value) => setTime([value])} />
+        <ChipSelect options={APPOINTMENT_TIME_OPTIONS} selected={time} onToggle={(value) => setTime([value])} size="large" />
       </Card>
 
       {memberMedications.length > 0 ? (

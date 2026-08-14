@@ -44,7 +44,7 @@ export default function TabsLayout() {
 
       {showElderTab ? (
         <NativeTabs.Trigger name="explore">
-          <NativeTabs.Trigger.Label>ผู้สูงอายุ</NativeTabs.Trigger.Label>
+          <NativeTabs.Trigger.Label>ข้อมูลของฉัน</NativeTabs.Trigger.Label>
           <NativeTabs.Trigger.Icon
             src={require('@/assets/images/tabIcons/explore.png')}
             renderingMode="template"

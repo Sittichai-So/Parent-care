@@ -51,13 +51,12 @@ export default function ElderHomeScreen() {
     }
   }, [currentRole, router]);
 
-  // "Me" here means the *caller's own* membership when the caller is
-  // themself an Elder — households can have more than one Elder member, and
-  // `primaryElderId` (the first Elder found) would show a second elder their
-  // housemate's medications/vitals instead of their own. Non-elder roles
-  // (caregiver/owner/viewer) still fall back to `primaryElderId`, since for
-  // them this screen means "check in on the family's elder", not "myself".
-  const selfMemberId = currentRole === 'Elder' && currentMembershipId ? currentMembershipId : primaryElderId;
+  // "Me" always means the *caller's own* membership in this household —
+  // every member (Owner, Caregiver, Elder, Viewer) can track their own
+  // medications/appointments here, separately from the family members they
+  // manage from the "ผู้ดูแล" tab. Only fall back to `primaryElderId` if
+  // the caller somehow has no membership id yet (e.g. mid-load).
+  const selfMemberId = currentMembershipId ?? primaryElderId;
 
   const myMedications = useMemo(
     () => medications.filter((med) => med.memberId === selfMemberId && med.active),

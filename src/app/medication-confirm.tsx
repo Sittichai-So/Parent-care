@@ -23,16 +23,15 @@ export default function MedicationConfirmScreen() {
   const router = useRouter();
   const theme = useTheme();
   const params = useLocalSearchParams<{ id?: string }>();
-  const { medications, primaryElderId, currentMembershipId, currentRole, confirmMedicationTaken } =
-    useFamilyContext();
+  const { medications, primaryElderId, currentMembershipId, confirmMedicationTaken } = useFamilyContext();
   const [photoCaptured, setPhotoCaptured] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
-  // Same reasoning as (tabs)/explore.tsx's selfMemberId — an Elder opening
-  // this screen without an explicit medicine id (e.g. a stale deep link)
-  // should fall back to *their own* medicine, not the first Elder's in a
-  // multi-elder household.
-  const selfMemberId = currentRole === 'Elder' && currentMembershipId ? currentMembershipId : primaryElderId;
+  // Same reasoning as (tabs)/explore.tsx's selfMemberId — opening this
+  // screen without an explicit medicine id (e.g. a stale deep link) should
+  // fall back to the caller's *own* medicine, not the household's primary
+  // elder (who may be someone else entirely).
+  const selfMemberId = currentMembershipId ?? primaryElderId;
 
   const medication = useMemo(() => {
     if (params.id) return medications.find((med) => med.id === params.id);

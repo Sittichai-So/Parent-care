@@ -123,7 +123,7 @@ export default function MedicationFormScreen() {
 
       <Card gap={Spacing.two}>
         <ThemedText type="smallBold">เวลาทานยา *</ThemedText>
-        <ChipSelect options={MEDICATION_TIME_OPTIONS} selected={schedule} onToggle={toggleTime} />
+        <ChipSelect options={MEDICATION_TIME_OPTIONS} selected={schedule} onToggle={toggleTime} size="large" />
         <ThemedText type="caption" themeColor="textMuted">
           {canScheduleLocalNotifications
             ? '🔔 ระบบจะแจ้งเตือนอัตโนมัติทุกวันตามเวลาที่เลือก'
