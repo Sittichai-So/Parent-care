@@ -17,6 +17,10 @@ type TextFieldProps = {
   keyboardType?: KeyboardTypeOptions;
   /** Masks the value and adds a show/hide eye toggle — for passwords. */
   secureTextEntry?: boolean;
+  /** `soft` swaps the bordered white box for a borderless filled pill (sunken
+   *  background, larger radius) — used on the login screen's more marketing-led
+   *  layout. `default` is every ordinary data-entry form's boxed, bordered field. */
+  variant?: 'default' | 'soft';
 };
 
 /** Label + input pair shared by every form screen so spacing and focus styling stay consistent. */
@@ -29,10 +33,12 @@ export function TextField({
   multiline = false,
   keyboardType = 'default',
   secureTextEntry = false,
+  variant = 'default',
 }: TextFieldProps) {
   const theme = useTheme();
   const [focused, setFocused] = useState(false);
   const [revealed, setRevealed] = useState(false);
+  const soft = variant === 'soft';
 
   return (
     <View style={styles.field}>
@@ -54,11 +60,12 @@ export function TextField({
           accessibilityLabel={label}
           style={[
             styles.input,
+            soft && styles.inputSoft,
             {
-              backgroundColor: theme.inputBackground,
+              backgroundColor: soft ? theme.surfaceSunken : theme.inputBackground,
               color: theme.text,
-              borderColor: focused ? theme.primary : theme.border,
-              borderWidth: focused ? 2 : 1,
+              borderColor: focused ? theme.primary : soft ? 'transparent' : theme.border,
+              borderWidth: focused ? 2 : soft ? 2 : 1,
             },
             multiline && styles.multiline,
             secureTextEntry && styles.withToggle,
@@ -89,6 +96,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     fontSize: 16,
   },
+  inputSoft: { borderRadius: Radius.lg },
   multiline: { minHeight: 88, textAlignVertical: 'top', paddingTop: Spacing.two },
   withToggle: { paddingRight: Spacing.three + HitSize.small },
   toggle: {

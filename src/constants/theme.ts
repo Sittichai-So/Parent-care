@@ -30,17 +30,39 @@ export const Colors = {
     border: '#E4E9F2',
     borderStrong: '#CBD5E1',
 
-    /* Brand */
-    primary: '#3D63E3',
-    primaryPressed: '#2C4CC4',
-    primarySoft: '#E7EFFE',
-    primaryText: '#2C4CC4',
+    /* Brand — sampled from the actual Parent Care logo's blue→teal heart mark,
+     *  not the borrowed navy/amber "medical center" reference this used to
+     *  chase. `primary` is the logo's blue figure; `teal` is its green one. */
+    primary: '#2F6FEE',
+    primaryPressed: '#1D53C7',
+    primarySoft: '#E8F0FE',
+    primaryText: '#1D53C7',
     onPrimary: '#FFFFFF',
 
-    /* Status — `*Soft` is a background, `*Text` is legible on that background */
-    success: '#15803D',
-    successSoft: '#E6F6EC',
-    successText: '#14663A',
+    teal: '#1FBE8C',
+    tealPressed: '#159C71',
+    tealSoft: '#E3FBF3',
+    tealText: '#0F7A5C',
+    onTeal: '#FFFFFF',
+
+    /* The two-tone diagonal sweep from the logo's heart mark — used sparingly,
+     *  as a fill on primary CTAs and thin accent bars, via `experimental_backgroundImage`. */
+    brandGradient: 'linear-gradient(135deg, #2F6FEE 0%, #1FBE8C 100%)',
+
+    /* Notification/reminder accent — the lavender bell badge from the
+     *  reference background art has no equivalent among the status tones
+     *  below, so it gets its own token rather than borrowing `primary`. */
+    lavender: '#8B7CF6',
+    lavenderSoft: '#F1EEFE',
+    lavenderText: '#5B4BC4',
+
+    /* Status — `*Soft` is a background, `*Text` is legible on that background.
+     *  `success` is tuned to the brand teal (not a generic forest green) since
+     *  "normal/good" is the most common status shown and should read as
+     *  on-brand rather than a stock traffic-light green. */
+    success: '#1FBE8C',
+    successSoft: '#E3FBF3',
+    successText: '#0F7A5C',
     warning: '#B45309',
     warningSoft: '#FDF3E3',
     warningText: '#8A4B08',
@@ -48,11 +70,18 @@ export const Colors = {
     dangerSoft: '#FDECEC',
     dangerText: '#A31818',
 
-    /* Hero / header block */
+    /* Hero / header block — the logo wordmark's own navy, so brand text and
+     *  any dark surface share one colour rather than two unrelated darks. */
     hero: '#16233B',
     heroText: '#FFFFFF',
     heroTextMuted: '#BFCADB',
     heroSurface: 'rgba(255, 255, 255, 0.12)',
+
+    /* Onboarding backdrops and the amber "due soon" status badge. */
+    sky: '#BFD7F0',
+    skySoft: '#EAF2FB',
+    accentYellow: '#F5C451',
+    accentYellowText: '#7A4E06',
 
     /* Forms */
     inputBackground: '#FFFFFF',
@@ -85,10 +114,22 @@ export const Colors = {
     primaryText: '#A9C9FF',
     onPrimary: '#08172B',
 
-    /* Status */
-    success: '#4ADE80',
-    successSoft: '#10291D',
-    successText: '#86EFAC',
+    teal: '#3EE7BE',
+    tealPressed: '#2BC9A3',
+    tealSoft: '#123528',
+    tealText: '#8FF3D4',
+    onTeal: '#04241A',
+
+    brandGradient: 'linear-gradient(135deg, #6AA6FF 0%, #3EE7BE 100%)',
+
+    lavender: '#A99BFF',
+    lavenderSoft: '#241E42',
+    lavenderText: '#C9BFFF',
+
+    /* Status — tuned to the brand teal, mirroring the light theme. */
+    success: '#3EE7BE',
+    successSoft: '#123528',
+    successText: '#8FF3D4',
     warning: '#FBBF24',
     warningSoft: '#2C2110',
     warningText: '#FCD34D',
@@ -101,6 +142,13 @@ export const Colors = {
     heroText: '#F8FAFC',
     heroTextMuted: '#AFBDD1',
     heroSurface: 'rgba(255, 255, 255, 0.08)',
+
+    /* Onboarding backdrops and the amber "due soon" status badge — muted,
+     *  low-glare counterparts of the light tones so both read correctly. */
+    sky: '#243554',
+    skySoft: '#17233A',
+    accentYellow: '#FBBF24',
+    accentYellowText: '#3A2A05',
 
     /* Forms */
     inputBackground: '#131C2B',

@@ -115,6 +115,12 @@ function RootLayoutNav() {
         </Stack.Protected>
 
         <Stack.Protected guard={!isAuthenticated}>
+          {/* First declared screen in this group is expo-router's initial
+           *  route whenever the app lands here unauthenticated — "welcome"
+           *  itself decides (via AsyncStorage) whether to actually show the
+           *  splash or bounce straight to "login", so every subsequent visit
+           *  (e.g. after logout) skips it in a single frame. */}
+          <Stack.Screen name="welcome" options={{ animation: 'fade' }} />
           <Stack.Screen name="login" options={{ animation: 'fade' }} />
           <Stack.Screen name="register" />
         </Stack.Protected>

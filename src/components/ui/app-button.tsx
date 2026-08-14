@@ -16,8 +16,10 @@ type AppButtonProps = {
   onPress?: () => void;
   variant?: ButtonVariant;
   size?: ButtonSize;
-  /** Leading icon. Marked as decorative for screen readers. */
+  /** Icon shown alongside the label. Marked as decorative for screen readers. */
   icon?: IconName;
+  /** Which side of the label `icon` renders on — e.g. `trailing` for a "Continue →" affordance. */
+  iconPosition?: 'leading' | 'trailing';
   disabled?: boolean;
   loading?: boolean;
   /** Supporting line under the label — helps elder-facing actions read clearly. */
@@ -32,6 +34,7 @@ export function AppButton({
   variant = 'primary',
   size = 'large',
   icon,
+  iconPosition = 'leading',
   disabled = false,
   loading = false,
   hint,
@@ -74,6 +77,10 @@ export function AppButton({
           borderColor: border,
           paddingVertical: hint ? Spacing.two : 0,
         },
+        // The brand's signature blue→teal sweep, on the one button variant
+        // that's the primary call to action everywhere in the app — kept off
+        // `disabled` so a greyed-out button doesn't still read as vibrant.
+        variant === 'primary' && !isDisabled && { experimental_backgroundImage: theme.brandGradient },
         raised && !isDisabled && { ...Elevation.medium, shadowColor: background },
         pressed && !isDisabled && styles.pressed,
         isDisabled && styles.disabled,
@@ -84,7 +91,7 @@ export function AppButton({
       ) : (
         <View style={styles.content}>
           <View style={styles.labelRow}>
-            {icon ? (
+            {icon && iconPosition === 'leading' ? (
               <Ionicons
                 name={icon}
                 size={size === 'xlarge' ? 22 : 18}
@@ -98,6 +105,15 @@ export function AppButton({
               style={[styles.label, size === 'xlarge' && styles.labelLarge, { color: text }]}>
               {label}
             </ThemedText>
+            {icon && iconPosition === 'trailing' ? (
+              <Ionicons
+                name={icon}
+                size={size === 'xlarge' ? 22 : 18}
+                color={text}
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+              />
+            ) : null}
           </View>
           {hint ? (
             <ThemedText style={[styles.hint, { color: text }]} numberOfLines={2}>

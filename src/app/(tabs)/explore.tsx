@@ -13,7 +13,7 @@ import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { VitalsSummary } from '@/components/ui/vitals-summary';
-import { Radius, Spacing } from '@/constants/theme';
+import { HitSize, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
@@ -43,7 +43,7 @@ function getTodayLabel() {
 export default function ElderHomeScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { medications, appointments, primaryElderId, currentMembershipId, currentRole, checkIn } =
     useFamilyContext();
 
@@ -122,15 +122,46 @@ export default function ElderHomeScreen() {
       });
   };
 
+  // Mirrors the caregiver dashboard's confirm-then-logout flow — this
+  // screen previously had no way out of the account at all.
+  const confirmLogout = () => {
+    Alert.alert('ออกจากระบบ', 'ต้องการออกจากระบบใช่หรือไม่?', [
+      { text: 'ยกเลิก', style: 'cancel' },
+      {
+        text: 'ออกจากระบบ',
+        style: 'destructive',
+        onPress: () => {
+          logout();
+          router.replace('/login');
+        },
+      },
+    ]);
+  };
+
   return (
     <Screen gap={Spacing.four}>
-      <View style={styles.greeting}>
-        <ThemedText type="caption" themeColor="textMuted">
-          {getTodayLabel()}
-        </ThemedText>
-        <ThemedText type="display" accessibilityRole="header">
-          สวัสดีค่ะ {user?.name ?? 'คุณแม่'}
-        </ThemedText>
+      <View style={styles.greetingRow}>
+        <View style={styles.greeting}>
+          <ThemedText type="caption" themeColor="textMuted">
+            {getTodayLabel()}
+          </ThemedText>
+          <ThemedText type="display" accessibilityRole="header">
+            สวัสดีค่ะ {user?.name ?? 'คุณแม่'}
+          </ThemedText>
+        </View>
+
+        <Pressable
+          onPress={confirmLogout}
+          accessibilityRole="button"
+          accessibilityLabel="ออกจากระบบ"
+          hitSlop={Spacing.two}
+          style={({ pressed }) => [
+            styles.logout,
+            { backgroundColor: theme.surfaceSunken, borderColor: theme.border },
+            pressed && styles.pressed,
+          ]}>
+          <Ionicons name="log-out-outline" size={20} color={theme.textSecondary} />
+        </Pressable>
       </View>
 
       <NotificationBanner />
@@ -252,7 +283,16 @@ export default function ElderHomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  greeting: { gap: Spacing.half },
+  greetingRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: Spacing.two },
+  greeting: { flex: 1, gap: Spacing.half },
+  logout: {
+    width: HitSize.medium,
+    height: HitSize.medium,
+    borderRadius: Radius.full,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
   statusTitle: { fontSize: 24, lineHeight: 32, fontWeight: '800' },
   statusBody: { fontSize: 16, lineHeight: 24, fontWeight: '500' },

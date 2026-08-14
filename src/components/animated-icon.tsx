@@ -33,7 +33,11 @@ export function AnimatedSplashOverlay() {
     },
   });
 
-  const image = <Image style={styles.image} source={require('@/assets/images/expo-logo.png')} />;
+  // `background.png` is a complete, self-contained splash composition (logo,
+  // tagline, feature icons, hero photo) — it fills the overlay itself, so
+  // unlike the old small centered mark this needs no separate icon layered
+  // on top of a flat colour.
+  const image = <Image style={styles.backgroundImage} contentFit="cover" source={require('@/assets/images/background.png')} />;
 
   return animate ? (
     <Animated.View
@@ -104,7 +108,7 @@ export function AnimatedIcon() {
 
       <Animated.View entering={keyframe.duration(DURATION)} style={styles.background} />
       <Animated.View style={styles.imageContainer} entering={logoKeyframe.duration(DURATION)}>
-        <Image style={styles.image} source={require('@/assets/images/expo-logo.png')} />
+        <Image style={styles.image} source={require('@/assets/images/ParentCare.png')} />
       </Animated.View>
     </View>
   );
@@ -138,9 +142,15 @@ const styles = StyleSheet.create({
     height: 128,
     position: 'absolute',
   },
+  backgroundImage: {
+    ...StyleSheet.absoluteFill,
+  },
   splashOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#208AEF',
+    // Matches `background.png`'s own light backdrop — this only ever shows
+    // at the image's edges on an aspect ratio that doesn't exactly match the
+    // device screen, so it needs to blend in rather than flash a brand colour.
+    backgroundColor: '#EAF2FB',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,

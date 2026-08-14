@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -7,9 +7,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
 import type { IconName } from '@/components/ui/app-button';
+import { AppointmentSpotlightCard } from '@/components/ui/appointment-spotlight-card';
 import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
+import { MedicalHeader } from '@/components/ui/medical-header';
+import { MemberAvatarStrip } from '@/components/ui/member-avatar-strip';
+import { PromoCard } from '@/components/ui/promo-card';
 import { Screen } from '@/components/ui/screen';
+import { SearchPill } from '@/components/ui/search-pill';
 import { SectionHeader } from '@/components/ui/section-header';
 import { StatTile } from '@/components/ui/stat-tile';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -18,6 +23,7 @@ import { HitSize, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useFamilyContext, type FamilyEvent, type FamilyTask } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
+import { daysFromToday } from '@/utils/date';
 
 const timelineIcons: Record<FamilyEvent['type'], IconName> = {
   'check-in': 'checkmark',
@@ -51,6 +57,8 @@ export default function CaregiverDashboardScreen() {
     familyMembers,
     tasks,
     timeline,
+    appointments,
+    primaryElderId,
     currentHousehold,
     currentRole,
     pendingInvites,
@@ -60,6 +68,8 @@ export default function CaregiverDashboardScreen() {
     acceptInvite,
     declineInvite,
   } = useFamilyContext();
+
+  const [search, setSearch] = useState('');
 
   // This route ("/") is the (tabs) group's default screen regardless of
   // which NativeTabs.Trigger the tab layout renders — a pure-Elder role
@@ -82,6 +92,26 @@ export default function CaregiverDashboardScreen() {
   const normalCount = familyMembers.filter((member) => member.status === 'normal').length;
   const attentionMembers = sortedMembers.filter((member) => member.status !== 'normal');
   const openTasks = tasks.filter((task) => task.status !== 'done');
+
+  // Search only narrows the member list below — stat tiles and alert cards
+  // still reflect the true household counts regardless of what's typed.
+  const visibleMembers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return sortedMembers;
+    return sortedMembers.filter(
+      (member) => member.name.toLowerCase().includes(query) || member.relation.toLowerCase().includes(query)
+    );
+  }, [sortedMembers, search]);
+
+  const nextAppointment = useMemo(
+    () =>
+      [...appointments]
+        .filter((apt) => daysFromToday(apt.date) >= 0)
+        .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))[0],
+    [appointments]
+  );
+  const nextAppointmentMemberName =
+    familyMembers.find((member) => member.id === nextAppointment?.memberId)?.name ?? '';
 
   const handleAcceptInvite = (householdId: string, membershipId: string, householdName: string) => {
     acceptInvite(householdId, membershipId)
@@ -115,51 +145,52 @@ export default function CaregiverDashboardScreen() {
 
   return (
     <Screen>
-      {/* Hero — who you are, and the one number that matters today. */}
-      <Card
-        tone="surface"
-        elevation="floating"
-        padding={Spacing.four}
-        gap={Spacing.three}
-        style={{ backgroundColor: theme.hero, borderColor: theme.hero }}>
-        <View style={styles.heroTop}>
-          <View style={styles.heroGreeting}>
-            <ThemedText type="caption" style={{ color: theme.heroTextMuted }}>
-              {greetingForNow().toUpperCase()}
-            </ThemedText>
-            <ThemedText type="display" style={{ color: theme.heroText }} numberOfLines={1}>
-              {user?.name ?? 'คุณ'}
-            </ThemedText>
-          </View>
+      {/* Header — who you are, and the one number that matters today. */}
+      <MedicalHeader
+        title={user?.name ?? 'คุณ'}
+        subtitle={
+          attentionMembers.length > 0
+            ? `${greetingForNow()} · มี ${attentionMembers.length} คนที่ควรตรวจสอบ`
+            : `${greetingForNow()} · วันนี้ทุกคนในบ้านสถานะปกติดี`
+        }
+        notificationCount={attentionMembers.length + pendingInvites.length}
+        onNotificationPress={() =>
+          Alert.alert(
+            'การแจ้งเตือน',
+            [
+              attentionMembers.length > 0 ? `${attentionMembers.length} คนที่ควรตรวจสอบ` : null,
+              pendingInvites.length > 0 ? `${pendingInvites.length} คำขอเข้าร่วมกลุ่มรออยู่` : null,
+            ]
+              .filter(Boolean)
+              .join('\n') || 'ไม่มีการแจ้งเตือนใหม่'
+          )
+        }
+        onLogoutPress={confirmLogout}>
+        <SearchPill
+          value={search}
+          onChangeText={setSearch}
+          placeholder="ค้นหาสมาชิกในบ้าน..."
+          accessibilityLabel="ค้นหาสมาชิกในบ้าน"
+        />
+      </MedicalHeader>
 
-          <Pressable
-            onPress={confirmLogout}
-            accessibilityRole="button"
-            accessibilityLabel="ออกจากระบบ"
-            hitSlop={Spacing.two}
-            style={({ pressed }) => [
-              styles.logout,
-              { backgroundColor: theme.heroSurface },
-              pressed && styles.pressed,
-            ]}>
-            <ThemedText type="caption" style={{ color: theme.heroText }}>
-              ออกจากระบบ
-            </ThemedText>
-          </Pressable>
-        </View>
+      <PromoCard
+        title="ถึงเวลานัดหมายครั้งต่อไปหรือยัง? จองนัดหมายใหม่ให้สมาชิกในบ้านได้ที่นี่"
+        ctaLabel="จองนัดหมาย"
+        icon="calendar-outline"
+        onPress={() => router.push({ pathname: '/appointment-form', params: { memberId: primaryElderId } })}
+      />
 
-        <ThemedText type="small" style={{ color: theme.heroTextMuted }}>
-          {attentionMembers.length > 0
-            ? `วันนี้มี ${attentionMembers.length} คนที่ควรตรวจสอบ และ ${openTasks.length} งานที่ยังไม่เสร็จ`
-            : 'วันนี้ทุกคนในบ้านสถานะปกติดี ไม่มีเรื่องเร่งด่วน'}
-        </ThemedText>
-
-        <View style={[styles.heroFooter, { borderTopColor: theme.heroSurface }]}>
-          <ThemedText type="caption" style={{ color: theme.heroTextMuted }}>
-            Check-in ล่าสุด 08:32 น.
-          </ThemedText>
-        </View>
-      </Card>
+      {nextAppointment ? (
+        <>
+          <SectionHeader title="นัดหมายที่ใกล้ที่สุด" />
+          <AppointmentSpotlightCard
+            appointment={nextAppointment}
+            memberName={nextAppointmentMemberName}
+            onPress={() => router.push({ pathname: '/appointment-detail', params: { id: nextAppointment.id } })}
+          />
+        </>
+      ) : null}
 
       {pendingInvites.length > 0 ? (
         <Card tone="primary" accented elevation="flat" gap={Spacing.two}>
@@ -239,8 +270,22 @@ export default function CaregiverDashboardScreen() {
       ) : null}
 
       <SectionHeader title="สมาชิกในบ้าน" count={familyMembers.length} />
+      <MemberAvatarStrip
+        members={sortedMembers}
+        onSelect={(member) => {
+          setSelectedMemberId(member.id);
+          router.push('/family-member');
+        }}
+      />
       <View style={styles.list}>
-        {sortedMembers.map((member) => {
+        {visibleMembers.length === 0 ? (
+          <Card tone="sunken" elevation="flat">
+            <ThemedText type="small" themeColor="textSecondary">
+              ไม่พบสมาชิกที่ตรงกับ &quot;{search}&quot;
+            </ThemedText>
+          </Card>
+        ) : null}
+        {visibleMembers.map((member) => {
           const status = MemberStatusMeta[member.status];
           return (
             <Pressable
@@ -413,14 +458,6 @@ export default function CaregiverDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  heroTop: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.three },
-  heroGreeting: { flex: 1, gap: Spacing.half },
-  logout: {
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-  },
-  heroFooter: { borderTopWidth: 1, paddingTop: Spacing.two },
   inviteCard: { alignItems: 'flex-start' },
 
   inviteRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },

@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Image } from 'expo-image';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
-import { Card } from '@/components/ui/card';
-import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
-import { Radius, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -46,85 +46,108 @@ export default function LoginScreen() {
   };
 
   return (
-    <Screen keyboardAvoiding gap={Spacing.four} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <View style={[styles.logo, { backgroundColor: theme.primarySoft }]}>
-          <Ionicons name="heart" size={32} color={theme.primary} />
-        </View>
-        <ThemedText type="display" style={styles.appName}>
-          Parent Care
-        </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary" style={styles.tagline}>
-          ดูแลพ่อแม่ร่วมกันทั้งครอบครัว ในที่เดียว
-        </ThemedText>
-      </View>
-
-      <Card gap={Spacing.three} padding={Spacing.four}>
-        <TextField
-          label="อีเมล"
-          value={email}
-          onChangeText={(value) => {
-            setEmail(value);
-            if (error) setError(null);
-          }}
-          placeholder="you@example.com"
-          keyboardType="email-address"
-          required
-        />
-        <TextField
-          label="รหัสผ่าน"
-          value={password}
-          onChangeText={(value) => {
-            setPassword(value);
-            if (error) setError(null);
-          }}
-          placeholder="รหัสผ่าน"
-          secureTextEntry
-          required
-        />
-
-        {error ? (
-          <View style={[styles.errorBox, { backgroundColor: theme.dangerSoft }]}>
-            <Ionicons name="alert-circle-outline" size={16} color={theme.dangerText} />
-            <ThemedText type="small" style={{ color: theme.dangerText, flex: 1 }}>
-              {error}
-            </ThemedText>
+    // Same edge-to-edge hero shell as `welcome.tsx`, not the shared `Screen` —
+    // the hero here needs to run full-bleed to the screen edges, which
+    // `Screen`'s fixed horizontal padding can't do.
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          {/* Cropped to the top of `background.png` — the logo, wordmark and
+           *  feature icons — not its lower half (the family photo), which
+           *  would fight with the form for attention right below it. */}
+          <View style={styles.hero}>
+            <Image
+              source={require('@/assets/images/background.png')}
+              style={styles.heroImage}
+              contentFit="cover"
+              contentPosition="top"
+            />
           </View>
-        ) : null}
 
-        <AppButton
-          label="เข้าสู่ระบบ"
-          onPress={handleLogin}
-          loading={isLoading}
-          disabled={isLoading}
-          accessibilityHint="เข้าสู่ระบบด้วยอีเมลและรหัสผ่านที่กรอก"
-        />
-      </Card>
+          <View style={styles.body}>
+            <View style={styles.form}>
+              <TextField
+                label="อีเมล"
+                value={email}
+                onChangeText={(value) => {
+                  setEmail(value);
+                  if (error) setError(null);
+                }}
+                placeholder="you@example.com"
+                keyboardType="email-address"
+                variant="soft"
+                required
+              />
+              <TextField
+                label="รหัสผ่าน"
+                value={password}
+                onChangeText={(value) => {
+                  setPassword(value);
+                  if (error) setError(null);
+                }}
+                placeholder="รหัสผ่าน"
+                secureTextEntry
+                variant="soft"
+                required
+              />
 
-      <Pressable
-        onPress={() => router.replace('/register')}
-        accessibilityRole="button"
-        style={({ pressed }) => [styles.registerLink, pressed && styles.pressed]}>
-        <ThemedText type="small" themeColor="textSecondary">
-          ยังไม่มีบัญชี? <ThemedText type="smallBold" themeColor="primary">สมัครสมาชิก</ThemedText>
-        </ThemedText>
-      </Pressable>
-    </Screen>
+              {error ? (
+                <View style={[styles.errorBox, { backgroundColor: theme.dangerSoft }]}>
+                  <Ionicons name="alert-circle-outline" size={16} color={theme.dangerText} />
+                  <ThemedText type="small" style={{ color: theme.dangerText, flex: 1 }}>
+                    {error}
+                  </ThemedText>
+                </View>
+              ) : null}
+
+              <AppButton
+                label="เข้าสู่ระบบ"
+                icon="arrow-forward"
+                iconPosition="trailing"
+                size="xlarge"
+                onPress={handleLogin}
+                loading={isLoading}
+                disabled={isLoading}
+                accessibilityHint="เข้าสู่ระบบด้วยอีเมลและรหัสผ่านที่กรอก"
+              />
+            </View>
+
+            <Pressable
+              onPress={() => router.replace('/register')}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.registerLink, pressed && styles.pressed]}>
+              <ThemedText type="small" themeColor="textSecondary">
+                ยังไม่มีบัญชี? <ThemedText type="smallBold" themeColor="primary">สมัครสมาชิก</ThemedText>
+              </ThemedText>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { justifyContent: 'center', paddingBottom: Spacing.five },
-  header: { alignItems: 'center', gap: Spacing.two, paddingTop: Spacing.four },
-  logo: {
-    width: 72,
-    height: 72,
-    borderRadius: Radius.xl,
-    justifyContent: 'center',
-    alignItems: 'center',
+  safeArea: { flex: 1 },
+  flex: { flex: 1 },
+  scrollContent: { flexGrow: 1 },
+  hero: {
+    height: 280,
+    borderBottomLeftRadius: 48,
+    borderBottomRightRadius: 48,
+    overflow: 'hidden',
   },
-  appName: { textAlign: 'center' },
-  tagline: { textAlign: 'center', maxWidth: 300 },
+  heroImage: { width: '100%', height: '100%' },
+  body: {
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.five,
+    paddingBottom: Spacing.five,
+    gap: Spacing.five,
+  },
+  form: { gap: Spacing.three },
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -133,6 +156,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },
-  registerLink: { alignItems: 'center', paddingVertical: Spacing.two },
+  registerLink: { alignItems: 'center', paddingVertical: Spacing.one },
   pressed: { opacity: 0.7 },
 });
