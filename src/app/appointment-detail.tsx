@@ -30,7 +30,7 @@ export default function AppointmentDetailScreen() {
   const router = useRouter();
   const theme = useTheme();
   const params = useLocalSearchParams<{ id?: string }>();
-  const { appointments, medications, familyMembers, updateAppointment } = useFamilyContext();
+  const { appointments, medications, familyMembers, canManage, updateAppointment } = useFamilyContext();
   const [checked, setChecked] = useState<string[]>(['card']);
   const [isTogglingReminder, setIsTogglingReminder] = useState(false);
 
@@ -71,31 +71,37 @@ export default function AppointmentDetailScreen() {
   return (
     <Screen
       gap={Spacing.three}
+      // Both actions below hit updateAppointment, which is Owner/Caregiver-only
+      // server-side (appointment.routes.js#requireHouseholdRole) — including
+      // the reminder toggle, since it goes through the same PUT on the whole
+      // appointment record. Hidden for Elder/Viewer rather than shown-and-failing.
       footer={
-        <>
-          <AppButton
-            label={appointment.reminderEnabled ? 'ปิดการเตือน' : 'เปิดการเตือน'}
-            icon={appointment.reminderEnabled ? 'notifications-off-outline' : 'notifications-outline'}
-            variant={appointment.reminderEnabled ? 'secondary' : 'primary'}
-            loading={isTogglingReminder}
-            disabled={isTogglingReminder}
-            onPress={() => {
-              setIsTogglingReminder(true);
-              updateAppointment(appointment.id, { reminderEnabled: !appointment.reminderEnabled })
-                .catch((err) => {
-                  const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
-                  Alert.alert('อัปเดตการเตือนไม่สำเร็จ', message);
-                })
-                .finally(() => setIsTogglingReminder(false));
-            }}
-          />
-          <AppButton
-            label="แก้ไขนัดหมาย"
-            variant="ghost"
-            size="medium"
-            onPress={() => router.push({ pathname: '/appointment-form', params: { id: appointment.id } })}
-          />
-        </>
+        canManage ? (
+          <>
+            <AppButton
+              label={appointment.reminderEnabled ? 'ปิดการเตือน' : 'เปิดการเตือน'}
+              icon={appointment.reminderEnabled ? 'notifications-off-outline' : 'notifications-outline'}
+              variant={appointment.reminderEnabled ? 'secondary' : 'primary'}
+              loading={isTogglingReminder}
+              disabled={isTogglingReminder}
+              onPress={() => {
+                setIsTogglingReminder(true);
+                updateAppointment(appointment.id, { reminderEnabled: !appointment.reminderEnabled })
+                  .catch((err) => {
+                    const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                    Alert.alert('อัปเดตการเตือนไม่สำเร็จ', message);
+                  })
+                  .finally(() => setIsTogglingReminder(false));
+              }}
+            />
+            <AppButton
+              label="แก้ไขนัดหมาย"
+              variant="ghost"
+              size="medium"
+              onPress={() => router.push({ pathname: '/appointment-form', params: { id: appointment.id } })}
+            />
+          </>
+        ) : undefined
       }>
       <ScreenHeader title="รายละเอียดนัดหมาย" eyebrow={member?.name} />
 

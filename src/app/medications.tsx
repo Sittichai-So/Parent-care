@@ -22,7 +22,7 @@ export default function MedicationsScreen() {
   const router = useRouter();
   const theme = useTheme();
   const params = useLocalSearchParams<{ memberId?: string }>();
-  const { medications, familyMembers, primaryElderId } = useFamilyContext();
+  const { medications, familyMembers, primaryElderId, canManage } = useFamilyContext();
 
   const memberId = params.memberId;
   const isOverview = !memberId;
@@ -46,14 +46,19 @@ export default function MedicationsScreen() {
   return (
     <Screen
       gap={Spacing.three}
+      // Only Owner/Caregiver may add a medicine (medicine.routes.js#requireHouseholdRole)
+      // — hidden rather than shown-disabled, since Elder/Viewer can still
+      // browse this whole list, just not the add action at the bottom.
       footer={
-        <AppButton
-          label="เพิ่มรายการยา"
-          icon="add-outline"
-          onPress={() =>
-            router.push({ pathname: '/medication-form', params: memberId ? { memberId } : { memberId: primaryElderId } })
-          }
-        />
+        canManage ? (
+          <AppButton
+            label="เพิ่มรายการยา"
+            icon="add-outline"
+            onPress={() =>
+              router.push({ pathname: '/medication-form', params: memberId ? { memberId } : { memberId: primaryElderId } })
+            }
+          />
+        ) : undefined
       }>
       <ScreenHeader
         title="รายการยา"
@@ -84,11 +89,15 @@ export default function MedicationsScreen() {
               return (
                 <Pressable
                   key={med.id}
-                  onPress={() => router.push({ pathname: '/medication-form', params: { id: med.id } })}
+                  // Same Owner/Caregiver-only restriction as the "+" button
+                  // above — tapping to edit is disabled rather than left to
+                  // fail at save inside medication-form.tsx.
+                  onPress={canManage ? () => router.push({ pathname: '/medication-form', params: { id: med.id } }) : undefined}
+                  disabled={!canManage}
                   accessibilityRole="button"
                   accessibilityLabel={`${med.name} ${med.dosage}`}
-                  accessibilityHint="แตะเพื่อแก้ไขรายการยา"
-                  style={({ pressed }) => pressed && styles.pressed}>
+                  accessibilityHint={canManage ? 'แตะเพื่อแก้ไขรายการยา' : undefined}
+                  style={({ pressed }) => pressed && canManage && styles.pressed}>
                   <Card gap={Spacing.two} style={!med.active && styles.inactive}>
                     <View style={styles.row}>
                       <View style={[styles.icon, { backgroundColor: theme.primarySoft }]}>

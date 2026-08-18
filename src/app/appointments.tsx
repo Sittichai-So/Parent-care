@@ -18,7 +18,7 @@ import { daysFromToday, formatDateKey, relativeDayLabel } from '@/utils/date';
 export default function AppointmentsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ memberId?: string }>();
-  const { appointments, familyMembers, primaryElderId } = useFamilyContext();
+  const { appointments, familyMembers, primaryElderId, canManage } = useFamilyContext();
 
   const memberId = params.memberId;
   const member = memberId ? familyMembers.find((m) => m.id === memberId) : undefined;
@@ -42,14 +42,17 @@ export default function AppointmentsScreen() {
   return (
     <Screen
       gap={Spacing.three}
+      // Only Owner/Caregiver may add an appointment (appointment.routes.js#requireHouseholdRole).
       footer={
-        <AppButton
-          label="เพิ่มนัดหมาย"
-          icon="add-outline"
-          onPress={() =>
-            router.push({ pathname: '/appointment-form', params: memberId ? { memberId } : { memberId: primaryElderId } })
-          }
-        />
+        canManage ? (
+          <AppButton
+            label="เพิ่มนัดหมาย"
+            icon="add-outline"
+            onPress={() =>
+              router.push({ pathname: '/appointment-form', params: memberId ? { memberId } : { memberId: primaryElderId } })
+            }
+          />
+        ) : undefined
       }>
       <ScreenHeader title="นัดหมาย" subtitle={member ? `ของ ${member.name}` : 'นัดหมายทั้งหมดของครอบครัว'} />
 

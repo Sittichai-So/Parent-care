@@ -151,10 +151,22 @@ type FamilyContextValue = {
   currentMembershipId: string | null;
   currentRole: MemberRole | null;
   /** Derived from `currentRole` — false only for Viewer. Every mutating
-   *  control (task/checklist toggles, medication actions, messages, notes,
-   *  reminders, pings, adding a household) gates on this, per the reference
-   *  design's Viewer read-only rule. */
+   *  control the backend allows *any* non-Viewer role to hit gates on this:
+   *  task/checklist toggles, confirming one's own medication dose, logging
+   *  one's own vitals, messages, handoff notes, check-in. Managing the
+   *  medicine/appointment *lists* themselves (create/edit/delete) is
+   *  narrower — see `canManage`. */
   canEdit: boolean;
+  /** Owner/Caregiver only. The backend restricts creating, editing, or
+   *  deleting medicines, appointments, and tasks to these two roles
+   *  (`requireHouseholdRole('owner','caregiver')` on those routes) — Elder
+   *  and Viewer both 403 with "Insufficient permissions for this household
+   *  role" if they try. Confirming a dose or logging a vital is a separate,
+   *  self-narrowed permission and stays under the broader `canEdit`. Screens
+   *  that create/edit/delete medicines or appointments must gate on this,
+   *  not `canEdit` — this is why `medication-form.tsx`/`appointment-form.tsx`
+   *  used to let Elder fill out the whole form before failing at save. */
+  canManage: boolean;
   createHousehold: (name: string, displayName: string, relation: string) => Promise<HouseholdSummary>;
   joinHousehold: (
     inviteCode: string,
@@ -417,6 +429,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const currentMembershipId = currentHousehold?.membershipId ?? null;
   const currentRole = currentHousehold?.role ?? null;
   const canEdit = currentRole !== 'Viewer';
+  const canManage = currentRole === 'Owner' || currentRole === 'Caregiver';
 
   const refreshAll = useCallback(async () => {
     if (!currentHouseholdId) return;
@@ -715,6 +728,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       currentMembershipId,
       currentRole,
       canEdit,
+      canManage,
       createHousehold,
       joinHousehold,
       setDefaultHousehold,
@@ -767,6 +781,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       currentMembershipId,
       currentRole,
       canEdit,
+      canManage,
       createHousehold,
       joinHousehold,
       setDefaultHousehold,

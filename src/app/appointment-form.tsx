@@ -25,6 +25,7 @@ export default function AppointmentFormScreen() {
     medications,
     familyMembers,
     primaryElderId,
+    canManage,
     addAppointment,
     updateAppointment,
     removeAppointment,
@@ -108,6 +109,25 @@ export default function AppointmentFormScreen() {
       },
     ]);
   };
+
+  // Same restriction as medication-form.tsx — creating/editing/deleting an
+  // appointment is Owner/Caregiver only server-side
+  // (appointment.routes.js#requireHouseholdRole), so this gates the whole
+  // form rather than letting Elder/Viewer fill it out and fail at save.
+  if (!canManage) {
+    return (
+      <Screen center gap={Spacing.three}>
+        <ScreenHeader title={editing ? 'แก้ไขนัดหมาย' : 'เพิ่มนัดหมาย'} />
+        <Card tone="sunken" elevation="flat" gap={Spacing.two}>
+          <ThemedText type="smallBold">ไม่มีสิทธิ์จัดการนัดหมาย</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            เฉพาะเจ้าของบ้านหรือผู้ดูแล (Caregiver) เท่านั้นที่เพิ่ม แก้ไข หรือลบนัดหมายได้
+          </ThemedText>
+        </Card>
+        <AppButton label="กลับ" onPress={() => router.back()} />
+      </Screen>
+    );
+  }
 
   return (
     <Screen

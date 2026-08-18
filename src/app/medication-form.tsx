@@ -24,7 +24,7 @@ export default function MedicationFormScreen() {
   const router = useRouter();
   const theme = useTheme();
   const params = useLocalSearchParams<{ id?: string; memberId?: string }>();
-  const { medications, familyMembers, primaryElderId, addMedication, updateMedication, removeMedication } =
+  const { medications, familyMembers, primaryElderId, canManage, addMedication, updateMedication, removeMedication } =
     useFamilyContext();
 
   const editing = useMemo(() => medications.find((med) => med.id === params.id), [medications, params.id]);
@@ -96,6 +96,28 @@ export default function MedicationFormScreen() {
       },
     ]);
   };
+
+  // Creating/editing/deleting a medicine is Owner/Caregiver only server-side
+  // (medicine.routes.js#requireHouseholdRole) — Elder and Viewer both 403
+  // with "Insufficient permissions for this household role" if they submit.
+  // Gated here (not just by hiding the "+ เพิ่มรายการยา" button in
+  // medications.tsx) so a direct navigation — e.g. tapping an existing
+  // medicine's card, or a deep link — can't reach a form that's guaranteed
+  // to fail on save.
+  if (!canManage) {
+    return (
+      <Screen center gap={Spacing.three}>
+        <ScreenHeader title={editing ? 'แก้ไขรายการยา' : 'เพิ่มรายการยา'} />
+        <Card tone="sunken" elevation="flat" gap={Spacing.two}>
+          <ThemedText type="smallBold">ไม่มีสิทธิ์จัดการรายการยา</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            เฉพาะเจ้าของบ้านหรือผู้ดูแล (Caregiver) เท่านั้นที่เพิ่ม แก้ไข หรือลบรายการยาได้
+          </ThemedText>
+        </Card>
+        <AppButton label="กลับ" onPress={() => router.back()} />
+      </Screen>
+    );
+  }
 
   return (
     <Screen
