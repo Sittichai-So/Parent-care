@@ -1,5 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
+import type { Icon as PhosphorIcon } from 'phosphor-react-native';
+
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -10,10 +12,13 @@ type StatTileProps = {
   value: string | number;
   label: string;
   tone?: BadgeTone;
+  /** Icon above the value — the reference design's dashboard KPI tiles.
+   *  Omit for the plain value+label tile used elsewhere (Family's stat row). */
+  phosphorIcon?: PhosphorIcon;
 };
 
 /** Compact metric used in the dashboard summary row. */
-export function StatTile({ value, label, tone = 'neutral' }: StatTileProps) {
+export function StatTile({ value, label, tone = 'neutral', phosphorIcon: Icon }: StatTileProps) {
   const theme = useTheme();
 
   const tones: Record<BadgeTone, string> = {
@@ -29,7 +34,8 @@ export function StatTile({ value, label, tone = 'neutral' }: StatTileProps) {
       accessible
       accessibilityLabel={`${label} ${value}`}
       style={[styles.tile, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-      <ThemedText type="display" style={{ color: tones[tone] }}>
+      {Icon ? <Icon weight="duotone" size={20} color={tones[tone]} /> : null}
+      <ThemedText type={Icon ? 'heading' : 'display'} style={{ color: tones[tone] }}>
         {value}
       </ThemedText>
       <ThemedText type="caption" themeColor="textSecondary" numberOfLines={2} style={styles.label}>

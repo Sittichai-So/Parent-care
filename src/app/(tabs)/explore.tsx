@@ -1,14 +1,23 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 
-import { Ionicons } from '@expo/vector-icons';
+import {
+  CalendarHeartIcon,
+  CaretRightIcon,
+  CheckCircleIcon,
+  ChatTeardropDotsIcon,
+  HandHeartIcon,
+  PillIcon,
+  SignOutIcon,
+  SirenIcon,
+  type Icon as PhosphorIcon,
+} from 'phosphor-react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { AppButton } from '@/components/ui/app-button';
-import type { IconName } from '@/components/ui/app-button';
 import { Card } from '@/components/ui/card';
 import { NotificationBanner } from '@/components/ui/notification-banner';
+import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
 import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -22,8 +31,11 @@ import { daysFromToday, isToday } from '@/utils/date';
 type ElderAction = {
   label: string;
   detail: string;
-  icon: IconName;
+  icon: PhosphorIcon;
   route: Href;
+  /** `danger` — the reference design's distinct red "ต้องการความช่วยเหลือ"
+   *  tile/border; every other action card is `primary`. */
+  tone?: 'primary' | 'danger';
 };
 
 /** One row in "ตารางวันนี้" — tappable, so it doubles as the shortcut into
@@ -44,7 +56,7 @@ export default function ElderHomeScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { user, logout } = useAuth();
-  const { medications, appointments, primaryElderId, currentMembershipId, currentRole, checkIn } =
+  const { medications, appointments, primaryElderId, currentMembershipId, currentRole, canEdit, checkIn } =
     useFamilyContext();
 
   // Mirrors the guard in (tabs)/index.tsx — a pure-Caregiver role has no
@@ -107,15 +119,34 @@ export default function ElderHomeScreen() {
 
   const pendingCount = todaySchedule.filter((item) => !item.done).length;
 
+  // Purely a this-session UI flag ("did I already tap the button"), not a
+  // persisted server field — the same scope the reference design's own mock
+  // check-in state has. `checkIn()` itself still calls the real API below.
+  const [checkedIn, setCheckedIn] = useState(false);
+
   const elderActions: ElderAction[] = [
-    { label: 'ยาของฉัน', detail: 'ดูและยืนยันการทานยา', icon: 'medical-outline', route: { pathname: '/medications', params: { memberId: selfMemberId } } },
-    { label: 'นัดหมาย', detail: 'ดูวันตรวจและสถานที่', icon: 'calendar-outline', route: { pathname: '/appointments', params: { memberId: selfMemberId } } },
-    { label: 'บันทึกสุขภาพ', detail: 'บันทึกความดัน น้ำตาล หรือน้ำหนัก', icon: 'clipboard-outline', route: { pathname: '/vitals-form', params: { memberId: selfMemberId } } },
+    {
+      label: 'ยาของฉัน',
+      detail: myMedications[0] ? `${myMedications[0].name} · ${myMedications[0].schedule[0] ?? ''}` : 'ดูและยืนยันการทานยา',
+      icon: PillIcon,
+      route: { pathname: '/medications', params: { memberId: selfMemberId } },
+    },
+    {
+      label: 'นัดหมายของฉัน',
+      detail: 'ดูวันตรวจและสถานที่',
+      icon: CalendarHeartIcon,
+      route: { pathname: '/appointments', params: { memberId: selfMemberId } },
+    },
+    { label: 'ข้อความครอบครัว', detail: 'คุยกับลูกและผู้ดูแล', icon: ChatTeardropDotsIcon, route: '/messages' },
+    { label: 'ต้องการความช่วยเหลือ', detail: 'ส่งคำขอไปยังครอบครัว', icon: SirenIcon, route: '/emergency', tone: 'danger' },
   ];
 
   const handleCheckIn = () => {
     checkIn()
-      .then(() => Alert.alert('ส่งแล้ว', 'บอกครอบครัวแล้วว่าคุณสบายดีวันนี้'))
+      .then(() => {
+        setCheckedIn(true);
+        Alert.alert('ส่งแล้ว', 'บอกครอบครัวแล้วว่าคุณสบายดีวันนี้');
+      })
       .catch((err) => {
         const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
         Alert.alert('ส่งไม่สำเร็จ', message);
@@ -140,16 +171,10 @@ export default function ElderHomeScreen() {
 
   return (
     <Screen gap={Spacing.four}>
-      <View style={styles.greetingRow}>
-        <View style={styles.greeting}>
-          <ThemedText type="caption" themeColor="textMuted">
-            {getTodayLabel()}
-          </ThemedText>
-          <ThemedText type="display" accessibilityRole="header">
-            สวัสดีค่ะ {user?.name ?? 'คุณแม่'}
-          </ThemedText>
-        </View>
-
+      <View style={styles.topRow}>
+        <ThemedText type="caption" themeColor="textMuted">
+          {getTodayLabel()}
+        </ThemedText>
         <Pressable
           onPress={confirmLogout}
           accessibilityRole="button"
@@ -160,62 +185,81 @@ export default function ElderHomeScreen() {
             { backgroundColor: theme.surfaceSunken, borderColor: theme.border },
             pressed && styles.pressed,
           ]}>
-          <Ionicons name="log-out-outline" size={20} color={theme.textSecondary} />
+          <SignOutIcon weight="bold" size={20} color={theme.textSecondary} />
         </Pressable>
       </View>
 
       <NotificationBanner />
+      <ReadOnlyBanner />
 
-      <Card tone="success" accented elevation="raised" padding={Spacing.four} gap={Spacing.two}>
-        <Ionicons name="checkmark-circle" size={34} color={theme.success} />
-        <ThemedText style={[styles.statusTitle, { color: theme.successText }]}>วันนี้ปกติดี</ThemedText>
-        <ThemedText style={[styles.statusBody, { color: theme.successText }]}>
-          {pendingCount > 0 ? `เหลืออีก ${pendingCount} รายการที่ต้องทำวันนี้` : 'ทำครบทุกอย่างวันนี้แล้ว เยี่ยมมาก!'}
+      {/* Hero — greeting, today's status and the single most important
+       *  action (check-in) folded into one card, per the reference design's
+       *  "Elder home" screen, instead of a separate status banner. */}
+      <Card elevation="floating" padding={Spacing.five} gap={Spacing.three} style={styles.heroCard}>
+        <ThemedText type="display" style={styles.heroGreeting} accessibilityRole="header">
+          สวัสดีค่ะ {user?.name ?? 'คุณแม่'}
         </ThemedText>
+        <ThemedText style={[styles.heroStatus, { color: pendingCount === 0 ? theme.successText : theme.textSecondary }]}>
+          {pendingCount === 0 ? 'ทำครบทุกอย่างวันนี้แล้ว เยี่ยมมาก!' : `เหลืออีก ${pendingCount} รายการที่ต้องทำวันนี้`}
+        </ThemedText>
+        <Pressable
+          onPress={handleCheckIn}
+          disabled={checkedIn || !canEdit}
+          accessibilityRole="button"
+          accessibilityLabel="ฉันสบายดี บอกครอบครัวว่าอยู่ดี"
+          style={({ pressed }) => [
+            styles.heroButton,
+            { backgroundColor: checkedIn ? theme.success : theme.primary },
+            !canEdit && styles.readOnly,
+            pressed && styles.pressed,
+          ]}>
+          {checkedIn ? (
+            <CheckCircleIcon weight="fill" size={26} color={theme.onPrimary} />
+          ) : (
+            <HandHeartIcon weight="fill" size={26} color={theme.onPrimary} />
+          )}
+          <ThemedText style={[styles.heroButtonLabel, { color: theme.onPrimary }]}>
+            {checkedIn ? 'เช็กอินแล้ววันนี้' : 'ฉันสบายดี'}
+          </ThemedText>
+        </Pressable>
       </Card>
-
-      <Pressable
-        onPress={handleCheckIn}
-        accessibilityRole="button"
-        accessibilityLabel="ฉันสบายดี บอกครอบครัวว่าอยู่ดี"
-        style={({ pressed }) => pressed && styles.pressed}>
-        <Card gap={Spacing.two} padding={Spacing.four} style={styles.checkinCard}>
-          <View style={[styles.actionIconWrap, { backgroundColor: theme.primarySoft }]}>
-            <Ionicons name="hand-left-outline" size={26} color={theme.primaryText} />
-          </View>
-          <View style={styles.actionText}>
-            <ThemedText style={styles.actionLabel}>ฉันสบายดี</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              บอกครอบครัวว่าวันนี้ปกติดี
-            </ThemedText>
-          </View>
-        </Card>
-      </Pressable>
 
       <SectionHeader title="สิ่งที่ทำได้" />
       <View style={styles.actions}>
-        {elderActions.map((action) => (
-          <Pressable
-            key={action.label}
-            onPress={() => router.push(action.route)}
-            accessibilityRole="button"
-            accessibilityLabel={action.label}
-            accessibilityHint={action.detail}
-            style={({ pressed }) => pressed && styles.pressed}>
-            <Card gap={Spacing.three} padding={Spacing.four} style={styles.actionCard}>
-              <View style={[styles.actionIconWrap, { backgroundColor: theme.primarySoft }]}>
-                <Ionicons name={action.icon} size={26} color={theme.primaryText} />
-              </View>
-              <View style={styles.actionText}>
-                <ThemedText style={styles.actionLabel}>{action.label}</ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {action.detail}
-                </ThemedText>
-              </View>
-              <Ionicons name="chevron-forward-outline" size={24} color={theme.textMuted} />
-            </Card>
-          </Pressable>
-        ))}
+        {elderActions.map((action) => {
+          const ActionIcon = action.icon;
+          const isDanger = action.tone === 'danger';
+          return (
+            <Pressable
+              key={action.label}
+              onPress={() => router.push(action.route)}
+              accessibilityRole="button"
+              accessibilityLabel={action.label}
+              accessibilityHint={action.detail}
+              style={({ pressed }) => pressed && styles.pressed}>
+              <Card
+                tone={isDanger ? 'danger' : 'surface'}
+                accented
+                gap={Spacing.three}
+                padding={Spacing.four}
+                style={[styles.actionCard, !isDanger && { borderColor: theme.backgroundSelected }]}>
+                <View
+                  style={[styles.actionIconWrap, { backgroundColor: isDanger ? theme.dangerSoft : theme.primarySoft }]}>
+                  <ActionIcon weight="duotone" size={32} color={isDanger ? theme.danger : theme.primaryText} />
+                </View>
+                <View style={styles.actionText}>
+                  <ThemedText style={[styles.actionLabel, isDanger && { color: theme.dangerText }]}>
+                    {action.label}
+                  </ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {action.detail}
+                  </ThemedText>
+                </View>
+                <CaretRightIcon weight="bold" size={20} color={theme.textMuted} />
+              </Card>
+            </Pressable>
+          );
+        })}
       </View>
 
       <SectionHeader title="ตารางวันนี้" />
@@ -262,29 +306,12 @@ export default function ElderHomeScreen() {
 
       <SectionHeader title="สุขภาพของฉัน" />
       <VitalsSummary memberId={selfMemberId} />
-
-      <View style={[styles.divider, { backgroundColor: theme.border }]} />
-      <Card tone="danger" accented elevation="flat" padding={Spacing.four} gap={Spacing.three}>
-        <ThemedText style={[styles.helpTitle, { color: theme.dangerText }]}>ต้องการความช่วยเหลือ?</ThemedText>
-        <ThemedText type="small" style={{ color: theme.dangerText }}>
-          กดปุ่มนี้เพื่อแจ้งครอบครัวทันที
-        </ThemedText>
-        <AppButton
-          label="ขอความช่วยเหลือ"
-          icon="alert-circle-outline"
-          variant="danger"
-          size="xlarge"
-          onPress={() => router.push('/emergency')}
-          accessibilityHint="เปิดหน้ายืนยันการขอความช่วยเหลือจากครอบครัว"
-        />
-      </Card>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  greetingRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: Spacing.two },
-  greeting: { flex: 1, gap: Spacing.half },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
   logout: {
     width: HitSize.medium,
     height: HitSize.medium,
@@ -294,12 +321,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  statusTitle: { fontSize: 24, lineHeight: 32, fontWeight: '800' },
-  statusBody: { fontSize: 16, lineHeight: 24, fontWeight: '500' },
+  heroCard: { alignItems: 'center' },
+  heroGreeting: { textAlign: 'center' },
+  heroStatus: { fontSize: 17, lineHeight: 24, fontWeight: '500', textAlign: 'center' },
+  heroButton: {
+    width: '100%',
+    minHeight: HitSize.xlarge,
+    borderRadius: Radius.lg,
+    marginTop: Spacing.one,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.two,
+  },
+  heroButtonLabel: { fontSize: 19, lineHeight: 26, fontWeight: '700' },
 
-  checkinCard: { flexDirection: 'row', alignItems: 'center', minHeight: 88 },
   actions: { gap: Spacing.two },
-  actionCard: { flexDirection: 'row', alignItems: 'center', minHeight: 88 },
+  actionCard: { flexDirection: 'row', alignItems: 'center', minHeight: 92 },
   actionIconWrap: {
     width: 56,
     height: 56,
@@ -308,7 +346,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionText: { flex: 1, gap: Spacing.half },
-  actionLabel: { fontSize: 19, lineHeight: 26, fontWeight: '700' },
+  actionLabel: { fontSize: 20, lineHeight: 27, fontWeight: '800' },
 
   scheduleRow: {
     flexDirection: 'row',
@@ -320,8 +358,6 @@ const styles = StyleSheet.create({
   scheduleBody: { flex: 1, gap: Spacing.half },
   scheduleTitle: { fontSize: 17, lineHeight: 24, fontWeight: '700' },
 
-  divider: { height: 1, marginTop: Spacing.two },
-  helpTitle: { fontSize: 20, lineHeight: 28, fontWeight: '800' },
-
   pressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
+  readOnly: { opacity: 0.45 },
 });

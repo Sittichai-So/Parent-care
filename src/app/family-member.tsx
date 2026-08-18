@@ -2,13 +2,15 @@ import { useMemo, useState } from 'react';
 import { Alert, Pressable, Share, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
+import { CaretLeftIcon, ChatTeardropDotsIcon, LinkIcon, PhoneCallIcon } from 'phosphor-react-native';
+
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
 import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { InfoRow } from '@/components/ui/info-row';
+import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
 import { Screen } from '@/components/ui/screen';
-import { ScreenHeader } from '@/components/ui/screen-header';
 import { SectionHeader } from '@/components/ui/section-header';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { VitalsSummary } from '@/components/ui/vitals-summary';
@@ -16,19 +18,26 @@ import { MemberStatusMeta } from '@/constants/status';
 import { Spacing } from '@/constants/theme';
 import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
-import { daysFromToday, formatDateKey } from '@/utils/date';
+import { daysFromToday, formatDateKey, isToday } from '@/utils/date';
 
 export default function FamilyMemberScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { selectedMemberId, familyMembers, medications, appointments, generateClaimCode } = useFamilyContext();
+  const { selectedMemberId, familyMembers, medications, appointments, canEdit, generateClaimCode } = useFamilyContext();
   const member = familyMembers.find((item) => item.id === selectedMemberId) ?? familyMembers[0];
   const [isGeneratingClaim, setIsGeneratingClaim] = useState(false);
+  const [pinged, setPinged] = useState(false);
 
   const memberMedications = useMemo(
     () => (member ? medications.filter((med) => med.memberId === member.id && med.active) : []),
     [medications, member]
   );
+  // The one medication this screen offers a quick "confirm today's dose" shortcut
+  // for — mirrors Home's one-row-per-member medication list, which also assumes
+  // a single primary active medication per person for that same at-a-glance UI.
+  const primaryMedication = memberMedications[0];
+  const primaryMedTakenToday = primaryMedication?.lastTakenAt ? isToday(primaryMedication.lastTakenAt.slice(0, 10)) : false;
+
   const nextAppointment = useMemo(
     () =>
       member
@@ -42,7 +51,6 @@ export default function FamilyMemberScreen() {
   if (!member) {
     return (
       <Screen center>
-        <ScreenHeader title="ไม่พบข้อมูลสมาชิก" />
         <Card tone="sunken" elevation="flat">
           <ThemedText type="small" themeColor="textSecondary">
             ยังไม่ได้เลือกสมาชิก กรุณากลับไปเลือกจากหน้าหลัก
@@ -54,6 +62,10 @@ export default function FamilyMemberScreen() {
   }
 
   const status = MemberStatusMeta[member.status];
+
+  const handlePing = () => {
+    setPinged(true);
+  };
 
   const handleGenerateClaimCode = async () => {
     setIsGeneratingClaim(true);
@@ -76,38 +88,61 @@ export default function FamilyMemberScreen() {
       footer={
         <>
           <AppButton
-            label="ส่งข้อความเตือน"
-            icon="chatbubble-outline"
-            onPress={() => Alert.alert('ส่งข้อความแล้ว', `ระบบส่งข้อความเตือนถึง ${member.name} เรียบร้อยแล้ว`)}
+            label={pinged ? 'ส่งข้อความเตือนแล้ว' : 'ส่งข้อความเตือน'}
+            phosphorIcon={ChatTeardropDotsIcon}
+            disabled={!canEdit}
+            onPress={
+              canEdit
+                ? () => {
+                    handlePing();
+                    router.push('/messages');
+                  }
+                : undefined
+            }
+            accessibilityHint={canEdit ? undefined : 'ดูได้เท่านั้น'}
           />
+          {primaryMedication ? (
+            <AppButton
+              label={primaryMedTakenToday ? 'ดูภาพยืนยันการทานยา' : `ยืนยันการทานยา ${primaryMedication.schedule[0] ?? ''}`}
+              variant="secondary"
+              onPress={() => router.push({ pathname: '/medication-confirm', params: { id: primaryMedication.id } })}
+            />
+          ) : null}
           <AppButton
             label="โทรหา"
-            icon="call-outline"
+            phosphorIcon={PhoneCallIcon}
             variant="secondary"
             onPress={() => Alert.alert('กำลังโทร', `ระบบจำลองการโทรหา ${member.name}`)}
           />
         </>
       }>
-      <ScreenHeader title="รายละเอียดสมาชิก" eyebrow="ครอบครัว" />
+      <Pressable
+        onPress={() => router.back()}
+        accessibilityRole="button"
+        accessibilityLabel="กลับไปสมาชิกในบ้าน"
+        style={({ pressed }) => [styles.backChip, { backgroundColor: theme.primarySoft }, pressed && styles.pressed]}>
+        <CaretLeftIcon weight="bold" size={16} color={theme.primaryText} />
+        <ThemedText type="smallBold" style={{ color: theme.primaryText }}>
+          สมาชิกในบ้าน
+        </ThemedText>
+      </Pressable>
 
-      <Card
-        elevation="raised"
-        padding={Spacing.four}
-        gap={Spacing.three}
-        accented={member.status !== 'normal'}
-        tone={member.status === 'normal' ? 'surface' : 'warning'}
-        style={styles.profile}>
-        <Avatar name={member.name} size={72} tone={status.tone} />
-        <ThemedText type="heading" style={styles.profileName}>
-          {member.name}
-        </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          {member.relation} · {member.role}
-        </ThemedText>
-        <View style={styles.badgeRow}>
-          <StatusBadge label={status.label} tone={status.tone} />
-          {!member.hasAccount ? <StatusBadge label="ไม่มีบัญชี" tone="neutral" /> : null}
-          {member.membershipState === 'pending' ? <StatusBadge label="รอการยืนยัน" tone="warning" /> : null}
+      <ReadOnlyBanner />
+
+      <Card elevation="floating" padding={Spacing.four} gap={Spacing.four} style={styles.hero}>
+        <Avatar name={member.name} size={132} shape="rounded" tone={status.tone} />
+        <View style={styles.heroBody}>
+          <ThemedText type="eyebrow" themeColor="eyebrow">
+            {member.role}
+          </ThemedText>
+          <ThemedText type="display" numberOfLines={2}>
+            {member.name}
+          </ThemedText>
+          <View style={styles.badgeRow}>
+            <StatusBadge label={status.label} tone={status.tone} phosphorIcon={status.icon} />
+            {!member.hasAccount ? <StatusBadge label="ไม่มีบัญชี" tone="neutral" /> : null}
+            {member.membershipState === 'pending' ? <StatusBadge label="รอการยืนยัน" tone="warning" /> : null}
+          </View>
         </View>
       </Card>
 
@@ -120,21 +155,19 @@ export default function FamilyMemberScreen() {
           </ThemedText>
           <AppButton
             label="สร้างรหัสผูกบัญชี"
-            icon="link-outline"
+            phosphorIcon={LinkIcon}
             variant="secondary"
-            onPress={handleGenerateClaimCode}
+            onPress={canEdit ? handleGenerateClaimCode : undefined}
+            disabled={!canEdit || isGeneratingClaim}
             loading={isGeneratingClaim}
-            disabled={isGeneratingClaim}
           />
         </Card>
       ) : null}
 
-      <Card gap={Spacing.three}>
-        <InfoRow icon="information-circle-outline" label="สถานะล่าสุด" value={member.detail} />
+      <Card gap={0} padding={Spacing.three}>
+        <InfoRow label="ความสัมพันธ์" value={member.relation} />
         <View style={[styles.separator, { backgroundColor: theme.border }]} />
-        <InfoRow icon="people-outline" label="ความสัมพันธ์" value={member.relation} />
-        <View style={[styles.separator, { backgroundColor: theme.border }]} />
-        <InfoRow icon="key-outline" label="สิทธิ์ในระบบ" value={member.role} />
+        <InfoRow label="สถานะ" value={member.detail} />
       </Card>
 
       <SectionHeader
@@ -209,9 +242,18 @@ export default function FamilyMemberScreen() {
 }
 
 const styles = StyleSheet.create({
-  profile: { alignItems: 'center' },
-  profileName: { textAlign: 'center' },
-  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.one, justifyContent: 'center' },
+  backChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: Spacing.one + 2,
+    minHeight: 44,
+    borderRadius: 12,
+    paddingHorizontal: Spacing.three,
+  },
+  hero: { flexDirection: 'row', alignItems: 'center' },
+  heroBody: { flex: 1, minWidth: 0, gap: Spacing.two },
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.one },
   separator: { height: 1 },
   list: { gap: Spacing.two },
   viewAll: { textAlign: 'center', paddingVertical: Spacing.one },

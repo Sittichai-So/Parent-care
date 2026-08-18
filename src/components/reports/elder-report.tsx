@@ -54,16 +54,17 @@ export function ElderReport() {
   );
 
   return (
-    <Screen>
-      <ReportHeader
-        title="รายงานสุขภาพของฉัน"
-        subtitle={
-          currentHousehold
-            ? `${currentHousehold.name}${user?.name ? ` · ${user.name}` : ''}`
-            : (user?.name ?? 'สรุปสุขภาพของฉัน')
-        }
-      />
-
+    <Screen
+      header={
+        <ReportHeader
+          title="รายงานสุขภาพของฉัน"
+          subtitle={
+            currentHousehold
+              ? `${currentHousehold.name}${user?.name ? ` · ${user.name}` : ''}`
+              : (user?.name ?? 'สรุปสุขภาพของฉัน')
+          }
+        />
+      }>
       <View style={styles.statRow}>
         <StatTile value={`${activeAdherence.pct}%`} label="ทานยาวันนี้" tone={adherenceTone(activeAdherence.pct)} />
         <StatTile value={myMedications.filter((med) => med.active).length} label="ยาที่ใช้อยู่" tone="primary" />

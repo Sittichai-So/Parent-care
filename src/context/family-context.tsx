@@ -145,6 +145,11 @@ type FamilyContextValue = {
   /** The caller's own membership id / role *within* currentHouseholdId. */
   currentMembershipId: string | null;
   currentRole: MemberRole | null;
+  /** Derived from `currentRole` — false only for Viewer. Every mutating
+   *  control (task/checklist toggles, medication actions, messages, notes,
+   *  reminders, pings, adding a household) gates on this, per the reference
+   *  design's Viewer read-only rule. */
+  canEdit: boolean;
   createHousehold: (name: string, displayName: string, relation: string) => Promise<HouseholdSummary>;
   joinHousehold: (
     inviteCode: string,
@@ -176,6 +181,9 @@ type FamilyContextValue = {
    *  member status to normal and records a timeline event server-side. */
   checkIn: () => Promise<void>;
   updateTaskStatus: (taskId: string, status: FamilyTask['status']) => Promise<void>;
+  /** Owner-only in practice (the server rejects anyone else) — changes what
+   *  a member can do in this household, not their account identity. */
+  updateMemberRole: (memberId: string, role: HouseholdRole) => Promise<void>;
 
   addMedication: (input: Omit<Medication, 'id' | 'lastTakenAt'>) => Promise<string>;
   updateMedication: (id: string, patch: Partial<Omit<Medication, 'id'>>) => Promise<void>;
@@ -396,6 +404,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const currentHousehold = households.find((household) => household.id === currentHouseholdId) ?? null;
   const currentMembershipId = currentHousehold?.membershipId ?? null;
   const currentRole = currentHousehold?.role ?? null;
+  const canEdit = currentRole !== 'Viewer';
 
   const refreshAll = useCallback(async () => {
     if (!currentHouseholdId) return;
@@ -495,6 +504,15 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     async (taskId, status) => {
       if (!currentHouseholdId) return;
       await tasksApi.updateTaskStatus(currentHouseholdId, taskId, status);
+      await refreshAll();
+    },
+    [currentHouseholdId, refreshAll]
+  );
+
+  const updateMemberRole = useCallback<FamilyContextValue['updateMemberRole']>(
+    async (memberId, role) => {
+      if (!currentHouseholdId) return;
+      await householdsApi.updateMember(currentHouseholdId, memberId, { role });
       await refreshAll();
     },
     [currentHouseholdId, refreshAll]
@@ -676,6 +694,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       currentHousehold,
       currentMembershipId,
       currentRole,
+      canEdit,
       createHousehold,
       joinHousehold,
 
@@ -696,6 +715,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
 
       checkIn,
       updateTaskStatus,
+      updateMemberRole,
 
       addMedication,
       updateMedication,
@@ -725,6 +745,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       currentHousehold,
       currentMembershipId,
       currentRole,
+      canEdit,
       createHousehold,
       joinHousehold,
       isLoadingData,
@@ -740,6 +761,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       selectedMemberId,
       checkIn,
       updateTaskStatus,
+      updateMemberRole,
       addMedication,
       updateMedication,
       removeMedication,

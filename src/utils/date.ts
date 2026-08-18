@@ -38,6 +38,15 @@ export function formatDateKey(
   return new Date(year, month - 1, day).toLocaleDateString('th-TH', options);
 }
 
+/** True when `dateKey` falls in the current calendar month/year — used for
+ *  "N นัดหมายเดือนนี้"-style monthly counts. */
+export function isDateInCurrentMonth(dateKey: string): boolean {
+  const [year, month] = dateKey.split('-').map(Number);
+  if (!year || !month) return false;
+  const today = new Date();
+  return year === today.getFullYear() && month === today.getMonth() + 1;
+}
+
 /** Days between `dateKey` and today. Negative when `dateKey` is in the past. */
 export function daysFromToday(dateKey: string): number {
   const [year, month, day] = dateKey.split('-').map(Number);

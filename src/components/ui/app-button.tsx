@@ -2,6 +2,7 @@ import type { ComponentProps } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
+import type { Icon as PhosphorIcon } from 'phosphor-react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Elevation, HitSize, Radius, Spacing } from '@/constants/theme';
@@ -18,7 +19,12 @@ type AppButtonProps = {
   size?: ButtonSize;
   /** Icon shown alongside the label. Marked as decorative for screen readers. */
   icon?: IconName;
-  /** Which side of the label `icon` renders on — e.g. `trailing` for a "Continue →" affordance. */
+  /** Phosphor icon component — takes precedence over `icon` when given.
+   *  Newer screens built against the "Parent Care v3" reference design pass
+   *  this instead, since that design's icon set is Phosphor, not Ionicons;
+   *  `icon` stays for every screen that hasn't been migrated yet. */
+  phosphorIcon?: PhosphorIcon;
+  /** Which side of the label `icon`/`phosphorIcon` renders on — e.g. `trailing` for a "Continue →" affordance. */
   iconPosition?: 'leading' | 'trailing';
   disabled?: boolean;
   loading?: boolean;
@@ -34,6 +40,7 @@ export function AppButton({
   variant = 'primary',
   size = 'large',
   icon,
+  phosphorIcon: PhosphorIconComp,
   iconPosition = 'leading',
   disabled = false,
   loading = false,
@@ -46,7 +53,11 @@ export function AppButton({
 
   const palette: Record<ButtonVariant, { background: string; text: string; border: string }> = {
     primary: { background: theme.primary, text: theme.onPrimary, border: theme.primary },
-    secondary: { background: theme.backgroundElement, text: theme.text, border: theme.borderStrong },
+    // Light navy-tinted fill, navy text, no visible border — the reference
+    // design's one consistent "secondary button" look (login's "สร้างบัญชี
+    // ใหม่", medication confirm's "ถ่ายใหม่", etc.), not a neutral
+    // gray/bordered button.
+    secondary: { background: theme.primarySoft, text: theme.primaryText, border: theme.primarySoft },
     danger: { background: theme.danger, text: theme.onPrimary, border: theme.danger },
     success: { background: theme.success, text: theme.onPrimary, border: theme.success },
     ghost: { background: 'transparent', text: theme.primary, border: 'transparent' },
@@ -60,6 +71,19 @@ export function AppButton({
 
   const { background, text, border } = palette[variant];
   const raised = variant === 'primary' || variant === 'danger' || variant === 'success';
+  const iconSize = size === 'xlarge' ? 22 : 18;
+
+  const iconNode = PhosphorIconComp ? (
+    <PhosphorIconComp weight="bold" size={iconSize} color={text} />
+  ) : icon ? (
+    <Ionicons
+      name={icon}
+      size={iconSize}
+      color={text}
+      accessibilityElementsHidden
+      importantForAccessibility="no"
+    />
+  ) : null;
 
   return (
     <Pressable
@@ -91,29 +115,13 @@ export function AppButton({
       ) : (
         <View style={styles.content}>
           <View style={styles.labelRow}>
-            {icon && iconPosition === 'leading' ? (
-              <Ionicons
-                name={icon}
-                size={size === 'xlarge' ? 22 : 18}
-                color={text}
-                accessibilityElementsHidden
-                importantForAccessibility="no"
-              />
-            ) : null}
+            {iconNode && iconPosition === 'leading' ? iconNode : null}
             <ThemedText
               numberOfLines={2}
               style={[styles.label, size === 'xlarge' && styles.labelLarge, { color: text }]}>
               {label}
             </ThemedText>
-            {icon && iconPosition === 'trailing' ? (
-              <Ionicons
-                name={icon}
-                size={size === 'xlarge' ? 22 : 18}
-                color={text}
-                accessibilityElementsHidden
-                importantForAccessibility="no"
-              />
-            ) : null}
+            {iconNode && iconPosition === 'trailing' ? iconNode : null}
           </View>
           {hint ? (
             <ThemedText style={[styles.hint, { color: text }]} numberOfLines={2}>

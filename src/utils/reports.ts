@@ -64,6 +64,23 @@ export function adherenceTone(pct: number): BadgeTone {
   return 'danger';
 }
 
+export type MemberAdherenceDetail = MemberAdherence & { note: string };
+
+/** `perMemberAdherence` plus a one-line status note naming the member's
+ *  medication — the reference design's dashboard "รายคน" row text. Shared
+ *  between OwnerReport and CaregiverReport so both phrase it identically. */
+export function memberAdherenceDetail(meds: Medication[], members: FamilyMember[]): MemberAdherenceDetail[] {
+  return perMemberAdherence(meds, members).map((entry) => {
+    const med = meds.find((item) => item.memberId === entry.memberId && item.active);
+    const note = !med
+      ? 'ไม่มีรายการยาที่ใช้งานอยู่'
+      : entry.pct >= 100
+        ? `ยืนยันครบวันนี้ · ${med.name}`
+        : `รอยืนยัน ${med.schedule[0] ?? ''} · ${med.name}`;
+    return { ...entry, note };
+  });
+}
+
 export function statusBreakdown(members: FamilyMember[]) {
   return {
     normal: members.filter((member) => member.status === 'normal').length,

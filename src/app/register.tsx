@@ -2,17 +2,21 @@ import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Ionicons } from '@expo/vector-icons';
-
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
-import { Card } from '@/components/ui/card';
+import { OnboardingHeader } from '@/components/ui/onboarding-header';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
-import { Radius, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useTheme } from '@/hooks/use-theme';
 
+/** Step 1 of the reference design's 2-step register flow — account fields
+ *  only. The mock's step 1 also has a role picker (Caregiver/Elder/Viewer),
+ *  but that's not a real account attribute here: role is per-household
+ *  (`HouseholdRole`), only ever chosen when creating or joining a household
+ *  on the next screen — so it's not reproduced here to avoid a field that
+ *  looks real but the server has nowhere to put it. */
 export default function RegisterScreen() {
   const router = useRouter();
   const theme = useTheme();
@@ -22,20 +26,15 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const handleRegister = async () => {
     if (!name.trim() || !email.trim() || !password) {
-      setError('โปรดกรอกชื่อ อีเมล และรหัสผ่านให้ครบถ้วน');
+      setError('กรอกชื่อ อีเมล และรหัสผ่านอย่างน้อย 4 ตัวอักษร');
       return;
     }
     if (password.length < 4) {
       setError('รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError('รหัสผ่านทั้งสองช่องไม่ตรงกัน');
       return;
     }
 
@@ -56,28 +55,19 @@ export default function RegisterScreen() {
   };
 
   return (
-    <Screen keyboardAvoiding gap={Spacing.four} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <View style={[styles.logo, { backgroundColor: theme.primarySoft }]}>
-          <Ionicons name="heart" size={32} color={theme.primary} />
-        </View>
-        <ThemedText type="display" style={styles.appName}>
-          สร้างบัญชีใหม่
-        </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary" style={styles.tagline}>
-          สมัครสมาชิกเพื่อสร้างหรือเข้าร่วมกลุ่มครอบครัว
-        </ThemedText>
-      </View>
-
-      <Card gap={Spacing.three} padding={Spacing.four}>
+    <Screen
+      keyboardAvoiding
+      gap={Spacing.three}
+      header={<OnboardingHeader title="สร้างบัญชี" step={1} onBack={() => router.replace('/login')} />}>
+      <View style={styles.form}>
         <TextField
-          label="ชื่อ-นามสกุล"
+          label="ชื่อที่ใช้แสดง"
           value={name}
           onChangeText={(value) => {
             setName(value);
             if (error) setError(null);
           }}
-          placeholder="เช่น คุณสมชาย ใจดี"
+          placeholder="คุณสมชาย"
           required
         />
         <TextField
@@ -87,7 +77,7 @@ export default function RegisterScreen() {
             setEmail(value);
             if (error) setError(null);
           }}
-          placeholder="you@example.com"
+          placeholder="you@gmail.com"
           keyboardType="email-address"
           required
         />
@@ -109,35 +99,22 @@ export default function RegisterScreen() {
           secureTextEntry
           required
         />
-        <TextField
-          label="ยืนยันรหัสผ่าน"
-          value={confirmPassword}
-          onChangeText={(value) => {
-            setConfirmPassword(value);
-            if (error) setError(null);
-          }}
-          placeholder="กรอกรหัสผ่านอีกครั้ง"
-          secureTextEntry
-          required
-        />
-
-        {error ? (
-          <View style={[styles.errorBox, { backgroundColor: theme.dangerSoft }]}>
-            <Ionicons name="alert-circle-outline" size={16} color={theme.dangerText} />
-            <ThemedText type="small" style={{ color: theme.dangerText, flex: 1 }}>
-              {error}
-            </ThemedText>
-          </View>
-        ) : null}
 
         <AppButton
-          label="สมัครสมาชิก"
+          label="ต่อไป · กลุ่มบ้าน"
+          size="large"
           onPress={handleRegister}
           loading={isLoading}
           disabled={isLoading}
-          accessibilityHint="สร้างบัญชีใหม่ด้วยข้อมูลที่กรอก"
+          accessibilityHint="สร้างบัญชีใหม่แล้วไปตั้งค่ากลุ่มบ้าน"
         />
-      </Card>
+
+        {error ? (
+          <ThemedText type="small" style={[styles.status, { color: theme.warningText }]} accessibilityRole="alert">
+            {error}
+          </ThemedText>
+        ) : null}
+      </View>
 
       <Pressable
         onPress={() => router.replace('/login')}
@@ -152,25 +129,8 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { justifyContent: 'center', paddingBottom: Spacing.five },
-  header: { alignItems: 'center', gap: Spacing.two, paddingTop: Spacing.four },
-  logo: {
-    width: 72,
-    height: 72,
-    borderRadius: Radius.xl,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  appName: { textAlign: 'center' },
-  tagline: { textAlign: 'center', maxWidth: 300 },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    borderRadius: Radius.sm,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-  },
+  form: { gap: Spacing.three, paddingTop: Spacing.one },
+  status: { textAlign: 'center' },
   loginLink: { alignItems: 'center', paddingVertical: Spacing.two },
   pressed: { opacity: 0.7 },
 });

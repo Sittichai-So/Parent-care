@@ -30,13 +30,13 @@ export const Colors = {
     border: '#E4E9F2',
     borderStrong: '#CBD5E1',
 
-    /* Brand — sampled from the actual Parent Care logo's blue→teal heart mark,
-     *  not the borrowed navy/amber "medical center" reference this used to
-     *  chase. `primary` is the logo's blue figure; `teal` is its green one. */
-    primary: '#2F6FEE',
-    primaryPressed: '#1D53C7',
-    primarySoft: '#E8F0FE',
-    primaryText: '#1D53C7',
+    /* Brand — deep navy, matched to the "Parent Care v3" reference design
+     *  (claude.ai/design) the product picked as the app's look. `teal` stays
+     *  as the secondary/success accent; it's no longer sampled from the logo. */
+    primary: '#1E3A8A',
+    primaryPressed: '#16295C',
+    primarySoft: '#E8EFFB',
+    primaryText: '#1E3A8A',
     onPrimary: '#FFFFFF',
 
     teal: '#1FBE8C',
@@ -45,9 +45,16 @@ export const Colors = {
     tealText: '#0F7A5C',
     onTeal: '#FFFFFF',
 
-    /* The two-tone diagonal sweep from the logo's heart mark — used sparingly,
-     *  as a fill on primary CTAs and thin accent bars, via `experimental_backgroundImage`. */
-    brandGradient: 'linear-gradient(135deg, #2F6FEE 0%, #1FBE8C 100%)',
+    /** Default tint for `ThemedText type="eyebrow"` — the reference
+     *  design's small-caps role/section labels (e.g. a member's role above
+     *  their name). A step lighter than `primary` so it reads as a label,
+     *  not another heading. */
+    eyebrow: '#3B5CB8',
+
+    /* Diagonal sweep used sparingly as a fill on primary CTAs and thin accent
+     *  bars, via `experimental_backgroundImage` — navy deepening to the
+     *  reference design's interactive-blue highlight. */
+    brandGradient: 'linear-gradient(135deg, #1E3A8A 0%, #2F4FBE 100%)',
 
     /* Notification/reminder accent — the lavender bell badge from the
      *  reference background art has no equivalent among the status tones
@@ -77,15 +84,24 @@ export const Colors = {
     heroTextMuted: '#BFCADB',
     heroSurface: 'rgba(255, 255, 255, 0.12)',
 
-    /* Onboarding backdrops and the amber "due soon" status badge. */
-    sky: '#BFD7F0',
+    /* Onboarding backdrops and the amber "due soon" status badge — the login
+     *  hero's own light-blue wash, per the reference design. */
+    sky: '#DBEAFE',
     skySoft: '#EAF2FB',
+    /** Fill behind the login hero's illustration frame — the reference
+     *  design's dedicated `welcomeArt` token, a shade deeper than `sky`. */
+    heroArt: '#C7DBFA',
     accentYellow: '#F5C451',
     accentYellowText: '#7A4E06',
 
     /* Forms */
     inputBackground: '#FFFFFF',
     placeholder: '#9AA8BA',
+
+    /** Viewer-role "read-only mode" banner background — its own token per
+     *  the reference design (distinct from `warningSoft`, though the icon
+     *  and text on it reuse `warning`/`warningText`). */
+    readOnlyBg: '#FFF7E6',
 
     /* Effects */
     shadow: '#0B1220',
@@ -107,12 +123,12 @@ export const Colors = {
     border: '#24314A',
     borderStrong: '#33456A',
 
-    /* Brand */
-    primary: '#6AA6FF',
-    primaryPressed: '#4E8CF0',
-    primarySoft: '#172A47',
-    primaryText: '#A9C9FF',
-    onPrimary: '#08172B',
+    /* Brand — same navy family as light mode, lightened for contrast on a dark surface. */
+    primary: '#7C9EEF',
+    primaryPressed: '#5A7FDD',
+    primarySoft: '#1B2A4D',
+    primaryText: '#B7C8F5',
+    onPrimary: '#0B1730',
 
     teal: '#3EE7BE',
     tealPressed: '#2BC9A3',
@@ -120,7 +136,9 @@ export const Colors = {
     tealText: '#8FF3D4',
     onTeal: '#04241A',
 
-    brandGradient: 'linear-gradient(135deg, #6AA6FF 0%, #3EE7BE 100%)',
+    eyebrow: '#8FA6E8',
+
+    brandGradient: 'linear-gradient(135deg, #7C9EEF 0%, #5A7FDD 100%)',
 
     lavender: '#A99BFF',
     lavenderSoft: '#241E42',
@@ -147,12 +165,18 @@ export const Colors = {
      *  low-glare counterparts of the light tones so both read correctly. */
     sky: '#243554',
     skySoft: '#17233A',
+    heroArt: '#2E4066',
     accentYellow: '#FBBF24',
     accentYellowText: '#3A2A05',
 
     /* Forms */
     inputBackground: '#131C2B',
     placeholder: '#6F7E93',
+
+    /** Muted counterpart of the light `readOnlyBg` — not specified by the
+     *  (light-only) reference design, tuned to sit near `warningSoft`
+     *  without being identical to it. */
+    readOnlyBg: '#2E2512',
 
     /* Effects */
     shadow: '#000000',

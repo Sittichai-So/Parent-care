@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Ionicons } from '@expo/vector-icons';
+import { CheckCircleIcon, SirenIcon, UserIcon, WarningCircleIcon } from 'phosphor-react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
@@ -42,7 +42,7 @@ export default function EmergencyScreen() {
       <Screen center gap={Spacing.four}>
         <Card tone="success" accented padding={Spacing.five} gap={Spacing.three} style={styles.centerCard}>
           <View style={[styles.glyphWrap, { backgroundColor: theme.success }]}>
-            <Ionicons name="checkmark-circle" size={40} color={theme.onPrimary} />
+            <CheckCircleIcon weight="fill" size={40} color={theme.onPrimary} />
           </View>
           <ThemedText type="display" style={{ color: theme.successText, textAlign: 'center' }}>
             ส่งคำขอแล้ว
@@ -61,13 +61,13 @@ export default function EmergencyScreen() {
     <Screen gap={Spacing.four} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View style={[styles.glyphWrap, { backgroundColor: theme.dangerSoft }]}>
-          <Ionicons name="alert-circle" size={44} color={theme.danger} />
+          <SirenIcon weight="duotone" size={44} color={theme.danger} />
         </View>
         <ThemedText type="display" style={{ textAlign: 'center' }} accessibilityRole="header">
           ต้องการความช่วยเหลือ?
         </ThemedText>
         <ThemedText type="body" style={{ color: theme.textSecondary, textAlign: 'center' }}>
-          เมื่อกดยืนยัน ครอบครัวจะได้รับแจ้งเตือนทันที พร้อมตำแหน่งล่าสุดของคุณ
+          เมื่อกดยืนยัน ครอบครัวจะได้รับแจ้งเตือนทันที
         </ThemedText>
       </View>
 
@@ -76,7 +76,7 @@ export default function EmergencyScreen() {
         {recipients.map((member) => (
           <View key={member.id} style={styles.contact}>
             <View style={[styles.contactDot, { backgroundColor: theme.primarySoft }]}>
-              <Ionicons name="person-outline" size={18} color={theme.primaryText} />
+              <UserIcon weight="duotone" size={18} color={theme.primaryText} />
             </View>
             <View style={styles.contactText}>
               <ThemedText type="smallBold">{member.name}</ThemedText>
@@ -90,7 +90,7 @@ export default function EmergencyScreen() {
 
       {error ? (
         <View style={[styles.errorBox, { backgroundColor: theme.dangerSoft, flexDirection: 'row', alignItems: 'center', gap: Spacing.two }]}>
-          <Ionicons name="alert-circle-outline" size={16} color={theme.dangerText} />
+          <WarningCircleIcon weight="duotone" size={16} color={theme.dangerText} />
           <ThemedText type="small" style={{ color: theme.dangerText }}>
             {error}
           </ThemedText>
@@ -100,7 +100,7 @@ export default function EmergencyScreen() {
       <View style={styles.actions}>
         <AppButton
           label="ใช่ ต้องการความช่วยเหลือ"
-          icon="alert-circle"
+          phosphorIcon={SirenIcon}
           variant="danger"
           size="xlarge"
           loading={phase === 'sending'}
@@ -124,9 +124,9 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', gap: Spacing.three },
   centerCard: { alignItems: 'center' },
   glyphWrap: {
-    width: 84,
-    height: 84,
-    borderRadius: Radius.full,
+    width: 64,
+    height: 64,
+    borderRadius: Radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
   },

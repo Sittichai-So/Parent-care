@@ -14,6 +14,7 @@ export type ThemedTextType =
   | 'smallRegular'
   | 'smallBold'
   | 'caption'
+  | 'eyebrow'
   | 'subtitle'
   | 'link'
   | 'linkPrimary'
@@ -106,6 +107,16 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     fontWeight: '600',
     letterSpacing: 0.2,
+  },
+  /** Small uppercase label above a title — a role, a section kind, a status
+   *  tag. Set `themeColor` per use (defaults to inherited text colour); the
+   *  reference design's own default tint is `theme.eyebrow`. */
+  eyebrow: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '700',
+    letterSpacing: 1.7,
+    textTransform: 'uppercase',
   },
   /** Legacy: kept for callers that still use the large sub-title scale. */
   subtitle: {

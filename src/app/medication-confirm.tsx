@@ -1,32 +1,64 @@
 import { useMemo, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import { Ionicons } from '@expo/vector-icons';
+import {
+  ArrowCounterClockwiseIcon,
+  CameraIcon,
+  ChartDonutIcon,
+  CheckCircleIcon,
+  ClockCountdownIcon,
+  ClockIcon,
+  FileTextIcon,
+  NotepadIcon,
+  PillIcon,
+  UsersThreeIcon,
+} from 'phosphor-react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
 import { Card } from '@/components/ui/card';
 import { InfoRow } from '@/components/ui/info-row';
+import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
 import { Screen } from '@/components/ui/screen';
-import { ScreenHeader } from '@/components/ui/screen-header';
-import { StatusBadge } from '@/components/ui/status-badge';
 import { Radius, Spacing } from '@/constants/theme';
+import { useAuth } from '@/context/auth-context';
 import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
 import { isToday } from '@/utils/date';
 
 const steps = [
-  { key: 'photo', label: 'ถ่ายรูปยา' },
-  { key: 'confirm', label: 'ยืนยันการทาน' },
+  { key: 'photo', label: '1 ถ่ายภาพ' },
+  { key: 'review', label: '2 ตรวจภาพ' },
+  { key: 'confirm', label: '3 ยืนยัน' },
 ] as const;
+
+const hints = [
+  { icon: PillIcon, text: 'ถ่ายให้เห็นเม็ดยาและซองยาในภาพเดียว' },
+  { icon: ClockIcon, text: 'ระบบบันทึกเวลาถ่ายภาพให้อัตโนมัติ' },
+  { icon: UsersThreeIcon, text: 'ครอบครัวเห็นภาพและเวลาที่ยืนยันทันที' },
+] as const;
+
+function nowLabel() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
 
 export default function MedicationConfirmScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const { user } = useAuth();
   const params = useLocalSearchParams<{ id?: string }>();
-  const { medications, primaryElderId, currentMembershipId, confirmMedicationTaken } = useFamilyContext();
+  const { medications, familyMembers, primaryElderId, currentMembershipId, canEdit, confirmMedicationTaken } =
+    useFamilyContext();
+
+  // Local-only UI state — mirrors the reference design's idle → camera →
+  // review → done state machine. `photoCaptured`/`shotTime` are simulated
+  // (this app has no camera/upload integration yet); `takenToday`, derived
+  // below from real data, is what actually drives the "done" stage.
+  const [uiStage, setUiStage] = useState<'idle' | 'camera'>('idle');
   const [photoCaptured, setPhotoCaptured] = useState(false);
+  const [shotTime, setShotTime] = useState<string | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
 
   // Same reasoning as (tabs)/explore.tsx's selfMemberId — opening this
@@ -40,15 +72,38 @@ export default function MedicationConfirmScreen() {
     return medications.find((med) => med.memberId === selfMemberId && med.active);
   }, [medications, params.id, selfMemberId]);
 
+  const isMe = medication?.memberId === currentMembershipId;
+  const person = useMemo(
+    () => familyMembers.find((member) => member.id === medication?.memberId),
+    [familyMembers, medication]
+  );
+
   const takenToday = medication?.lastTakenAt ? isToday(medication.lastTakenAt.slice(0, 10)) : false;
-  const currentStep = takenToday ? 2 : photoCaptured ? 1 : 0;
+  const stage: 'idle' | 'camera' | 'review' | 'done' = takenToday ? 'done' : photoCaptured ? 'review' : uiStage;
+  const currentStepIndex = stage === 'done' ? 2 : stage === 'review' ? 1 : 0;
+
+  const openCamera = () => {
+    if (!canEdit) return;
+    setUiStage('camera');
+  };
+  const cancelCamera = () => setUiStage('idle');
+  const shoot = () => {
+    if (!canEdit) return;
+    setPhotoCaptured(true);
+    setShotTime(nowLabel());
+  };
+  const retake = () => {
+    if (!canEdit) return;
+    setPhotoCaptured(false);
+    setShotTime(null);
+    setUiStage('camera');
+  };
 
   const handleConfirm = async () => {
     if (!medication) return;
     setIsConfirming(true);
     try {
       await confirmMedicationTaken(medication.id);
-      router.back();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
       Alert.alert('ยืนยันการทานยาไม่สำเร็จ', message);
@@ -60,7 +115,6 @@ export default function MedicationConfirmScreen() {
   if (!medication) {
     return (
       <Screen center gap={Spacing.three}>
-        <ScreenHeader title="ยืนยันการทานยา" />
         <Card tone="sunken" elevation="flat" gap={Spacing.two}>
           <ThemedText type="smallBold">ยังไม่มีรายการยา</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
@@ -80,145 +134,258 @@ export default function MedicationConfirmScreen() {
       gap={Spacing.three}
       footer={
         <>
-          <AppButton
-            label={takenToday ? 'ยืนยันแล้ววันนี้' : 'ทานแล้ว และยืนยัน'}
-            icon={takenToday ? 'checkmark-outline' : 'medical-outline'}
-            size="xlarge"
-            variant={takenToday ? 'success' : 'primary'}
-            disabled={!photoCaptured || takenToday || isConfirming}
-            loading={isConfirming}
-            onPress={handleConfirm}
-            accessibilityHint={photoCaptured ? 'บันทึกว่าคุณทานยาแล้ว' : 'ต้องถ่ายรูปยืนยันก่อนจึงจะกดได้'}
-          />
+          {stage === 'done' ? (
+            <AppButton
+              label="ดูแดชบอร์ดการทานยา"
+              phosphorIcon={ChartDonutIcon}
+              size="xlarge"
+              onPress={() => router.push('/report')}
+            />
+          ) : (
+            <AppButton
+              label="ทานแล้ว และยืนยัน"
+              phosphorIcon={PillIcon}
+              size="xlarge"
+              disabled={!canEdit || !photoCaptured || isConfirming}
+              loading={isConfirming}
+              onPress={handleConfirm}
+              accessibilityHint={
+                !canEdit ? 'ดูได้เท่านั้น' : photoCaptured ? 'บันทึกว่าคุณทานยาแล้ว' : 'ต้องถ่ายรูปยืนยันก่อนจึงจะกดได้'
+              }
+            />
+          )}
           <AppButton label="ยกเลิก" variant="ghost" size="medium" onPress={() => router.back()} disabled={isConfirming} />
         </>
       }>
-      <ScreenHeader
-        title="ยืนยันการทานยา"
-        eyebrow="ยาประจำวัน"
-        subtitle="ถ่ายรูปยาแล้วกดยืนยัน เพื่อให้ครอบครัวเห็นว่าคุณทานยาแล้ว"
-      />
+      <ReadOnlyBanner />
+
+      <View style={styles.headerRow}>
+        <View style={[styles.headerChip, { backgroundColor: theme.primarySoft }]}>
+          <PillIcon weight="duotone" size={28} color={theme.primaryText} />
+        </View>
+        <View style={styles.headerText}>
+          <ThemedText type="heading" numberOfLines={1}>
+            {medication.name}
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+            ยา {medication.schedule.join(', ')} · {isMe ? 'ของฉัน' : (person?.name ?? '')}
+          </ThemedText>
+        </View>
+      </View>
 
       <View style={styles.stepper}>
         {steps.map((step, index) => {
-          const isDone = currentStep > index;
-          const isActive = currentStep === index;
+          const on = currentStepIndex >= index;
           return (
             <View key={step.key} style={styles.step}>
-              <View
-                style={[
-                  styles.stepDot,
-                  {
-                    backgroundColor: isDone ? theme.success : isActive ? theme.primary : theme.surfaceSunken,
-                    borderColor: isDone ? theme.success : isActive ? theme.primary : theme.border,
-                  },
-                ]}>
-                {isDone ? (
-                  <Ionicons name="checkmark" size={16} color={theme.onPrimary} />
-                ) : (
-                  <ThemedText style={[styles.stepGlyph, { color: isActive ? theme.onPrimary : theme.textMuted }]}>
-                    {String(index + 1)}
-                  </ThemedText>
-                )}
-              </View>
-              <ThemedText type="caption" themeColor={isDone || isActive ? 'text' : 'textMuted'} numberOfLines={1}>
+              <View style={[styles.stepBar, { backgroundColor: on ? theme.primary : theme.border }]} />
+              <ThemedText
+                type="caption"
+                numberOfLines={1}
+                style={{ color: on ? theme.primaryText : theme.textMuted }}>
                 {step.label}
               </ThemedText>
-              {index < steps.length - 1 ? (
-                <View style={[styles.stepLine, { backgroundColor: currentStep > index ? theme.success : theme.border }]} />
-              ) : null}
             </View>
           );
         })}
       </View>
 
       <Card gap={Spacing.three} padding={Spacing.four}>
-        <View style={styles.pillHead}>
-          <View style={[styles.pillIcon, { backgroundColor: theme.primarySoft }]}>
-            <Ionicons name="medical-outline" size={20} color={theme.primaryText} />
-          </View>
-          <View style={styles.pillText}>
-            <ThemedText type="heading">{medication.name}</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              {medication.dosage}
-            </ThemedText>
-          </View>
-        </View>
-
-        <View style={[styles.separator, { backgroundColor: theme.border }]} />
-
-        <InfoRow icon="time-outline" label="เวลาที่กำหนด" value={medication.schedule.join(', ') + ' น.'} />
-        {medication.reason ? <InfoRow icon="document-text-outline" label="ใช้เพื่อ" value={medication.reason} /> : null}
-        {medication.notes ? <InfoRow icon="document-outline" label="หมายเหตุ" value={medication.notes} /> : null}
+        <InfoRow phosphorIcon={ClockCountdownIcon} label="เวลาที่กำหนด" value={medication.schedule.join(', ') + ' น.'} />
+        {medication.reason ? <InfoRow phosphorIcon={FileTextIcon} label="ใช้เพื่อ" value={medication.reason} /> : null}
+        {medication.notes ? <InfoRow phosphorIcon={NotepadIcon} label="หมายเหตุ" value={medication.notes} /> : null}
       </Card>
 
-      <Card tone={takenToday ? 'success' : photoCaptured ? 'primary' : 'sunken'} elevation="flat" gap={Spacing.two}>
-        <StatusBadge
-          label={takenToday ? 'ยืนยันแล้ววันนี้' : photoCaptured ? 'พร้อมยืนยัน' : 'รอถ่ายรูป'}
-          tone={takenToday ? 'success' : photoCaptured ? 'primary' : 'neutral'}
-        />
-        <ThemedText type="small" themeColor="textSecondary">
-          {takenToday
-            ? 'ครอบครัวจะเห็นว่าคุณทานยาตามกำหนดแล้ว'
-            : photoCaptured
-              ? 'ภาพพร้อมส่งแล้ว กดปุ่มยืนยันด้านล่างเพื่อบันทึก'
-              : 'ถ่ายรูปยาก่อนทาน เพื่อให้ครอบครัวมั่นใจว่าทานถูกต้อง'}
-        </ThemedText>
-      </Card>
-
-      {photoCaptured ? (
-        <Card gap={Spacing.two} style={styles.preview}>
-          <View style={[styles.previewFrame, { backgroundColor: theme.surfaceSunken, borderColor: theme.border }]}>
-            <Ionicons name="camera-outline" size={40} color={theme.textMuted} />
+      {stage === 'idle' ? (
+        <Card gap={Spacing.four} padding={Spacing.four}>
+          <View style={styles.hintList}>
+            {hints.map((hint) => {
+              const HintIcon = hint.icon;
+              return (
+                <View key={hint.text} style={styles.hintRow}>
+                  <View style={[styles.hintIconWrap, { backgroundColor: theme.primarySoft }]}>
+                    <HintIcon weight="duotone" size={19} color={theme.primaryText} />
+                  </View>
+                  <ThemedText type="small" themeColor="textSecondary" style={styles.hintText}>
+                    {hint.text}
+                  </ThemedText>
+                </View>
+              );
+            })}
           </View>
-          <ThemedText type="smallBold">ภาพยืนยันพร้อมส่ง</ThemedText>
-          <ThemedText type="caption" themeColor="textMuted" style={styles.previewCaption}>
-            รูปนี้จำลองการอัปโหลดจากกล้องเพื่อยืนยันการทานยา
-          </ThemedText>
-          <AppButton label="ถ่ายใหม่" variant="ghost" size="medium" onPress={() => setPhotoCaptured(true)} />
+          <AppButton
+            label="ถ่ายภาพยืนยัน"
+            phosphorIcon={CameraIcon}
+            size="xlarge"
+            disabled={!canEdit}
+            onPress={openCamera}
+            accessibilityHint={canEdit ? undefined : 'ดูได้เท่านั้น'}
+          />
         </Card>
-      ) : (
-        <AppButton
-          label="ถ่ายรูปยืนยัน"
-          icon="camera-outline"
-          variant="secondary"
-          size="xlarge"
-          onPress={() => setPhotoCaptured(true)}
-          accessibilityHint="เปิดกล้องเพื่อถ่ายภาพยาก่อนยืนยัน"
-        />
-      )}
+      ) : null}
+
+      {stage === 'camera' ? (
+        <>
+          <Pressable
+            onPress={canEdit ? shoot : undefined}
+            disabled={!canEdit}
+            accessibilityRole="button"
+            accessibilityLabel="ถ่ายรูปยืนยัน"
+            accessibilityHint={canEdit ? 'จำลองการถ่ายภาพยาก่อนยืนยัน — แอปนี้ยังไม่เชื่อมกล้องจริง' : 'ดูได้เท่านั้น'}
+            style={({ pressed }) => pressed && canEdit && styles.pressed}>
+            <View style={[styles.viewfinder, { backgroundColor: theme.hero }]}>
+              <View style={styles.viewfinderFrame} />
+              <View style={styles.recRow}>
+                <View style={[styles.recDot, { backgroundColor: theme.danger }]} />
+                <ThemedText style={styles.recLabel}>กล้อง (จำลอง)</ThemedText>
+              </View>
+              <ThemedText style={styles.viewfinderCaption}>จัดซองยาให้อยู่ในกรอบ แล้วกดถ่าย</ThemedText>
+              <View style={styles.shutterWrap}>
+                <View style={styles.shutter} />
+              </View>
+            </View>
+          </Pressable>
+          <AppButton label="ยกเลิก" variant="secondary" size="large" onPress={cancelCamera} />
+        </>
+      ) : null}
+
+      {stage === 'review' || stage === 'done' ? (
+        <>
+          <View style={[styles.previewFrame, { backgroundColor: theme.surfaceSunken, borderColor: theme.border }]}>
+            <CameraIcon weight="duotone" size={40} color={theme.textMuted} />
+            <View
+              style={[
+                styles.stampPill,
+                { backgroundColor: theme.backgroundElement, shadowColor: theme.shadow },
+              ]}>
+              {stage === 'done' ? (
+                <CheckCircleIcon weight="fill" size={16} color={theme.successText} />
+              ) : (
+                <ClockCountdownIcon weight="fill" size={16} color={theme.warningText} />
+              )}
+              <ThemedText type="caption" style={{ color: stage === 'done' ? theme.successText : theme.warningText }}>
+                {stage === 'done'
+                  ? `ยืนยันแล้ว ${new Date(medication.lastTakenAt!).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`
+                  : 'รอการยืนยัน'}
+              </ThemedText>
+            </View>
+          </View>
+
+          <Card gap={0} padding={Spacing.three}>
+            <InfoRow label="เวลาถ่ายภาพ" value={shotTime ?? '—'} />
+            <View style={[styles.separator, { backgroundColor: theme.border }]} />
+            <InfoRow label="ผู้บันทึก" value={user?.name ?? '—'} />
+          </Card>
+
+          {stage === 'review' ? (
+            <AppButton
+              label="ถ่ายใหม่"
+              phosphorIcon={ArrowCounterClockwiseIcon}
+              variant="secondary"
+              size="large"
+              disabled={!canEdit}
+              onPress={retake}
+            />
+          ) : null}
+
+          <ThemedText type="small" themeColor="textSecondary" style={styles.previewCaption}>
+            {stage === 'done'
+              ? 'ครอบครัวเห็นแล้ว'
+              : 'รูปนี้จำลองการอัปโหลดจากกล้องเพื่อยืนยันการทานยา — ตรวจภาพให้ชัดเจน แล้วกดยืนยันเพื่อบันทึก'}
+          </ThemedText>
+        </>
+      ) : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  step: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  stepDot: {
-    width: 28,
-    height: 28,
-    borderRadius: Radius.full,
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  stepGlyph: { fontSize: 13, lineHeight: 18, fontWeight: '800' },
-  stepLine: { width: 28, height: 2, marginHorizontal: Spacing.one },
+  pressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
 
-  pillHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  pillIcon: { width: 52, height: 52, borderRadius: Radius.lg, justifyContent: 'center', alignItems: 'center' },
-  pillText: { flex: 1, gap: Spacing.half },
-  separator: { height: 1 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  headerChip: { width: 52, height: 52, borderRadius: Radius.lg, justifyContent: 'center', alignItems: 'center' },
+  headerText: { flex: 1, gap: Spacing.half, minWidth: 0 },
 
-  preview: { alignItems: 'center' },
+  stepper: { flexDirection: 'row', gap: Spacing.two },
+  step: { flex: 1, gap: Spacing.one },
+  stepBar: { height: 4, borderRadius: 2 },
+
+  hintList: { gap: Spacing.three },
+  hintRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  hintIconWrap: { width: 34, height: 34, borderRadius: Radius.sm + 1, justifyContent: 'center', alignItems: 'center' },
+  hintText: { flex: 1 },
+
   previewFrame: {
     width: '100%',
-    height: 132,
-    borderRadius: Radius.md,
+    height: 220,
+    borderRadius: Radius.xl,
     borderWidth: 1,
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  stampPill: {
+    position: 'absolute',
+    top: 14,
+    left: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one + 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  separator: { height: 1 },
   previewCaption: { textAlign: 'center' },
+
+  viewfinder: {
+    height: 240,
+    borderRadius: Radius.xl,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  viewfinderFrame: {
+    position: 'absolute',
+    top: 22,
+    left: 22,
+    right: 22,
+    bottom: 78,
+    borderRadius: Radius.lg,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(255,255,255,0.42)',
+  },
+  recRow: {
+    position: 'absolute',
+    top: Spacing.three,
+    left: Spacing.three,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+  },
+  recDot: { width: 8, height: 8, borderRadius: Radius.full },
+  recLabel: { fontSize: 12, fontWeight: '700', color: '#FFFFFF' },
+  viewfinderCaption: {
+    position: 'absolute',
+    left: 30,
+    right: 30,
+    bottom: 66,
+    textAlign: 'center',
+    fontSize: 13.5,
+    lineHeight: 20,
+    color: '#DBEAFE',
+  },
+  shutterWrap: { position: 'absolute', left: 0, right: 0, bottom: 16, alignItems: 'center' },
+  shutter: {
+    width: 52,
+    height: 52,
+    borderRadius: Radius.full,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 4,
+    borderColor: 'rgba(255,255,255,0.45)',
+  },
 });

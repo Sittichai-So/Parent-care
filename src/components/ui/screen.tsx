@@ -25,6 +25,12 @@ type ScreenProps = {
   gap?: number;
   /** Pinned to the bottom of the screen, outside the scroll area. */
   footer?: ReactNode;
+  /** Full-bleed slot above the scroll area (e.g. `MedicalHeader`'s solid navy
+   *  panel) — unlike `children`, it ignores `contentWidth`'s gutters and spans
+   *  the full device width. When set, the screen's own top safe-area inset is
+   *  ceded to the header (it must pad itself via `useSafeAreaInsets`), so its
+   *  background can paint behind the status bar. */
+  header?: ReactNode;
   edges?: readonly Edge[];
   contentContainerStyle?: StyleProp<ViewStyle>;
 };
@@ -40,6 +46,7 @@ export function Screen({
   keyboardAvoiding = false,
   gap = Spacing.three,
   footer,
+  header,
   edges = ['top', 'left', 'right'],
   contentContainerStyle,
 }: ScreenProps) {
@@ -64,7 +71,8 @@ export function Screen({
   );
 
   const body = (
-    <SafeAreaView style={styles.safeArea} edges={edges}>
+    <SafeAreaView style={styles.safeArea} edges={header ? edges.filter((edge) => edge !== 'top') : edges}>
+      {header}
       <View style={styles.contentWidth}>
         {content}
         {footer ? <View style={styles.footer}>{footer}</View> : null}

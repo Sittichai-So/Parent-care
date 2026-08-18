@@ -1,27 +1,32 @@
-import type { ComponentProps } from 'react';
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Tabs, TabList, TabSlot, TabTrigger, useTabTrigger } from 'expo-router/ui';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 
-import { Ionicons } from '@expo/vector-icons';
+import {
+  ChartDonutIcon,
+  HouseIcon,
+  PhoneCallIcon,
+  UserCircleIcon,
+  UsersThreeIcon,
+  type Icon as PhosphorIcon,
+} from 'phosphor-react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Elevation, Radius, Spacing } from '@/constants/theme';
 import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
 
-type IconName = ComponentProps<typeof Ionicons>['name'];
-
 type TabButtonProps = {
   name: string;
-  activeIcon: IconName;
-  inactiveIcon: IconName;
+  icon: PhosphorIcon;
   label: string;
   badge?: number;
 };
 
-function TabButton({ name, activeIcon, inactiveIcon, label, badge }: TabButtonProps) {
+function TabButton({ name, icon: Icon, label, badge }: TabButtonProps) {
   const theme = useTheme();
   const { trigger, triggerProps } = useTabTrigger({ name });
   const focused = trigger?.isFocused ?? false;
@@ -35,7 +40,11 @@ function TabButton({ name, activeIcon, inactiveIcon, label, badge }: TabButtonPr
       accessibilityState={{ selected: focused }}
       style={styles.tabItem}>
       <View style={styles.iconWrap}>
-        <Ionicons name={focused ? activeIcon : inactiveIcon} size={24} color={color} />
+        {/* Rounded chip behind the icon, filled when active — per the
+         *  reference design, replacing the old underline-dot indicator. */}
+        <View style={[styles.iconChip, focused && { backgroundColor: theme.primarySoft }]}>
+          <Icon weight={focused ? 'fill' : 'regular'} size={22} color={color} />
+        </View>
         {badge ? (
           <View style={[styles.badge, { backgroundColor: theme.danger, borderColor: theme.backgroundElement }]}>
             <ThemedText style={[styles.badgeLabel, { color: theme.onPrimary }]}>{badge}</ThemedText>
@@ -45,16 +54,50 @@ function TabButton({ name, activeIcon, inactiveIcon, label, badge }: TabButtonPr
       <ThemedText type="caption" style={{ color, fontWeight: focused ? '800' : '600' }}>
         {label}
       </ThemedText>
-      {/* Small brand-gradient pill instead of a flat colour underline — the
-       *  one place in the nav that carries the logo's blue→teal identity. */}
-      <View style={[styles.activeDot, focused && { experimental_backgroundImage: theme.brandGradient }]} />
     </Pressable>
+  );
+}
+
+/** The centre SOS button — navy, phone-call glyph, a slow breathing shadow
+ *  pulse to draw the eye (this is the one control on the tab bar that
+ *  should never be missed), per the reference design's `Emergency` FAB. */
+function EmergencyButton() {
+  const theme = useTheme();
+  const router = useRouter();
+  const pulse = useSharedValue(0);
+
+  useEffect(() => {
+    pulse.value = withRepeat(withTiming(1, { duration: 1300, easing: Easing.inOut(Easing.ease) }), -1, true);
+  }, [pulse]);
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    shadowOpacity: 0.4 + pulse.value * 0.22,
+    shadowRadius: 10 + pulse.value * 8,
+  }));
+
+  return (
+    <View style={styles.fabSlot} pointerEvents="box-none">
+      <Animated.View style={[styles.fabShadow, { shadowColor: theme.primary }, pulseStyle]}>
+        <Pressable
+          onPress={() => router.push('/emergency')}
+          accessibilityRole="button"
+          accessibilityLabel="ขอความช่วยเหลือฉุกเฉิน"
+          accessibilityHint="เปิดหน้ายืนยันการขอความช่วยเหลือจากครอบครัว"
+          style={({ pressed }) => [
+            styles.fab,
+            { backgroundColor: theme.primary, borderColor: theme.backgroundElement },
+            pressed && styles.fabPressed,
+          ]}>
+          <PhoneCallIcon weight="fill" size={26} color={theme.onPrimary} />
+        </Pressable>
+      </Animated.View>
+      <ThemedText style={[styles.fabLabel, { color: theme.primary }]}>Emergency</ThemedText>
+    </View>
   );
 }
 
 export default function TabsLayout() {
   const theme = useTheme();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { familyMembers, currentRole } = useFamilyContext();
 
@@ -80,45 +123,35 @@ export default function TabsLayout() {
           ])}>
           {showCaregiverTab ? (
             <TabTrigger name="index" href="/" asChild>
-              <TabButton
-                name="index"
-                activeIcon="home"
-                inactiveIcon="home-outline"
-                label="ผู้ดูแล"
-                badge={attentionCount}
-              />
+              <TabButton name="index" icon={HouseIcon} label="หน้าหลัก" badge={attentionCount} />
+            </TabTrigger>
+          ) : null}
+
+          {showCaregiverTab ? (
+            <TabTrigger name="family" href="/family" asChild>
+              <TabButton name="family" icon={UsersThreeIcon} label="ครอบครัว" />
             </TabTrigger>
           ) : null}
 
           {showElderTab ? (
             <TabTrigger name="explore" href="/explore" asChild>
-              <TabButton
-                name="explore"
-                activeIcon="person-circle"
-                inactiveIcon="person-circle-outline"
-                label="ข้อมูลของฉัน"
-              />
+              <TabButton name="explore" icon={UserCircleIcon} label="ข้อมูลของฉัน" />
             </TabTrigger>
           ) : null}
 
           {/* Every role gets a report — its content differs per role (see
            *  (tabs)/report.tsx), but the tab itself is never hidden. */}
           <TabTrigger name="report" href="/report" asChild>
-            <TabButton name="report" activeIcon="stats-chart" inactiveIcon="stats-chart-outline" label="รายงาน" />
+            <TabButton name="report" icon={ChartDonutIcon} label="แดชบอร์ด" />
           </TabTrigger>
 
-          <Pressable
-            onPress={() => router.push('/emergency')}
-            accessibilityRole="button"
-            accessibilityLabel="ขอความช่วยเหลือฉุกเฉิน"
-            accessibilityHint="เปิดหน้ายืนยันการขอความช่วยเหลือจากครอบครัว"
-            style={({ pressed }) => [
-              styles.fab,
-              { backgroundColor: theme.danger, borderColor: theme.background },
-              pressed && styles.fabPressed,
-            ]}>
-            <Ionicons name="alert-circle" size={28} color={theme.onPrimary} />
-          </Pressable>
+          {showCaregiverTab ? (
+            <TabTrigger name="profile" href="/profile" asChild>
+              <TabButton name="profile" icon={UserCircleIcon} label="โปรไฟล์" />
+            </TabTrigger>
+          ) : null}
+
+          <EmergencyButton />
         </View>
       </TabList>
     </Tabs>
@@ -145,8 +178,14 @@ const styles = StyleSheet.create({
     gap: Spacing.half,
     paddingVertical: Spacing.one,
   },
-  activeDot: { width: 18, height: 4, borderRadius: Radius.full, marginTop: 1 },
   iconWrap: { position: 'relative' },
+  iconChip: {
+    width: 38,
+    height: 32,
+    borderRadius: Radius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   badge: {
     position: 'absolute',
     top: -4,
@@ -161,22 +200,30 @@ const styles = StyleSheet.create({
   },
   badgeLabel: { fontSize: 10, lineHeight: 12, fontWeight: '800' },
 
-  fab: {
+  // Overlaps the bar's top edge, centred — matches the reference design's
+  // always-visible SOS button rather than tucking it in as just another tab.
+  fabSlot: {
     position: 'absolute',
-    top: -22,
+    top: -34,
     left: '50%',
     marginLeft: -30,
+    width: 60,
+    alignItems: 'center',
+    gap: Spacing.one,
+  },
+  fabShadow: {
+    borderRadius: Radius.full,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+  },
+  fab: {
     width: 60,
     height: 60,
     borderRadius: Radius.full,
     borderWidth: 4,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
   },
   fabPressed: { opacity: 0.9, transform: [{ scale: 0.97 }] },
+  fabLabel: { fontSize: 11, fontWeight: '700' },
 });

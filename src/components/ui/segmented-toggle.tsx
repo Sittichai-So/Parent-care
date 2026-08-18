@@ -18,7 +18,7 @@ export function SegmentedToggle<T extends string>({ options, value, onChange }: 
   const theme = useTheme();
 
   return (
-    <View style={[styles.toggle, { backgroundColor: theme.surfaceSunken, borderColor: theme.border }]}>
+    <View style={[styles.toggle, { backgroundColor: theme.primarySoft }]}>
       {options.map((option) => {
         const active = option.value === value;
         return (
@@ -42,16 +42,17 @@ export function SegmentedToggle<T extends string>({ options, value, onChange }: 
 }
 
 const styles = StyleSheet.create({
+  // Pill track + pill option, per the reference design's segmented range
+  // control (radius 999, no border — a soft navy-tinted fill instead).
   toggle: {
     flexDirection: 'row',
-    borderRadius: Radius.md,
-    borderWidth: 1,
+    borderRadius: Radius.full,
     padding: 4,
     gap: 4,
   },
   option: {
     flex: 1,
-    borderRadius: Radius.sm,
+    borderRadius: Radius.full,
     paddingVertical: Spacing.two,
     alignItems: 'center',
   },

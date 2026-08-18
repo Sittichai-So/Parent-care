@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View, type KeyboardTypeOptions } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
+import type { Icon as PhosphorIcon } from 'phosphor-react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { HitSize, Radius, Spacing } from '@/constants/theme';
@@ -17,6 +18,10 @@ type TextFieldProps = {
   keyboardType?: KeyboardTypeOptions;
   /** Masks the value and adds a show/hide eye toggle — for passwords. */
   secureTextEntry?: boolean;
+  /** Leading glyph inside the field — the login screen's envelope/lock icons. Omit for the plain boxed look every other form uses. */
+  icon?: keyof typeof Ionicons.glyphMap;
+  /** Phosphor icon component — takes precedence over `icon` when given (see `AppButton`'s `phosphorIcon`). */
+  phosphorIcon?: PhosphorIcon;
   /** `soft` swaps the bordered white box for a borderless filled pill (sunken
    *  background, larger radius) — used on the login screen's more marketing-led
    *  layout. `default` is every ordinary data-entry form's boxed, bordered field. */
@@ -33,6 +38,8 @@ export function TextField({
   multiline = false,
   keyboardType = 'default',
   secureTextEntry = false,
+  icon,
+  phosphorIcon: PhosphorIconComp,
   variant = 'default',
 }: TextFieldProps) {
   const theme = useTheme();
@@ -46,7 +53,26 @@ export function TextField({
         {label}
         {required ? <ThemedText style={{ color: theme.danger }}> *</ThemedText> : null}
       </ThemedText>
-      <View style={styles.inputWrap}>
+      <View
+        style={[
+          styles.row,
+          multiline && styles.rowMultiline,
+          {
+            backgroundColor: soft ? theme.surfaceSunken : theme.inputBackground,
+            borderColor: focused ? theme.primary : soft ? 'transparent' : theme.border,
+            borderWidth: focused ? 2 : soft ? 2 : 1,
+            // `soft` matches the reference design's login/register fields —
+            // radius 14, same as `Radius.md` (a bordered `default` field
+            // uses the same token for consistency, not because the mock
+            // calls for it there too).
+            borderRadius: Radius.md,
+          },
+        ]}>
+        {PhosphorIconComp ? (
+          <PhosphorIconComp weight="duotone" size={20} color={theme.primary} />
+        ) : icon ? (
+          <Ionicons name={icon} size={20} color={theme.primary} />
+        ) : null}
         <TextInput
           value={value}
           onChangeText={onChangeText}
@@ -58,18 +84,7 @@ export function TextField({
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           accessibilityLabel={label}
-          style={[
-            styles.input,
-            soft && styles.inputSoft,
-            {
-              backgroundColor: soft ? theme.surfaceSunken : theme.inputBackground,
-              color: theme.text,
-              borderColor: focused ? theme.primary : soft ? 'transparent' : theme.border,
-              borderWidth: focused ? 2 : soft ? 2 : 1,
-            },
-            multiline && styles.multiline,
-            secureTextEntry && styles.withToggle,
-          ]}
+          style={[styles.input, { color: theme.text }, multiline && styles.multiline]}
         />
         {secureTextEntry ? (
           <Pressable
@@ -77,7 +92,7 @@ export function TextField({
             accessibilityRole="button"
             accessibilityLabel={revealed ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
             hitSlop={Spacing.two}
-            style={({ pressed }) => [styles.toggle, pressed && styles.pressed]}>
+            style={({ pressed }) => pressed && styles.pressed}>
             <Ionicons name={revealed ? 'eye-off-outline' : 'eye-outline'} size={20} color={theme.textSecondary} />
           </Pressable>
         ) : null}
@@ -88,21 +103,21 @@ export function TextField({
 
 const styles = StyleSheet.create({
   field: { gap: Spacing.two },
-  inputWrap: { justifyContent: 'center' },
-  input: {
-    minHeight: HitSize.large,
-    borderRadius: Radius.md,
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+    minHeight: HitSize.large,
+  },
+  rowMultiline: { alignItems: 'flex-start' },
+  input: {
+    flex: 1,
+    minWidth: 0,
+    backgroundColor: 'transparent',
     fontSize: 16,
+    paddingVertical: Spacing.two,
   },
-  inputSoft: { borderRadius: Radius.lg },
-  multiline: { minHeight: 88, textAlignVertical: 'top', paddingTop: Spacing.two },
-  withToggle: { paddingRight: Spacing.three + HitSize.small },
-  toggle: {
-    position: 'absolute',
-    right: Spacing.three,
-    padding: Spacing.one,
-  },
+  multiline: { minHeight: 88, textAlignVertical: 'top' },
   pressed: { opacity: 0.7 },
 });

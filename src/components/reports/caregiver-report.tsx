@@ -1,25 +1,35 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Ionicons } from '@expo/vector-icons';
+import { CheckCircleIcon, HospitalIcon, WarningCircleIcon } from 'phosphor-react-native';
 
 import { ThemedText } from '@/components/themed-text';
+import { AdherenceRingCard } from '@/components/ui/adherence-ring-card';
 import { BarChart } from '@/components/ui/bar-chart';
 import { Card } from '@/components/ui/card';
 import { DonutChart } from '@/components/ui/donut-chart';
+import { MemberAdherenceRow } from '@/components/ui/member-adherence-row';
 import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
+import { SegmentedToggle } from '@/components/ui/segmented-toggle';
 import { StatTile } from '@/components/ui/stat-tile';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { MemberStatusMeta } from '@/constants/status';
 import { Spacing } from '@/constants/theme';
 import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
-import { daysFromToday, relativeDayLabel } from '@/utils/date';
-import { adherenceTone, bucketEventsByDay, perMemberAdherence, taskBreakdown } from '@/utils/reports';
+import { daysFromToday, isDateInCurrentMonth, relativeDayLabel } from '@/utils/date';
+import { adherenceTone, bucketEventsByDay, medicationAdherence, memberAdherenceDetail, taskBreakdown } from '@/utils/reports';
 
 import { ReportHeader } from './report-header';
+
+const rangeOptions = [
+  { value: '7', label: '7 วัน' },
+  { value: '30', label: '30 วัน' },
+  { value: '90', label: '3 เดือน' },
+] as const;
+const rangeDays: Record<(typeof rangeOptions)[number]['value'], number> = { '7': 7, '30': 30, '90': 90 };
 
 /** Report for the Caregiver role — narrower than `OwnerReport`: it opens on
  *  *this* caregiver's own assigned tasks (falling back to the household's
@@ -40,6 +50,8 @@ export function CaregiverReport() {
     setSelectedMemberId,
   } = useFamilyContext();
 
+  const [range, setRange] = useState<(typeof rangeOptions)[number]['value']>('7');
+
   const myName = familyMembers.find((member) => member.id === currentMembershipId)?.name ?? '';
   const myTasks = useMemo(() => (myName ? tasks.filter((task) => task.owner === myName) : []), [tasks, myName]);
   const usingHouseholdFallback = myTasks.length === 0;
@@ -50,10 +62,19 @@ export function CaregiverReport() {
     () => familyMembers.filter((member) => member.status !== 'normal'),
     [familyMembers]
   );
-  const memberAdherence = useMemo(() => perMemberAdherence(medications, familyMembers), [medications, familyMembers]);
+  const memberDetail = useMemo(() => memberAdherenceDetail(medications, familyMembers), [medications, familyMembers]);
+  const dailyAdherence = useMemo(() => medicationAdherence(medications), [medications]);
+  const monthAppointmentCount = useMemo(
+    () => appointments.filter((apt) => isDateInCurrentMonth(apt.date)).length,
+    [appointments]
+  );
   const careActivityByDay = useMemo(
-    () => bucketEventsByDay(timeline.filter((event) => event.type === 'task' || event.type === 'medication'), 7),
-    [timeline]
+    () =>
+      bucketEventsByDay(
+        timeline.filter((event) => event.type === 'task' || event.type === 'medication'),
+        rangeDays[range]
+      ),
+    [timeline, range]
   );
 
   const upcomingAppointments = useMemo(
@@ -71,17 +92,43 @@ export function CaregiverReport() {
   };
 
   return (
-    <Screen>
-      <ReportHeader
-        title="รายงานงานดูแลของฉัน"
-        subtitle={
-          currentHousehold
-            ? myName
-              ? `${currentHousehold.name} · ผู้ดูแล: ${myName}`
-              : currentHousehold.name
-            : 'ยังไม่ได้เลือกกลุ่มครอบครัว'
+    <Screen
+      header={
+        <ReportHeader
+          title="รายงานงานดูแลของฉัน"
+          subtitle={
+            currentHousehold
+              ? myName
+                ? `${currentHousehold.name} · ผู้ดูแล: ${myName}`
+                : currentHousehold.name
+              : 'ยังไม่ได้เลือกกลุ่มครอบครัว'
+          }
+        />
+      }>
+      <SegmentedToggle options={rangeOptions} value={range} onChange={setRange} />
+
+      <AdherenceRingCard
+        pct={dailyAdherence.pct}
+        headline={
+          dailyAdherence.due === 0
+            ? 'ยังไม่มีรายการยาที่ใช้งานอยู่'
+            : dailyAdherence.taken >= dailyAdherence.due
+              ? 'ทุกคนทานยาครบวันนี้'
+              : `เหลือยาที่ยังไม่ยืนยัน ${dailyAdherence.due - dailyAdherence.taken} รายการ`
         }
+        sub={`จาก ${dailyAdherence.due} ครั้งที่กำหนดวันนี้ · พลาด ${dailyAdherence.due - dailyAdherence.taken} ครั้ง`}
       />
+
+      <View style={styles.statRow}>
+        <StatTile value={dailyAdherence.taken} label="ยืนยันพร้อมรูป" tone="success" phosphorIcon={CheckCircleIcon} />
+        <StatTile
+          value={dailyAdherence.due - dailyAdherence.taken}
+          label="พลาด / เลยเวลา"
+          tone="warning"
+          phosphorIcon={WarningCircleIcon}
+        />
+        <StatTile value={monthAppointmentCount} label="นัดหมายเดือนนี้" tone="primary" phosphorIcon={HospitalIcon} />
+      </View>
 
       <View style={styles.statRow}>
         <StatTile value={focusTasks.filter((task) => task.status !== 'done').length} label="งานค้าง" tone="warning" />
@@ -106,22 +153,29 @@ export function CaregiverReport() {
         />
       </Card>
 
-      <SectionHeader title="การทานยาวันนี้ ตามสมาชิก" />
-      <Card>
-        {memberAdherence.length === 0 ? (
+      <SectionHeader title="รายคน" />
+      {memberDetail.length === 0 ? (
+        <Card tone="sunken" elevation="flat">
           <ThemedText type="small" themeColor="textSecondary">
             ยังไม่มีสมาชิกที่มีรายการยาที่ใช้งานอยู่
           </ThemedText>
-        ) : (
-          <BarChart
-            scaleMax={100}
-            valueSuffix="%"
-            data={memberAdherence.map((entry) => ({ label: entry.name, value: entry.pct, tone: adherenceTone(entry.pct) }))}
-          />
-        )}
-      </Card>
+        </Card>
+      ) : (
+        <View style={styles.list}>
+          {memberDetail.map((entry) => (
+            <MemberAdherenceRow
+              key={entry.memberId}
+              name={entry.name}
+              pct={entry.pct}
+              tone={adherenceTone(entry.pct)}
+              note={entry.note}
+              onPress={() => goToMember(entry.memberId)}
+            />
+          ))}
+        </View>
+      )}
 
-      <SectionHeader title="กิจกรรมการดูแล 7 วันที่ผ่านมา" />
+      <SectionHeader title={`กิจกรรมการดูแล ${rangeDays[range]} วันที่ผ่านมา`} />
       <Card>
         <BarChart
           orientation="vertical"
@@ -166,7 +220,7 @@ export function CaregiverReport() {
       {attentionMembers.length === 0 ? (
         <Card tone="success" accented elevation="flat">
           <View style={styles.okRow}>
-            <Ionicons name="checkmark-circle" size={18} color={theme.success} />
+            <CheckCircleIcon weight="fill" size={18} color={theme.success} />
             <ThemedText type="small" style={{ color: theme.successText }}>
               ทุกคนในบ้านสถานะปกติดี
             </ThemedText>

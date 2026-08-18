@@ -44,12 +44,13 @@ export function ViewerReport() {
   };
 
   return (
-    <Screen>
-      <ReportHeader
-        title="รายงานสถานะครอบครัว"
-        subtitle={currentHousehold ? currentHousehold.name : 'ยังไม่ได้เลือกกลุ่มครอบครัว'}
-      />
-
+    <Screen
+      header={
+        <ReportHeader
+          title="รายงานสถานะครอบครัว"
+          subtitle={currentHousehold ? currentHousehold.name : 'ยังไม่ได้เลือกกลุ่มครอบครัว'}
+        />
+      }>
       <View style={styles.statRow}>
         <StatTile value={statusCounts.normal} label="ปกติดี" tone="success" />
         <StatTile value={statusCounts.monitor + statusCounts.urgent} label="ต้องติดตาม" tone="warning" />

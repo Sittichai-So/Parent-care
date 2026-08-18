@@ -1,5 +1,7 @@
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
+import type { Icon as PhosphorIcon } from 'phosphor-react-native';
+
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -9,12 +11,16 @@ export type BadgeTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger'
 type StatusBadgeProps = {
   label: string;
   tone?: BadgeTone;
-  /** Coloured dot instead of an emoji — reads better at small sizes. */
+  /** Coloured dot instead of an emoji — reads better at small sizes. Ignored
+   *  when `phosphorIcon` is given. */
   dot?: boolean;
+  /** A real status glyph (e.g. `CheckCircleIcon`) instead of the plain dot —
+   *  per the reference design's member/task status pills. */
+  phosphorIcon?: PhosphorIcon;
   style?: StyleProp<ViewStyle>;
 };
 
-export function StatusBadge({ label, tone = 'neutral', dot = true, style }: StatusBadgeProps) {
+export function StatusBadge({ label, tone = 'neutral', dot = true, phosphorIcon: Icon, style }: StatusBadgeProps) {
   const theme = useTheme();
 
   const tones: Record<BadgeTone, { background: string; text: string; dot: string }> = {
@@ -27,7 +33,11 @@ export function StatusBadge({ label, tone = 'neutral', dot = true, style }: Stat
 
   return (
     <View style={[styles.badge, { backgroundColor: tones[tone].background }, style]}>
-      {dot ? <View style={[styles.dot, { backgroundColor: tones[tone].dot }]} /> : null}
+      {Icon ? (
+        <Icon weight="fill" size={15} color={tones[tone].dot} />
+      ) : dot ? (
+        <View style={[styles.dot, { backgroundColor: tones[tone].dot }]} />
+      ) : null}
       <ThemedText type="caption" style={{ color: tones[tone].text }}>
         {label}
       </ThemedText>

@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 
-import { Ionicons } from '@expo/vector-icons';
+import { ArrowRightIcon, EnvelopeSimpleIcon, LockKeyIcon, UserPlusIcon } from 'phosphor-react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
@@ -32,11 +33,6 @@ export default function LoginScreen() {
 
     try {
       await login(email.trim(), password);
-      // Role (caregiver/elder/...) now lives on the household membership,
-      // not the account — the root layout guard sends a household-less
-      // account to household-setup, and the tab layout below that picks
-      // the right default tab from the current membership's role. Login
-      // itself no longer knows or needs to know which.
       router.replace('/');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
@@ -46,25 +42,37 @@ export default function LoginScreen() {
   };
 
   return (
-    // Same edge-to-edge hero shell as `welcome.tsx`, not the shared `Screen` —
-    // the hero here needs to run full-bleed to the screen edges, which
-    // `Screen`'s fixed horizontal padding can't do.
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.backgroundElement }]} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          {/* Cropped to the top of `background.png` — the logo, wordmark and
-           *  feature icons — not its lower half (the family photo), which
-           *  would fight with the form for attention right below it. */}
-          <View style={styles.hero}>
-            <Image
-              source={require('@/assets/images/background.png')}
-              style={styles.heroImage}
-              contentFit="cover"
-              contentPosition="top"
-            />
+          {/* Hero — light-blue backdrop with a rounded picture frame, cut off by
+           *  a wave into the white body below. Per the reference design; the
+           *  wave is the one place in the app that isn't a straight edge. */}
+          <View style={[styles.hero, { backgroundColor: theme.sky }]}>
+            <View style={[styles.heroFrame, { backgroundColor: theme.heroArt }]}>
+              <Image
+                source={require('@/assets/images/background.png')}
+                style={styles.heroImage}
+                contentFit="cover"
+                contentPosition="top"
+              />
+            </View>
+            <Svg viewBox="0 0 402 70" preserveAspectRatio="none" style={styles.wave}>
+              <Path
+                d="M0 34C86 4 150 62 236 44 300 31 348 8 402 22V70H0Z"
+                fill={theme.backgroundElement}
+              />
+            </Svg>
           </View>
 
           <View style={styles.body}>
+            <View>
+              <ThemedText type="small" themeColor="textSecondary">
+                เข้าสู่ระบบ
+              </ThemedText>
+              <ThemedText type="display">Parent Care</ThemedText>
+            </View>
+
             <View style={styles.form}>
               <TextField
                 label="อีเมล"
@@ -76,6 +84,7 @@ export default function LoginScreen() {
                 placeholder="you@example.com"
                 keyboardType="email-address"
                 variant="soft"
+                phosphorIcon={EnvelopeSimpleIcon}
                 required
               />
               <TextField
@@ -88,38 +97,48 @@ export default function LoginScreen() {
                 placeholder="รหัสผ่าน"
                 secureTextEntry
                 variant="soft"
+                phosphorIcon={LockKeyIcon}
                 required
               />
 
-              {error ? (
-                <View style={[styles.errorBox, { backgroundColor: theme.dangerSoft }]}>
-                  <Ionicons name="alert-circle-outline" size={16} color={theme.dangerText} />
-                  <ThemedText type="small" style={{ color: theme.dangerText, flex: 1 }}>
-                    {error}
-                  </ThemedText>
-                </View>
-              ) : null}
-
               <AppButton
                 label="เข้าสู่ระบบ"
-                icon="arrow-forward"
+                phosphorIcon={ArrowRightIcon}
                 iconPosition="trailing"
-                size="xlarge"
+                size="large"
                 onPress={handleLogin}
                 loading={isLoading}
                 disabled={isLoading}
                 accessibilityHint="เข้าสู่ระบบด้วยอีเมลและรหัสผ่านที่กรอก"
               />
+
+              {error ? (
+                <ThemedText type="small" style={[styles.status, { color: theme.dangerText }]} accessibilityRole="alert">
+                  {error}
+                </ThemedText>
+              ) : null}
             </View>
 
-            <Pressable
-              onPress={() => router.replace('/register')}
-              accessibilityRole="button"
-              style={({ pressed }) => [styles.registerLink, pressed && styles.pressed]}>
-              <ThemedText type="small" themeColor="textSecondary">
-                ยังไม่มีบัญชี? <ThemedText type="smallBold" themeColor="primary">สมัครสมาชิก</ThemedText>
+            <View style={styles.divider}>
+              <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
+              <ThemedText type="caption" themeColor="textMuted">
+                หรือ
               </ThemedText>
-            </Pressable>
+              <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
+            </View>
+
+            <AppButton
+              label="สร้างบัญชีใหม่"
+              phosphorIcon={UserPlusIcon}
+              variant="secondary"
+              size="large"
+              onPress={() => router.push('/register')}
+              style={styles.registerButton}
+            />
+
+            <ThemedText type="caption" themeColor="textMuted" style={styles.footnote}>
+              ลืมรหัสผ่าน? ติดต่อผู้ดูแลกลุ่มบ้านของคุณ
+            </ThemedText>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -132,30 +151,40 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   hero: {
-    height: 280,
-    borderBottomLeftRadius: 48,
-    borderBottomRightRadius: 48,
+    height: 246,
+    position: 'relative',
+  },
+  heroFrame: {
+    position: 'absolute',
+    top: 56,
+    left: 40,
+    right: 40,
+    bottom: 78,
+    borderRadius: Radius.lg,
     overflow: 'hidden',
   },
   heroImage: { width: '100%', height: '100%' },
+  wave: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: -1,
+    width: '100%',
+    height: 70,
+  },
   body: {
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
     paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.five,
+    paddingTop: Spacing.half,
     paddingBottom: Spacing.five,
-    gap: Spacing.five,
+    gap: Spacing.three,
   },
-  form: { gap: Spacing.three },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    borderRadius: Radius.sm,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-  },
-  registerLink: { alignItems: 'center', paddingVertical: Spacing.one },
-  pressed: { opacity: 0.7 },
+  form: { gap: Spacing.three, paddingTop: Spacing.four },
+  status: { textAlign: 'center' },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingTop: Spacing.two },
+  dividerLine: { flex: 1, height: 1 },
+  registerButton: { width: '100%' },
+  footnote: { textAlign: 'center' },
 });

@@ -96,6 +96,7 @@ function RootLayoutNav() {
           <Stack.Screen name="vitals-form" options={{ presentation: 'modal' }} />
           <Stack.Screen name="appointment-detail" />
           <Stack.Screen name="appointments" />
+          <Stack.Screen name="calendar" />
           <Stack.Screen name="medications" />
           <Stack.Screen
             name="emergency"
@@ -103,6 +104,14 @@ function RootLayoutNav() {
           />
           <Stack.Screen name="family-member" />
           <Stack.Screen name="add-member" options={{ presentation: 'modal' }} />
+          {/* Owner-only; both screens self-gate on `currentRole` too, so a
+           *  stale deep link from a demoted Owner still shows a clean
+           *  "not allowed" card rather than real data. */}
+          <Stack.Screen name="household-access" />
+          <Stack.Screen name="audit-log" />
+          {/* Design preview only — see the in-screen banner; no messaging backend exists yet. */}
+          <Stack.Screen name="messages" />
+          <Stack.Screen name="notices" />
         </Stack.Protected>
 
         {/* household-setup also covers "ผูกบัญชี" (claim), which an account

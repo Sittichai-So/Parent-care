@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { HitSize, Radius, Spacing } from '@/constants/theme';
@@ -10,13 +10,16 @@ type DateStripProps = {
   value: string | null;
   onChange: (dateKey: string) => void;
   daysAhead?: number;
+  /** Marks a day with the reference design's small dot (has something on that
+   *  day) — omit on a plain date picker like the appointment form's. */
+  hasEventOn?: (dateKey: string) => boolean;
 };
 
 /** Horizontal day picker for the next `daysAhead` days — a lighter-weight choice
  *  than a full calendar dependency for a single "pick an upcoming day" control.
  *  Cells are sized as a primary tap target (not a dense calendar grid) since
  *  this is meant to be easy to hit for elder users, not just easy to scan. */
-export function DateStrip({ value, onChange, daysAhead = 30 }: DateStripProps) {
+export function DateStrip({ value, onChange, daysAhead = 30, hasEventOn }: DateStripProps) {
   const theme = useTheme();
 
   const days = useMemo(() => {
@@ -35,6 +38,7 @@ export function DateStrip({ value, onChange, daysAhead = 30 }: DateStripProps) {
         // Only call out the month when it's not obvious from context — the
         // very first cell, or wherever the strip crosses into a new month.
         const showMonth = index === 0 || date.getDate() === 1;
+        const hasEvent = hasEventOn?.(key) ?? false;
         return (
           <Pressable
             key={key}
@@ -69,6 +73,14 @@ export function DateStrip({ value, onChange, daysAhead = 30 }: DateStripProps) {
               style={{ color: active ? theme.onPrimary : theme.textMuted, opacity: showMonth ? 1 : 0 }}>
               {date.toLocaleDateString('th-TH', { month: 'short' })}
             </ThemedText>
+            {hasEventOn ? (
+              <View
+                style={[
+                  styles.dot,
+                  { backgroundColor: hasEvent ? (active ? theme.accentYellow : theme.primary) : 'transparent' },
+                ]}
+              />
+            ) : null}
           </Pressable>
         );
       })}
@@ -79,7 +91,7 @@ export function DateStrip({ value, onChange, daysAhead = 30 }: DateStripProps) {
 const styles = StyleSheet.create({
   row: { gap: Spacing.three, paddingVertical: Spacing.one, paddingHorizontal: Spacing.half },
   day: {
-    width: 72,
+    width: 68,
     minHeight: HitSize.xlarge,
     borderRadius: Radius.lg,
     justifyContent: 'center',
@@ -88,5 +100,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
   },
   dayNumber: { fontSize: 24, lineHeight: 28, fontWeight: '800' },
+  dot: { width: 6, height: 6, borderRadius: Radius.full },
   pressed: { opacity: 0.85 },
 });

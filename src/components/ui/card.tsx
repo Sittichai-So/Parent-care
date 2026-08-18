@@ -4,7 +4,7 @@ import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Elevation, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-export type CardTone = 'surface' | 'sunken' | 'primary' | 'success' | 'warning' | 'danger';
+export type CardTone = 'surface' | 'sunken' | 'primary' | 'success' | 'warning' | 'danger' | 'readOnly';
 
 type CardProps = {
   children: ReactNode;
@@ -36,6 +36,9 @@ export function Card({
     success: { background: theme.successSoft, border: theme.success },
     warning: { background: theme.warningSoft, border: theme.warning },
     danger: { background: theme.dangerSoft, border: theme.danger },
+    // Viewer-role "read-only mode" banner — its own bg per the reference
+    // design, bordered/text in the same family as `warning`.
+    readOnly: { background: theme.readOnlyBg, border: theme.warning },
   };
 
   const shadow =

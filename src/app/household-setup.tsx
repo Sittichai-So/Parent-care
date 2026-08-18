@@ -2,17 +2,15 @@ import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Ionicons } from '@expo/vector-icons';
-
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
 import { Card } from '@/components/ui/card';
 import { ChipSelect } from '@/components/ui/chip-select';
+import { OnboardingHeader } from '@/components/ui/onboarding-header';
 import { Screen } from '@/components/ui/screen';
-import { ScreenHeader } from '@/components/ui/screen-header';
 import { SegmentedToggle } from '@/components/ui/segmented-toggle';
 import { TextField } from '@/components/ui/text-field';
-import { Radius, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
@@ -125,12 +123,19 @@ export default function HouseholdSetupScreen() {
   };
 
   return (
-    <Screen keyboardAvoiding gap={Spacing.four}>
-      <ScreenHeader
-        title="เริ่มต้นใช้งาน"
-        subtitle="สร้างกลุ่มครอบครัวใหม่ เข้าร่วมด้วยรหัสเชิญ หรือผูกบัญชีกับโปรไฟล์ที่มีอยู่แล้ว"
-        showBack={canGoBack}
-      />
+    <Screen
+      keyboardAvoiding
+      gap={Spacing.four}
+      header={
+        <OnboardingHeader
+          title={canGoBack ? 'กลุ่มบ้าน' : 'สร้างบัญชี'}
+          step={canGoBack ? undefined : 2}
+          onBack={canGoBack ? () => router.back() : undefined}
+        />
+      }>
+      <ThemedText type="small" themeColor="textSecondary">
+        สร้างกลุ่มครอบครัวใหม่ เข้าร่วมด้วยรหัสเชิญ หรือผูกบัญชีกับโปรไฟล์ที่มีอยู่แล้ว
+      </ThemedText>
 
       <SegmentedToggle
         options={modeOptions}
@@ -217,12 +222,9 @@ export default function HouseholdSetupScreen() {
       ) : null}
 
       {error ? (
-        <View style={[styles.errorBox, { backgroundColor: theme.dangerSoft, flexDirection: 'row', alignItems: 'center', gap: Spacing.two }]}>
-          <Ionicons name="alert-circle-outline" size={16} color={theme.dangerText} />
-          <ThemedText type="small" style={{ color: theme.dangerText, flex: 1 }}>
-            {error}
-          </ThemedText>
-        </View>
+        <ThemedText type="small" style={[styles.status, { color: theme.warningText }]} accessibilityRole="alert">
+          {error}
+        </ThemedText>
       ) : null}
 
       <AppButton
@@ -246,7 +248,7 @@ export default function HouseholdSetupScreen() {
 
 const styles = StyleSheet.create({
   field: { gap: Spacing.two },
-  errorBox: { borderRadius: Radius.sm, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
+  status: { textAlign: 'center' },
   logoutLink: { alignItems: 'center', paddingVertical: Spacing.two },
   pressed: { opacity: 0.7 },
 });

@@ -11,10 +11,17 @@ type AvatarProps = {
   size?: number;
   /** Ring colour — mirrors the member's status so the list scans at a glance. */
   tone?: BadgeTone;
+  /** `circle` (default) — the Profile identity avatar's look. `rounded` —
+   *  a rounded-square initials tile, per the reference design's list-row
+   *  avatars (Family, Member detail, Members & access). */
+  shape?: 'circle' | 'rounded';
 };
 
-/** Thai names have no space-separated surname, so fall back to the first glyphs. */
-function getInitials(name: string) {
+/** Thai names have no space-separated surname, so fall back to the first glyphs.
+ *  Exported for callers that need the same initials logic but can't use
+ *  `Avatar` itself — e.g. a non-square tile shape `Avatar`'s single `size`
+ *  can't express (see `MemberAvatarStrip`). */
+export function getInitials(name: string) {
   const words = name.trim().split(/\s+/).filter(Boolean);
   if (words.length > 1) {
     return words
@@ -25,7 +32,7 @@ function getInitials(name: string) {
   return [...(words[0] ?? '')].slice(0, 2).join('');
 }
 
-export function Avatar({ name, size = 48, tone = 'primary' }: AvatarProps) {
+export function Avatar({ name, size = 48, tone = 'primary', shape = 'circle' }: AvatarProps) {
   const theme = useTheme();
 
   const tones: Record<BadgeTone, { background: string; text: string }> = {
@@ -45,7 +52,7 @@ export function Avatar({ name, size = 48, tone = 'primary' }: AvatarProps) {
         {
           width: size,
           height: size,
-          borderRadius: Radius.full,
+          borderRadius: shape === 'rounded' ? Radius.lg : Radius.full,
           backgroundColor: tones[tone].background,
         },
       ]}>
