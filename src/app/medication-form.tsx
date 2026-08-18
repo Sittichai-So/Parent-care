@@ -19,17 +19,36 @@ import { useTheme } from '@/hooks/use-theme';
 import { canScheduleLocalNotifications } from '@/services/notifications';
 
 /** Add or edit a medication. Editing is detected by an `id` param; creating a
- *  new one targets `memberId` (defaults to the family's Elder). */
+ *  new one targets `memberId` (an explicit param, or the caller's own record
+ *  for Elder, or the family's Elder for Owner/Caregiver — changeable via the
+ *  "สำหรับใคร" picker below when the caller can manage more than one member). */
 export default function MedicationFormScreen() {
   const router = useRouter();
   const theme = useTheme();
   const params = useLocalSearchParams<{ id?: string; memberId?: string }>();
-  const { medications, familyMembers, primaryElderId, canManage, addMedication, updateMedication, removeMedication } =
-    useFamilyContext();
+  const {
+    medications,
+    familyMembers,
+    primaryElderId,
+    currentRole,
+    currentMembershipId,
+    canManage,
+    canManageFor,
+    addMedication,
+    updateMedication,
+    removeMedication,
+  } = useFamilyContext();
 
   const editing = useMemo(() => medications.find((med) => med.id === params.id), [medications, params.id]);
-  const memberId = editing?.memberId ?? params.memberId ?? primaryElderId;
+
+  // Elder has nothing to pick (always self); for Owner/Caregiver this is
+  // just the starting suggestion — the picker below can change it.
+  const [selectedMemberId, setSelectedMemberId] = useState<string>(
+    () => params.memberId ?? (currentRole === 'Elder' ? (currentMembershipId ?? primaryElderId) : primaryElderId)
+  );
+  const memberId = editing?.memberId ?? selectedMemberId;
   const member = familyMembers.find((m) => m.id === memberId);
+  const showMemberPicker = !editing && canManage && familyMembers.length > 1;
 
   const [name, setName] = useState(editing?.name ?? '');
   const [dosage, setDosage] = useState(editing?.dosage ?? '');
@@ -97,21 +116,17 @@ export default function MedicationFormScreen() {
     ]);
   };
 
-  // Creating/editing/deleting a medicine is Owner/Caregiver only server-side
-  // (medicine.routes.js#requireHouseholdRole) — Elder and Viewer both 403
-  // with "Insufficient permissions for this household role" if they submit.
-  // Gated here (not just by hiding the "+ เพิ่มรายการยา" button in
-  // medications.tsx) so a direct navigation — e.g. tapping an existing
-  // medicine's card, or a deep link — can't reach a form that's guaranteed
-  // to fail on save.
-  if (!canManage) {
+  // Mirrors the backend's per-member write permission — gated here (not
+  // just the "+" button in medications.tsx) so a deep link can't reach a
+  // form that's guaranteed to fail on save.
+  if (!canManageFor(memberId)) {
     return (
       <Screen center gap={Spacing.three}>
         <ScreenHeader title={editing ? 'แก้ไขรายการยา' : 'เพิ่มรายการยา'} />
         <Card tone="sunken" elevation="flat" gap={Spacing.two}>
-          <ThemedText type="smallBold">ไม่มีสิทธิ์จัดการรายการยา</ThemedText>
+          <ThemedText type="smallBold">ไม่มีสิทธิ์จัดการรายการยานี้</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            เฉพาะเจ้าของบ้านหรือผู้ดูแล (Caregiver) เท่านั้นที่เพิ่ม แก้ไข หรือลบรายการยาได้
+            เพิ่ม/แก้ไขรายการยาของตัวเองได้ หรือให้เจ้าของบ้าน/ผู้ดูแล (Caregiver) จัดการแทนสำหรับสมาชิกคนอื่น
           </ThemedText>
         </Card>
         <AppButton label="กลับ" onPress={() => router.back()} />
@@ -131,15 +146,26 @@ export default function MedicationFormScreen() {
             loading={isSaving}
             disabled={isSaving}
           />
-          {editing ? (
+          {editing && canManage ? (
             <AppButton label="ลบรายการยา" variant="danger" size="medium" onPress={handleDelete} disabled={isSaving} />
           ) : null}
         </>
       }>
       <ScreenHeader
         title={editing ? 'แก้ไขรายการยา' : 'เพิ่มรายการยา'}
-        eyebrow={member ? `สำหรับ ${member.name}` : undefined}
+        eyebrow={!showMemberPicker && member ? `สำหรับ ${member.name}` : undefined}
       />
+
+      {showMemberPicker ? (
+        <Card gap={Spacing.two}>
+          <ThemedText type="smallBold">สำหรับใคร *</ThemedText>
+          <ChipSelect
+            options={familyMembers.map((m) => ({ value: m.id, label: m.name }))}
+            selected={[selectedMemberId]}
+            onToggle={setSelectedMemberId}
+          />
+        </Card>
+      ) : null}
 
       <Card gap={Spacing.three}>
         <TextField label="ชื่อยา" value={name} onChangeText={setName} placeholder="เช่น Amlodipine" required />

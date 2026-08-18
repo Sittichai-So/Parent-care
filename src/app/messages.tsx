@@ -16,6 +16,7 @@ import type { ApiMessage } from '@/services/messages-api';
 import { connectSocket, disconnectSocket, getSocket } from '@/services/socket-client';
 
 type SendAck = { ok: boolean; message?: ApiMessage; error?: string };
+type JoinAck = { ok: boolean; error?: string };
 type DeletedAck = { _id: string; householdId: string };
 
 /** ครอบครัว-wide chat — real backend now (`GET /messages` for history,
@@ -32,17 +33,13 @@ export default function MessagesScreen() {
   const [messages, setMessages] = useState<ApiMessage[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [liveError, setLiveError] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [isSending, setIsSending] = useState(false);
 
   // History — refetched whenever the selected household changes.
-  //
-  // react-hooks/set-state-in-effect flags the synchronous setState calls
-  // below (both the no-household-selected branch and the loading/error
-  // resets before the fetch starts). Same situation as family-context.tsx's
-  // identically-suppressed effects: React 19 batches every setState call
-  // made during one effect execution into a single re-render, so there's no
-  // real cascade here to restructure around.
+  // Same react-hooks/set-state-in-effect situation as family-context.tsx
+  // (see its comment there) — batched by React 19 into one render regardless.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!currentHouseholdId) {
@@ -71,15 +68,21 @@ export default function MessagesScreen() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Live connection — joins this household's room for as long as the
-  // screen is mounted, per the backend's join_family_room/leave_family_room
-  // contract (every event after join is checked against the rooms this
-  // socket was actually cleared for).
+  // screen is mounted. Every failure mode here (bad/expired token, rejected
+  // join, dropped connection) gets its own message instead of failing
+  // silently, since a quiet socket looks identical to "no new messages."
   useEffect(() => {
     if (!currentHouseholdId || !token) return;
 
     const socket = connectSocket(token);
-    socket.emit('join_family_room', { householdId: currentHouseholdId });
+    const join = () => {
+      socket.emit('join_family_room', { householdId: currentHouseholdId }, (ack: JoinAck) => {
+        setLiveError(ack?.ok ? null : (ack?.error ?? 'เข้าร่วมห้องสนทนาไม่สำเร็จ'));
+      });
+    };
 
+    const onConnect = () => join();
+    const onConnectError = (err: Error) => setLiveError(err.message || 'เชื่อมต่อห้องสนทนาไม่สำเร็จ');
     const onReceive = (message: ApiMessage) => {
       if (message.householdId !== currentHouseholdId) return;
       setMessages((current) => (current.some((m) => m._id === message._id) ? current : [...current, message]));
@@ -89,10 +92,15 @@ export default function MessagesScreen() {
       setMessages((current) => current.filter((m) => m._id !== _id));
     };
 
+    socket.on('connect', onConnect);
+    socket.on('connect_error', onConnectError);
     socket.on('receive_message', onReceive);
     socket.on('message_deleted', onDeleted);
+    if (socket.connected) join();
 
     return () => {
+      socket.off('connect', onConnect);
+      socket.off('connect_error', onConnectError);
       socket.off('receive_message', onReceive);
       socket.off('message_deleted', onDeleted);
       socket.emit('leave_family_room', { householdId: currentHouseholdId });
@@ -149,6 +157,12 @@ export default function MessagesScreen() {
       <ScreenHeader title="ข้อความครอบครัว" />
 
       <ReadOnlyBanner />
+
+      {liveError ? (
+        <ThemedText type="small" style={{ color: theme.dangerText }}>
+          เชื่อมต่อห้องสนทนาไม่สำเร็จ: {liveError}
+        </ThemedText>
+      ) : null}
 
       {!currentHouseholdId ? (
         <ThemedText type="small" themeColor="textSecondary">

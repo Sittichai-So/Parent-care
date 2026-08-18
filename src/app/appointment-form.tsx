@@ -25,15 +25,25 @@ export default function AppointmentFormScreen() {
     medications,
     familyMembers,
     primaryElderId,
+    currentRole,
+    currentMembershipId,
     canManage,
+    canManageFor,
     addAppointment,
     updateAppointment,
     removeAppointment,
   } = useFamilyContext();
 
   const editing = useMemo(() => appointments.find((apt) => apt.id === params.id), [appointments, params.id]);
-  const memberId = editing?.memberId ?? params.memberId ?? primaryElderId;
+
+  // Elder has nothing to pick (always self); for Owner/Caregiver this is
+  // just the starting suggestion — the picker below can change it.
+  const [selectedMemberId, setSelectedMemberId] = useState<string>(
+    () => params.memberId ?? (currentRole === 'Elder' ? (currentMembershipId ?? primaryElderId) : primaryElderId)
+  );
+  const memberId = editing?.memberId ?? selectedMemberId;
   const member = familyMembers.find((m) => m.id === memberId);
+  const showMemberPicker = !editing && canManage && familyMembers.length > 1;
   const memberMedications = useMemo(
     () => medications.filter((med) => med.memberId === memberId),
     [medications, memberId]
@@ -110,18 +120,16 @@ export default function AppointmentFormScreen() {
     ]);
   };
 
-  // Same restriction as medication-form.tsx — creating/editing/deleting an
-  // appointment is Owner/Caregiver only server-side
-  // (appointment.routes.js#requireHouseholdRole), so this gates the whole
-  // form rather than letting Elder/Viewer fill it out and fail at save.
-  if (!canManage) {
+  // Same restriction as medication-form.tsx — mirrors the backend's
+  // per-member write permission so a deep link can't reach a dead-end form.
+  if (!canManageFor(memberId)) {
     return (
       <Screen center gap={Spacing.three}>
         <ScreenHeader title={editing ? 'แก้ไขนัดหมาย' : 'เพิ่มนัดหมาย'} />
         <Card tone="sunken" elevation="flat" gap={Spacing.two}>
-          <ThemedText type="smallBold">ไม่มีสิทธิ์จัดการนัดหมาย</ThemedText>
+          <ThemedText type="smallBold">ไม่มีสิทธิ์จัดการนัดหมายนี้</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            เฉพาะเจ้าของบ้านหรือผู้ดูแล (Caregiver) เท่านั้นที่เพิ่ม แก้ไข หรือลบนัดหมายได้
+            เพิ่ม/แก้ไขนัดหมายของตัวเองได้ หรือให้เจ้าของบ้าน/ผู้ดูแล (Caregiver) จัดการแทนสำหรับสมาชิกคนอื่น
           </ThemedText>
         </Card>
         <AppButton label="กลับ" onPress={() => router.back()} />
@@ -141,15 +149,26 @@ export default function AppointmentFormScreen() {
             loading={isSaving}
             disabled={isSaving}
           />
-          {editing ? (
+          {editing && canManage ? (
             <AppButton label="ลบนัดหมาย" variant="danger" size="medium" onPress={handleDelete} disabled={isSaving} />
           ) : null}
         </>
       }>
       <ScreenHeader
         title={editing ? 'แก้ไขนัดหมาย' : 'เพิ่มนัดหมาย'}
-        eyebrow={member ? `สำหรับ ${member.name}` : undefined}
+        eyebrow={!showMemberPicker && member ? `สำหรับ ${member.name}` : undefined}
       />
+
+      {showMemberPicker ? (
+        <Card gap={Spacing.two}>
+          <ThemedText type="smallBold">สำหรับใคร *</ThemedText>
+          <ChipSelect
+            options={familyMembers.map((m) => ({ value: m.id, label: m.name }))}
+            selected={[selectedMemberId]}
+            onToggle={setSelectedMemberId}
+          />
+        </Card>
+      ) : null}
 
       <Card gap={Spacing.three}>
         <TextField label="ชื่อนัดหมาย" value={title} onChangeText={setTitle} placeholder="เช่น ตรวจสุขภาพประจำปี" required />

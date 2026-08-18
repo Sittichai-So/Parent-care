@@ -30,7 +30,7 @@ export default function AppointmentDetailScreen() {
   const router = useRouter();
   const theme = useTheme();
   const params = useLocalSearchParams<{ id?: string }>();
-  const { appointments, medications, familyMembers, canManage, updateAppointment } = useFamilyContext();
+  const { appointments, medications, familyMembers, canManageFor, updateAppointment } = useFamilyContext();
   const [checked, setChecked] = useState<string[]>(['card']);
   const [isTogglingReminder, setIsTogglingReminder] = useState(false);
 
@@ -71,12 +71,10 @@ export default function AppointmentDetailScreen() {
   return (
     <Screen
       gap={Spacing.three}
-      // Both actions below hit updateAppointment, which is Owner/Caregiver-only
-      // server-side (appointment.routes.js#requireHouseholdRole) — including
-      // the reminder toggle, since it goes through the same PUT on the whole
-      // appointment record. Hidden for Elder/Viewer rather than shown-and-failing.
+      // Both actions hit updateAppointment — Owner/Caregiver may act on
+      // anyone's appointment, Elder only their own.
       footer={
-        canManage ? (
+        canManageFor(appointment.memberId) ? (
           <>
             <AppButton
               label={appointment.reminderEnabled ? 'ปิดการเตือน' : 'เปิดการเตือน'}

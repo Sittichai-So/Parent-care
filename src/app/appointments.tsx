@@ -18,10 +18,14 @@ import { daysFromToday, formatDateKey, relativeDayLabel } from '@/utils/date';
 export default function AppointmentsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ memberId?: string }>();
-  const { appointments, familyMembers, primaryElderId, canManage } = useFamilyContext();
+  const { appointments, familyMembers, primaryElderId, currentRole, currentMembershipId, canManageFor } =
+    useFamilyContext();
 
   const memberId = params.memberId;
   const member = memberId ? familyMembers.find((m) => m.id === memberId) : undefined;
+  // Where a new appointment from the "+" button would go: the scoped member
+  // if there is one, else self for Elder or the family's Elder otherwise.
+  const addTargetMemberId = memberId ?? (currentRole === 'Elder' ? (currentMembershipId ?? primaryElderId) : primaryElderId);
 
   const scoped = useMemo(
     () => (memberId ? appointments.filter((apt) => apt.memberId === memberId) : appointments),
@@ -42,15 +46,13 @@ export default function AppointmentsScreen() {
   return (
     <Screen
       gap={Spacing.three}
-      // Only Owner/Caregiver may add an appointment (appointment.routes.js#requireHouseholdRole).
+      // Owner/Caregiver can add for anyone; Elder only for themself.
       footer={
-        canManage ? (
+        canManageFor(addTargetMemberId) ? (
           <AppButton
             label="เพิ่มนัดหมาย"
             icon="add-outline"
-            onPress={() =>
-              router.push({ pathname: '/appointment-form', params: memberId ? { memberId } : { memberId: primaryElderId } })
-            }
+            onPress={() => router.push({ pathname: '/appointment-form', params: { memberId: addTargetMemberId } })}
           />
         ) : undefined
       }>

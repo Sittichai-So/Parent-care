@@ -22,10 +22,14 @@ export default function MedicationsScreen() {
   const router = useRouter();
   const theme = useTheme();
   const params = useLocalSearchParams<{ memberId?: string }>();
-  const { medications, familyMembers, primaryElderId, canManage } = useFamilyContext();
+  const { medications, familyMembers, primaryElderId, currentRole, currentMembershipId, canManageFor } =
+    useFamilyContext();
 
   const memberId = params.memberId;
   const isOverview = !memberId;
+  // Where a new medicine from the "+" button would go: the scoped member if
+  // there is one, else self for Elder or the family's Elder otherwise.
+  const addTargetMemberId = memberId ?? (currentRole === 'Elder' ? (currentMembershipId ?? primaryElderId) : primaryElderId);
 
   const grouped = useMemo(() => {
     const scoped = memberId ? medications.filter((med) => med.memberId === memberId) : medications;
@@ -46,17 +50,14 @@ export default function MedicationsScreen() {
   return (
     <Screen
       gap={Spacing.three}
-      // Only Owner/Caregiver may add a medicine (medicine.routes.js#requireHouseholdRole)
-      // — hidden rather than shown-disabled, since Elder/Viewer can still
-      // browse this whole list, just not the add action at the bottom.
+      // Owner/Caregiver can add for anyone, Elder only for themself; hidden
+      // (not disabled) since Viewer can still browse the list.
       footer={
-        canManage ? (
+        canManageFor(addTargetMemberId) ? (
           <AppButton
             label="เพิ่มรายการยา"
             icon="add-outline"
-            onPress={() =>
-              router.push({ pathname: '/medication-form', params: memberId ? { memberId } : { memberId: primaryElderId } })
-            }
+            onPress={() => router.push({ pathname: '/medication-form', params: { memberId: addTargetMemberId } })}
           />
         ) : undefined
       }>
@@ -86,18 +87,17 @@ export default function MedicationsScreen() {
 
             {memberMeds.map((med) => {
               const takenToday = med.lastTakenAt ? isToday(med.lastTakenAt.slice(0, 10)) : false;
+              const canEditThis = canManageFor(med.memberId);
               return (
                 <Pressable
                   key={med.id}
-                  // Same Owner/Caregiver-only restriction as the "+" button
-                  // above — tapping to edit is disabled rather than left to
-                  // fail at save inside medication-form.tsx.
-                  onPress={canManage ? () => router.push({ pathname: '/medication-form', params: { id: med.id } }) : undefined}
-                  disabled={!canManage}
+                  // Owner/Caregiver can edit anyone's, Elder only their own.
+                  onPress={canEditThis ? () => router.push({ pathname: '/medication-form', params: { id: med.id } }) : undefined}
+                  disabled={!canEditThis}
                   accessibilityRole="button"
                   accessibilityLabel={`${med.name} ${med.dosage}`}
-                  accessibilityHint={canManage ? 'แตะเพื่อแก้ไขรายการยา' : undefined}
-                  style={({ pressed }) => pressed && canManage && styles.pressed}>
+                  accessibilityHint={canEditThis ? 'แตะเพื่อแก้ไขรายการยา' : undefined}
+                  style={({ pressed }) => pressed && canEditThis && styles.pressed}>
                   <Card gap={Spacing.two} style={!med.active && styles.inactive}>
                     <View style={styles.row}>
                       <View style={[styles.icon, { backgroundColor: theme.primarySoft }]}>

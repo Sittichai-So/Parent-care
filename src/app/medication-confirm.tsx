@@ -114,12 +114,25 @@ export default function MedicationConfirmScreen() {
   const handleConfirm = async () => {
     if (!medication || !photoUri || !shotAt) return;
     setIsConfirming(true);
+
+    // Split into two try/catches (not one) so a failure names which step it
+    // was — otherwise both "can't reach the server at all" and "reached it,
+    // but the log write itself was rejected" look identical to the user.
+    let uploadedUrl: string;
     try {
-      const uploaded = await uploadsApi.uploadImage(photoUri);
-      await confirmMedicationTaken(medication.id, { image: uploaded.url, photoTakenAt: shotAt.toISOString() });
+      uploadedUrl = (await uploadsApi.uploadImage(photoUri)).url;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
-      Alert.alert('ยืนยันการทานยาไม่สำเร็จ', message);
+      Alert.alert('อัปโหลดรูปไม่สำเร็จ', message);
+      setIsConfirming(false);
+      return;
+    }
+
+    try {
+      await confirmMedicationTaken(medication.id, { image: uploadedUrl, photoTakenAt: shotAt.toISOString() });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+      Alert.alert('บันทึกการทานยาไม่สำเร็จ', message);
     } finally {
       setIsConfirming(false);
     }

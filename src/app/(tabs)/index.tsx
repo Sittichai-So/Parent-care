@@ -53,6 +53,7 @@ export default function CaregiverDashboardScreen() {
     currentMembershipId,
     currentRole,
     canEdit,
+    canManageFor,
     pendingInvites,
     setSelectedMemberId,
     updateTaskStatus,
@@ -164,13 +165,17 @@ export default function CaregiverDashboardScreen() {
           style={({ pressed }) => [styles.bookingTile, { backgroundColor: theme.sky }, pressed && styles.pressed]}>
           <CalendarPlusIcon weight="duotone" size={30} color={theme.primaryText} />
         </Pressable>
-        <AppButton
-          label="จองนัดหมาย"
-          phosphorIcon={ArrowRightIcon}
-          iconPosition="trailing"
-          style={styles.bookingButton}
-          onPress={() => router.push({ pathname: '/appointment-form', params: { memberId: primaryElderId } })}
-        />
+        {/* Targets primaryElderId as a starting suggestion — the form itself
+         *  offers a "สำหรับใคร" picker to change who it's for. Hidden for Viewer. */}
+        {canManageFor(primaryElderId) ? (
+          <AppButton
+            label="จองนัดหมาย"
+            phosphorIcon={ArrowRightIcon}
+            iconPosition="trailing"
+            style={styles.bookingButton}
+            onPress={() => router.push({ pathname: '/appointment-form', params: { memberId: primaryElderId } })}
+          />
+        ) : null}
       </View>
 
       {nextAppointment ? (

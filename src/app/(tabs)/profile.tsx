@@ -82,11 +82,8 @@ export default function ProfileScreen() {
   const [documents, setDocuments] = useState<ApiDocument[]>([]);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(true);
 
-  // react-hooks/set-state-in-effect flags the synchronous setState calls
-  // below — same situation as family-context.tsx's identically-suppressed
-  // effects: React 19 batches every setState call made during one effect
-  // execution into a single re-render, so there's no real cascade here to
-  // restructure around.
+  // Same react-hooks/set-state-in-effect situation as family-context.tsx
+  // (see its comment there) — batched by React 19 into one render regardless.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!currentHouseholdId) {

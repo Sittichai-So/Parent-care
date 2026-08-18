@@ -150,23 +150,17 @@ type FamilyContextValue = {
   /** The caller's own membership id / role *within* currentHouseholdId. */
   currentMembershipId: string | null;
   currentRole: MemberRole | null;
-  /** Derived from `currentRole` — false only for Viewer. Every mutating
-   *  control the backend allows *any* non-Viewer role to hit gates on this:
-   *  task/checklist toggles, confirming one's own medication dose, logging
-   *  one's own vitals, messages, handoff notes, check-in. Managing the
-   *  medicine/appointment *lists* themselves (create/edit/delete) is
-   *  narrower — see `canManage`. */
+  /** Derived from `currentRole` — false only for Viewer. Covers everything a
+   *  non-Viewer may touch except managing the medicine/appointment lists
+   *  themselves — see `canManageFor`. */
   canEdit: boolean;
-  /** Owner/Caregiver only. The backend restricts creating, editing, or
-   *  deleting medicines, appointments, and tasks to these two roles
-   *  (`requireHouseholdRole('owner','caregiver')` on those routes) — Elder
-   *  and Viewer both 403 with "Insufficient permissions for this household
-   *  role" if they try. Confirming a dose or logging a vital is a separate,
-   *  self-narrowed permission and stays under the broader `canEdit`. Screens
-   *  that create/edit/delete medicines or appointments must gate on this,
-   *  not `canEdit` — this is why `medication-form.tsx`/`appointment-form.tsx`
-   *  used to let Elder fill out the whole form before failing at save. */
+  /** True for Owner/Caregiver — can manage *any* member's medicine/appointment
+   *  records, including deleting them (Elder never can, even their own). */
   canManage: boolean;
+  /** True if the caller may create/edit a medicine or appointment for
+   *  `memberId` — Owner/Caregiver: anyone; Elder: only themself; Viewer:
+   *  never. Mirrors household-scope.js's resolveWriteMemberId exactly. */
+  canManageFor: (memberId: string) => boolean;
   createHousehold: (name: string, displayName: string, relation: string) => Promise<HouseholdSummary>;
   joinHousehold: (
     inviteCode: string,
@@ -392,19 +386,6 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     setPendingInvites(invites.map(toPendingInvite));
   }, []);
 
-  // Load this account's households on login; clear everything on logout —
-  // stale data from account A must never leak into account B's session.
-  //
-  // react-hooks/set-state-in-effect flags this: an effect calling setState
-  // synchronously (the "loading" flags above, and every setState in the
-  // else branch) can in principle cause extra render passes. In practice,
-  // with React 19's automatic batching every setState call made during this
-  // one effect execution is coalesced into a single re-render regardless —
-  // there's no real cascade to avoid here. Splitting this into ~10
-  // individually-dispatched pieces of state (or one big reducer) to satisfy
-  // the rule would be a much larger rewrite for no behavioral gain, so it's
-  // suppressed here rather than restructured. See the identical suppression
-  // below on the currentHouseholdId effect.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (isAuthenticated) {
@@ -430,6 +411,10 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const currentRole = currentHousehold?.role ?? null;
   const canEdit = currentRole !== 'Viewer';
   const canManage = currentRole === 'Owner' || currentRole === 'Caregiver';
+  const canManageFor = useCallback(
+    (memberId: string) => canManage || (currentRole === 'Elder' && memberId === currentMembershipId),
+    [canManage, currentRole, currentMembershipId]
+  );
 
   const refreshAll = useCallback(async () => {
     if (!currentHouseholdId) return;
@@ -445,9 +430,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       ]);
       const mappedMembers = members.map(toFamilyMember);
       setFamilyMembers(mappedMembers);
-      // Re-point the selected member at something valid whenever the member
-      // list changes (household switch, member added/removed elsewhere) —
-      // decided here, right where the fresh list is available.
+
       setSelectedMemberId((current) => {
         if (mappedMembers.length === 0) return null;
         if (current && mappedMembers.some((member) => member.id === current)) return current;
@@ -463,8 +446,6 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentHouseholdId]);
 
-  // Same react-hooks/set-state-in-effect situation as the isAuthenticated
-  // effect above — batched by React 19 into one render either way.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (currentHouseholdId) {
@@ -486,9 +467,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     return elder?.id ?? familyMembers[0]?.id ?? '';
   }, [familyMembers]);
 
-  // Keep device reminders in sync with whatever the household's data
-  // actually is — including changes fetched in from another member's edits,
-  // not just ones made from this device.
+
   useEffect(() => {
     medications.forEach((medication) => syncMedicationReminders(medication).catch(() => {}));
   }, [medications]);
@@ -729,6 +708,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       currentRole,
       canEdit,
       canManage,
+      canManageFor,
       createHousehold,
       joinHousehold,
       setDefaultHousehold,
@@ -782,6 +762,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       currentRole,
       canEdit,
       canManage,
+      canManageFor,
       createHousehold,
       joinHousehold,
       setDefaultHousehold,
