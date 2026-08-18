@@ -11,7 +11,7 @@ import * as appointmentsApi from '@/services/appointments-api';
 import type { ApiAppointment } from '@/services/appointments-api';
 import * as emergencyApi from '@/services/emergency-api';
 import * as householdsApi from '@/services/households-api';
-import type { ApiHouseholdMember, HouseholdRole } from '@/services/households-api';
+import type { ApiHouseholdMember, HouseholdKind, HouseholdRole } from '@/services/households-api';
 import * as medicinesApi from '@/services/medicines-api';
 import type { ApiMedicine } from '@/services/medicines-api';
 import * as tasksApi from '@/services/tasks-api';
@@ -130,6 +130,11 @@ export type HouseholdSummary = {
   inviteCode: string;
   role: MemberRole;
   membershipId: string;
+  kind: HouseholdKind;
+  /** True if this is the household the caller opens on sign-in — a
+   *  per-membership flag, so it's this account's own default, not a
+   *  household-wide setting (see `setDefaultHousehold`). */
+  isDefault: boolean;
 };
 
 type FamilyContextValue = {
@@ -157,6 +162,8 @@ type FamilyContextValue = {
     displayName: string,
     relation: string
   ) => Promise<HouseholdSummary>;
+  /** Sets `householdId` as the caller's own "กลุ่มเริ่มต้น". */
+  setDefaultHousehold: (householdId: string) => Promise<void>;
 
   isLoadingData: boolean;
   familyMembers: FamilyMember[];
@@ -188,7 +195,10 @@ type FamilyContextValue = {
   addMedication: (input: Omit<Medication, 'id' | 'lastTakenAt'>) => Promise<string>;
   updateMedication: (id: string, patch: Partial<Omit<Medication, 'id'>>) => Promise<void>;
   removeMedication: (id: string) => Promise<void>;
-  confirmMedicationTaken: (id: string) => Promise<void>;
+  /** `extra` carries the photo confirmation — `image` (its uploaded URL) and
+   *  `photoTakenAt` (the real capture time, distinct from the server's own
+   *  `takenAt`) — see medication-confirm.tsx. */
+  confirmMedicationTaken: (id: string, extra?: { image?: string; photoTakenAt?: string }) => Promise<void>;
 
   addAppointment: (input: Omit<Appointment, 'id'>) => Promise<string>;
   updateAppointment: (id: string, patch: Partial<Omit<Appointment, 'id'>>) => Promise<void>;
@@ -310,6 +320,8 @@ const toSummary = ({ household, membership }: householdsApi.HouseholdWithMembers
   inviteCode: household.inviteCode,
   role: ROLE_TO_DISPLAY[membership.role],
   membershipId: membership._id,
+  kind: household.kind,
+  isDefault: membership.isDefault,
 });
 
 const toPendingInvite = ({ household, membership }: householdsApi.ApiPendingInvite): PendingInvite => ({
@@ -561,9 +573,9 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   );
 
   const confirmMedicationTaken = useCallback<FamilyContextValue['confirmMedicationTaken']>(
-    async (id) => {
+    async (id, extra) => {
       if (!currentHouseholdId) return;
-      await medicinesApi.logDose(currentHouseholdId, id, 'taken');
+      await medicinesApi.logDose(currentHouseholdId, id, 'taken', extra);
       await refreshAll();
     },
     [currentHouseholdId, refreshAll]
@@ -685,6 +697,14 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     [refreshHouseholds]
   );
 
+  const setDefaultHousehold = useCallback<FamilyContextValue['setDefaultHousehold']>(
+    async (householdId) => {
+      await householdsApi.setDefaultHousehold(householdId);
+      await refreshHouseholds();
+    },
+    [refreshHouseholds]
+  );
+
   const value = useMemo<FamilyContextValue>(
     () => ({
       households,
@@ -697,6 +717,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       canEdit,
       createHousehold,
       joinHousehold,
+      setDefaultHousehold,
 
       isLoadingData,
       familyMembers,
@@ -748,6 +769,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       canEdit,
       createHousehold,
       joinHousehold,
+      setDefaultHousehold,
       isLoadingData,
       familyMembers,
       tasks,

@@ -88,3 +88,38 @@ export const apiPost = <T>(path: string, body?: unknown) => request<T>(path, { m
 export const apiPut = <T>(path: string, body?: unknown) => request<T>(path, { method: 'PUT', body });
 export const apiPatch = <T>(path: string, body?: unknown) => request<T>(path, { method: 'PATCH', body });
 export const apiDelete = <T>(path: string) => request<T>(path, { method: 'DELETE' });
+
+/** Multipart upload — separate from `request()` because a file body can't be
+ *  JSON.stringify'd, and `fetch` must set its own `Content-Type` (with the
+ *  multipart boundary) rather than the `application/json` `request()` always
+ *  sends when a body is present. */
+export async function apiUpload<T>(path: string, file: { uri: string; name: string; type: string }): Promise<T> {
+  const form = new FormData();
+  // React Native's FormData accepts this `{uri,name,type}` shape in place of
+  // a real Blob/File — not expressible in the DOM FormData types TypeScript
+  // has loaded here, hence the cast.
+  form.append('file', { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
+
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (authToken) headers.Authorization = `Bearer ${authToken}`;
+
+  let response: Response;
+  try {
+    response = await fetch(buildUrl(path), { method: 'POST', headers, body: form });
+  } catch {
+    throw new ApiError('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่', 0);
+  }
+
+  let payload: Envelope<T> | null = null;
+  try {
+    payload = (await response.json()) as Envelope<T>;
+  } catch {
+    // Non-JSON response — falls through to the status-based error below.
+  }
+
+  if (!response.ok || !payload || payload.success === false) {
+    throw new ApiError(payload?.message ?? `Request failed (${response.status})`, response.status, payload?.errors ?? []);
+  }
+
+  return payload.data as T;
+}

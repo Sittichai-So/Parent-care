@@ -33,6 +33,12 @@
         {
           "color": "#2563EB"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "แอปนี้ใช้กล้องเพื่อถ่ายภาพยืนยันการทานยา"
+        }
       ]
     ],
     "experiments": {

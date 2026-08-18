@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Image, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 
 import {
   ArrowCounterClockwiseIcon,
@@ -25,6 +26,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
+import * as uploadsApi from '@/services/uploads-api';
 import { isToday } from '@/utils/date';
 
 const steps = [
@@ -39,9 +41,8 @@ const hints = [
   { icon: UsersThreeIcon, text: 'ครอบครัวเห็นภาพและเวลาที่ยืนยันทันที' },
 ] as const;
 
-function nowLabel() {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+function formatTime(date: Date) {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
 export default function MedicationConfirmScreen() {
@@ -52,13 +53,13 @@ export default function MedicationConfirmScreen() {
   const { medications, familyMembers, primaryElderId, currentMembershipId, canEdit, confirmMedicationTaken } =
     useFamilyContext();
 
-  // Local-only UI state — mirrors the reference design's idle → camera →
-  // review → done state machine. `photoCaptured`/`shotTime` are simulated
-  // (this app has no camera/upload integration yet); `takenToday`, derived
-  // below from real data, is what actually drives the "done" stage.
-  const [uiStage, setUiStage] = useState<'idle' | 'camera'>('idle');
-  const [photoCaptured, setPhotoCaptured] = useState(false);
-  const [shotTime, setShotTime] = useState<string | null>(null);
+  // Real camera capture — `photoUri` is the local file the OS camera handed
+  // back (via expo-image-picker's native camera UI), `shotAt` the real
+  // moment it was taken. `takenToday`, derived below from real data, is
+  // what actually drives the "done" stage.
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [shotAt, setShotAt] = useState<Date | null>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
   // Same reasoning as (tabs)/explore.tsx's selfMemberId — opening this
@@ -79,31 +80,43 @@ export default function MedicationConfirmScreen() {
   );
 
   const takenToday = medication?.lastTakenAt ? isToday(medication.lastTakenAt.slice(0, 10)) : false;
-  const stage: 'idle' | 'camera' | 'review' | 'done' = takenToday ? 'done' : photoCaptured ? 'review' : uiStage;
+  const stage: 'idle' | 'review' | 'done' = takenToday ? 'done' : photoUri ? 'review' : 'idle';
   const currentStepIndex = stage === 'done' ? 2 : stage === 'review' ? 1 : 0;
 
-  const openCamera = () => {
+  const takePhoto = async () => {
     if (!canEdit) return;
-    setUiStage('camera');
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('ต้องอนุญาตใช้กล้อง', 'กรุณาอนุญาตให้แอปใช้กล้องในตั้งค่าเครื่อง เพื่อถ่ายภาพยืนยันการทานยา');
+      return;
+    }
+    setIsCapturing(true);
+    try {
+      const result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
+      if (!result.canceled && result.assets[0]) {
+        setPhotoUri(result.assets[0].uri);
+        setShotAt(new Date());
+      }
+    } catch {
+      Alert.alert('ถ่ายภาพไม่สำเร็จ', 'เกิดข้อผิดพลาดขณะเปิดกล้อง กรุณาลองใหม่');
+    } finally {
+      setIsCapturing(false);
+    }
   };
-  const cancelCamera = () => setUiStage('idle');
-  const shoot = () => {
-    if (!canEdit) return;
-    setPhotoCaptured(true);
-    setShotTime(nowLabel());
-  };
+
   const retake = () => {
     if (!canEdit) return;
-    setPhotoCaptured(false);
-    setShotTime(null);
-    setUiStage('camera');
+    setPhotoUri(null);
+    setShotAt(null);
+    takePhoto();
   };
 
   const handleConfirm = async () => {
-    if (!medication) return;
+    if (!medication || !photoUri || !shotAt) return;
     setIsConfirming(true);
     try {
-      await confirmMedicationTaken(medication.id);
+      const uploaded = await uploadsApi.uploadImage(photoUri);
+      await confirmMedicationTaken(medication.id, { image: uploaded.url, photoTakenAt: shotAt.toISOString() });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
       Alert.alert('ยืนยันการทานยาไม่สำเร็จ', message);
@@ -146,11 +159,11 @@ export default function MedicationConfirmScreen() {
               label="ทานแล้ว และยืนยัน"
               phosphorIcon={PillIcon}
               size="xlarge"
-              disabled={!canEdit || !photoCaptured || isConfirming}
+              disabled={!canEdit || !photoUri || isConfirming}
               loading={isConfirming}
               onPress={handleConfirm}
               accessibilityHint={
-                !canEdit ? 'ดูได้เท่านั้น' : photoCaptured ? 'บันทึกว่าคุณทานยาแล้ว' : 'ต้องถ่ายรูปยืนยันก่อนจึงจะกดได้'
+                !canEdit ? 'ดูได้เท่านั้น' : photoUri ? 'บันทึกว่าคุณทานยาแล้ว' : 'ต้องถ่ายรูปยืนยันก่อนจึงจะกดได้'
               }
             />
           )}
@@ -218,41 +231,21 @@ export default function MedicationConfirmScreen() {
             phosphorIcon={CameraIcon}
             size="xlarge"
             disabled={!canEdit}
-            onPress={openCamera}
+            loading={isCapturing}
+            onPress={takePhoto}
             accessibilityHint={canEdit ? undefined : 'ดูได้เท่านั้น'}
           />
         </Card>
       ) : null}
 
-      {stage === 'camera' ? (
-        <>
-          <Pressable
-            onPress={canEdit ? shoot : undefined}
-            disabled={!canEdit}
-            accessibilityRole="button"
-            accessibilityLabel="ถ่ายรูปยืนยัน"
-            accessibilityHint={canEdit ? 'จำลองการถ่ายภาพยาก่อนยืนยัน — แอปนี้ยังไม่เชื่อมกล้องจริง' : 'ดูได้เท่านั้น'}
-            style={({ pressed }) => pressed && canEdit && styles.pressed}>
-            <View style={[styles.viewfinder, { backgroundColor: theme.hero }]}>
-              <View style={styles.viewfinderFrame} />
-              <View style={styles.recRow}>
-                <View style={[styles.recDot, { backgroundColor: theme.danger }]} />
-                <ThemedText style={styles.recLabel}>กล้อง (จำลอง)</ThemedText>
-              </View>
-              <ThemedText style={styles.viewfinderCaption}>จัดซองยาให้อยู่ในกรอบ แล้วกดถ่าย</ThemedText>
-              <View style={styles.shutterWrap}>
-                <View style={styles.shutter} />
-              </View>
-            </View>
-          </Pressable>
-          <AppButton label="ยกเลิก" variant="secondary" size="large" onPress={cancelCamera} />
-        </>
-      ) : null}
-
       {stage === 'review' || stage === 'done' ? (
         <>
           <View style={[styles.previewFrame, { backgroundColor: theme.surfaceSunken, borderColor: theme.border }]}>
-            <CameraIcon weight="duotone" size={40} color={theme.textMuted} />
+            {photoUri ? (
+              <Image source={{ uri: photoUri }} style={styles.previewImage} resizeMode="cover" />
+            ) : (
+              <CameraIcon weight="duotone" size={40} color={theme.textMuted} />
+            )}
             <View
               style={[
                 styles.stampPill,
@@ -272,7 +265,7 @@ export default function MedicationConfirmScreen() {
           </View>
 
           <Card gap={0} padding={Spacing.three}>
-            <InfoRow label="เวลาถ่ายภาพ" value={shotTime ?? '—'} />
+            <InfoRow label="เวลาถ่ายภาพ" value={shotAt ? formatTime(shotAt) : '—'} />
             <View style={[styles.separator, { backgroundColor: theme.border }]} />
             <InfoRow label="ผู้บันทึก" value={user?.name ?? '—'} />
           </Card>
@@ -283,15 +276,14 @@ export default function MedicationConfirmScreen() {
               phosphorIcon={ArrowCounterClockwiseIcon}
               variant="secondary"
               size="large"
-              disabled={!canEdit}
+              disabled={!canEdit || isCapturing}
+              loading={isCapturing}
               onPress={retake}
             />
           ) : null}
 
           <ThemedText type="small" themeColor="textSecondary" style={styles.previewCaption}>
-            {stage === 'done'
-              ? 'ครอบครัวเห็นแล้ว'
-              : 'รูปนี้จำลองการอัปโหลดจากกล้องเพื่อยืนยันการทานยา — ตรวจภาพให้ชัดเจน แล้วกดยืนยันเพื่อบันทึก'}
+            {stage === 'done' ? 'ครอบครัวเห็นแล้ว' : 'ตรวจภาพให้ชัดเจน แล้วกดยืนยันเพื่อบันทึก'}
           </ThemedText>
         </>
       ) : null}
@@ -300,8 +292,6 @@ export default function MedicationConfirmScreen() {
 }
 
 const styles = StyleSheet.create({
-  pressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
-
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   headerChip: { width: 52, height: 52, borderRadius: Radius.lg, justifyContent: 'center', alignItems: 'center' },
   headerText: { flex: 1, gap: Spacing.half, minWidth: 0 },
@@ -323,7 +313,9 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
+  previewImage: { width: '100%', height: '100%' },
   stampPill: {
     position: 'absolute',
     top: 14,
@@ -341,51 +333,4 @@ const styles = StyleSheet.create({
   },
   separator: { height: 1 },
   previewCaption: { textAlign: 'center' },
-
-  viewfinder: {
-    height: 240,
-    borderRadius: Radius.xl,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  viewfinderFrame: {
-    position: 'absolute',
-    top: 22,
-    left: 22,
-    right: 22,
-    bottom: 78,
-    borderRadius: Radius.lg,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: 'rgba(255,255,255,0.42)',
-  },
-  recRow: {
-    position: 'absolute',
-    top: Spacing.three,
-    left: Spacing.three,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.one,
-  },
-  recDot: { width: 8, height: 8, borderRadius: Radius.full },
-  recLabel: { fontSize: 12, fontWeight: '700', color: '#FFFFFF' },
-  viewfinderCaption: {
-    position: 'absolute',
-    left: 30,
-    right: 30,
-    bottom: 66,
-    textAlign: 'center',
-    fontSize: 13.5,
-    lineHeight: 20,
-    color: '#DBEAFE',
-  },
-  shutterWrap: { position: 'absolute', left: 0, right: 0, bottom: 16, alignItems: 'center' },
-  shutter: {
-    width: 52,
-    height: 52,
-    borderRadius: Radius.full,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 4,
-    borderColor: 'rgba(255,255,255,0.45)',
-  },
 });

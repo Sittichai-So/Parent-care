@@ -35,5 +35,9 @@ export const updateMedicine = (householdId: string, medicineId: string, patch: P
 export const deleteMedicine = (householdId: string, medicineId: string) =>
   apiDelete<null>(`/households/${householdId}/medicines/${medicineId}`);
 
-export const logDose = (householdId: string, medicineId: string, status: 'taken' | 'missed' | 'skipped' = 'taken') =>
-  apiPost(`/households/${householdId}/medicines/${medicineId}/logs`, { status });
+export const logDose = (
+  householdId: string,
+  medicineId: string,
+  status: 'taken' | 'missed' | 'skipped' = 'taken',
+  extra?: { image?: string; photoTakenAt?: string }
+) => apiPost(`/households/${householdId}/medicines/${medicineId}/logs`, { status, ...extra });

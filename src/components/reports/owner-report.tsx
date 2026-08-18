@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { CheckCircleIcon, HospitalIcon, InfoIcon, WarningCircleIcon } from 'phosphor-react-native';
+import { CheckCircleIcon, HospitalIcon, WarningCircleIcon } from 'phosphor-react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { AdherenceRingCard } from '@/components/ui/adherence-ring-card';
@@ -19,6 +19,8 @@ import { MemberStatusMeta } from '@/constants/status';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
+import * as expensesApi from '@/services/expenses-api';
+import type { ApiExpenseSummary } from '@/services/expenses-api';
 import { daysFromToday, isDateInCurrentMonth, relativeDayLabel } from '@/utils/date';
 import {
   adherenceTone,
@@ -38,15 +40,11 @@ const rangeOptions = [
 ] as const;
 const rangeDays: Record<(typeof rangeOptions)[number]['value'], number> = { '7': 7, '30': 30, '90': 90 };
 
-/** Fixed placeholder numbers — this app has no expense-tracking feature or
- *  data behind it. Shown only to preview the reference design's layout,
- *  never presented as real spending (see the banner above it). Colours are
- *  assigned from the theme below, not hardcoded, so dark mode still works. */
-const DEMO_SPEND_META = [
-  { label: 'ค่ายา', baht: '620', pct: 15 },
-  { label: 'ค่าตรวจอายุรกรรม', baht: '1,900', pct: 44 },
-  { label: 'ค่าเดินทางโรงพยาบาล', baht: '1,760', pct: 41 },
-] as const;
+/** Colour per category slot, by position in `summary.categories` — there are
+ *  at most 4 categories (medicine/treatment/transport/other), so this only
+ *  needs 4 entries. Assigned from the theme, not hardcoded, so dark mode
+ *  still works. */
+const SPEND_COLORS = ['primary', 'teal', 'warning', 'lavender'] as const;
 
 /** Household-wide report for the Owner role — the one member who's meant to
  *  see everything: every member's status, task throughput, medication
@@ -55,10 +53,54 @@ const DEMO_SPEND_META = [
 export function OwnerReport() {
   const router = useRouter();
   const theme = useTheme();
-  const { currentHousehold, familyMembers, tasks, medications, appointments, timeline, setSelectedMemberId } =
-    useFamilyContext();
+  const {
+    currentHousehold,
+    currentHouseholdId,
+    familyMembers,
+    tasks,
+    medications,
+    appointments,
+    timeline,
+    setSelectedMemberId,
+  } = useFamilyContext();
 
   const [range, setRange] = useState<(typeof rangeOptions)[number]['value']>('7');
+
+  const [expenseSummary, setExpenseSummary] = useState<ApiExpenseSummary | null>(null);
+  const [isLoadingExpenses, setIsLoadingExpenses] = useState(true);
+  const [expensesError, setExpensesError] = useState<string | null>(null);
+
+  // react-hooks/set-state-in-effect flags the synchronous setState calls
+  // below — same situation as family-context.tsx's identically-suppressed
+  // effects: React 19 batches every setState call made during one effect
+  // execution into a single re-render, so there's no real cascade here to
+  // restructure around.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!currentHouseholdId) {
+      setExpenseSummary(null);
+      setIsLoadingExpenses(false);
+      return;
+    }
+    let cancelled = false;
+    setIsLoadingExpenses(true);
+    setExpensesError(null);
+    expensesApi
+      .getExpenseSummary(currentHouseholdId)
+      .then((summary) => {
+        if (!cancelled) setExpenseSummary(summary);
+      })
+      .catch((err) => {
+        if (!cancelled) setExpensesError(err instanceof Error ? err.message : 'โหลดค่าใช้จ่ายไม่สำเร็จ');
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingExpenses(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentHouseholdId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const attentionMembers = useMemo(
     () => familyMembers.filter((member) => member.status !== 'normal'),
@@ -88,11 +130,6 @@ export function OwnerReport() {
     setSelectedMemberId(memberId);
     router.push('/family-member');
   };
-
-  const demoSpend = DEMO_SPEND_META.map((entry, index) => ({
-    ...entry,
-    fill: [theme.primary, theme.teal, theme.warning][index],
-  }));
 
   return (
     <Screen
@@ -222,36 +259,51 @@ export function OwnerReport() {
 
       <SectionHeader title="ค่าใช้จ่ายเดือนนี้" />
       <Card gap={Spacing.three}>
-        <View style={styles.demoBadgeRow}>
-          <InfoIcon weight="duotone" size={14} color={theme.warningText} />
-          <ThemedText type="caption" style={{ color: theme.warningText }}>
-            ตัวอย่างดีไซน์ — แอปยังไม่มีระบบบันทึกค่าใช้จ่ายจริง ตัวเลขด้านล่างเป็นตัวอย่างคงที่
-          </ThemedText>
-        </View>
-        <View style={styles.spendHeadRow}>
-          <ThemedText style={styles.spendTotal}>4,280</ThemedText>
+        {isLoadingExpenses ? (
           <ThemedText type="small" themeColor="textSecondary">
-            บาท · 6 รายการ
+            กำลังโหลดค่าใช้จ่าย...
           </ThemedText>
-        </View>
-        <View style={styles.spendBar}>
-          {demoSpend.map((entry) => (
-            <View key={entry.label} style={{ width: `${entry.pct}%`, backgroundColor: entry.fill }} />
-          ))}
-        </View>
-        <View style={styles.spendLegend}>
-          {demoSpend.map((entry) => (
-            <View key={entry.label} style={styles.spendLegendRow}>
-              <View style={[styles.spendDot, { backgroundColor: entry.fill }]} />
-              <ThemedText type="small" style={styles.spendLegendLabel}>
-                {entry.label}
-              </ThemedText>
+        ) : expensesError ? (
+          <ThemedText type="small" style={{ color: theme.dangerText }}>
+            {expensesError}
+          </ThemedText>
+        ) : !expenseSummary || expenseSummary.count === 0 ? (
+          <ThemedText type="small" themeColor="textSecondary">
+            ยังไม่มีค่าใช้จ่ายที่บันทึกไว้ในเดือนนี้
+          </ThemedText>
+        ) : (
+          <>
+            <View style={styles.spendHeadRow}>
+              <ThemedText style={styles.spendTotal}>{expenseSummary.total.toLocaleString('th-TH')}</ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
-                {entry.baht} บาท
+                บาท · {expenseSummary.count} รายการ
               </ThemedText>
             </View>
-          ))}
-        </View>
+            <View style={styles.spendBar}>
+              {expenseSummary.categories.map((entry, index) => (
+                <View
+                  key={entry.category}
+                  style={{ width: `${entry.pct}%`, backgroundColor: theme[SPEND_COLORS[index % SPEND_COLORS.length]] }}
+                />
+              ))}
+            </View>
+            <View style={styles.spendLegend}>
+              {expenseSummary.categories.map((entry, index) => (
+                <View key={entry.category} style={styles.spendLegendRow}>
+                  <View
+                    style={[styles.spendDot, { backgroundColor: theme[SPEND_COLORS[index % SPEND_COLORS.length]] }]}
+                  />
+                  <ThemedText type="small" style={styles.spendLegendLabel}>
+                    {entry.label}
+                  </ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {entry.amount.toLocaleString('th-TH')} บาท
+                  </ThemedText>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
       </Card>
 
       <SectionHeader title="สมาชิกที่ต้องติดตาม" count={attentionMembers.length} />
@@ -295,7 +347,6 @@ export function OwnerReport() {
 
 const styles = StyleSheet.create({
   statRow: { flexDirection: 'row', gap: Spacing.two },
-  demoBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
   spendHeadRow: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.two },
   spendTotal: { fontSize: 30, lineHeight: 36, fontWeight: '800', letterSpacing: -0.4 },
   spendBar: { flexDirection: 'row', height: 12, borderRadius: Radius.sm, overflow: 'hidden' },

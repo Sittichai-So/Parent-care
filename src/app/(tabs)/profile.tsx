@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -10,7 +10,6 @@ import {
   CheckIcon,
   FileTextIcon,
   IdentificationCardIcon,
-  InfoIcon,
   ListChecksIcon,
   PillIcon,
   SealCheckIcon,
@@ -30,33 +29,22 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useFamilyContext, type FamilyEvent } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
+import * as documentsApi from '@/services/documents-api';
+import type { ApiDocument } from '@/services/documents-api';
+import * as handoffNotesApi from '@/services/handoff-notes-api';
+import type { ApiHandoffNote } from '@/services/handoff-notes-api';
 import { daysFromToday, isToday, relativeDayLabel } from '@/utils/date';
 
-type HandoffNote = { id: string; who: string; time: string; text: string };
-
-function nowLabel() {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
-/** A design preview, not a feature — same reasoning as messages.tsx: there is
- *  no handoff-notes storage in this app (no endpoint, nothing persisted).
- *  Seeded with two placeholder lines, reset the moment this screen unmounts. */
-const seedNotes: HandoffNote[] = [
-  { id: 'seed-1', who: 'ตัวอย่าง', time: '10:20', text: 'รับผิดชอบจัดเตรียมเอกสารไปโรงพยาบาลพรุ่งนี้ 09:00' },
-  { id: 'seed-2', who: 'ตัวอย่าง', time: '08:45', text: 'ทานยาเช้าแล้ว เพิ่ม photo confirmation ในระบบ' },
-];
-
-/** Also a design preview — this app has no document storage. Unlike the
- *  reference design's seed data, these aren't attributed to specific mock
- *  family members (that would misrepresent whoever is actually in this
- *  household), just the document kinds the design shows. */
-const demoDocuments = [
-  { id: 'd1', name: 'บัตรประชาชน', meta: 'ตัวอย่าง — เอกสารประจำตัว', kind: 'ID', icon: IdentificationCardIcon },
-  { id: 'd2', name: 'สิทธิ์การรักษา', meta: 'ตัวอย่าง — สิทธิ์บัตรทอง/ประกันสังคม', kind: 'สิทธิ์', icon: SealCheckIcon },
-  { id: 'd3', name: 'ประกันสุขภาพ', meta: 'ตัวอย่าง — เลขที่กรมธรรม์', kind: 'ประกัน', icon: ShieldCheckIcon },
-  { id: 'd4', name: 'ใบรับรองแพทย์', meta: 'ตัวอย่าง — ออกโดยแพทย์', kind: 'PDF', icon: FileTextIcon },
-] as const;
+/** Icon per document `kind` — the backend stores `kind` as this exact Thai
+ *  label (see documents-api.ts), so this is keyed on the label itself, not
+ *  a slug. Unrecognized kinds (a label this app hasn't seen yet) fall back
+ *  to a generic file icon rather than failing to render. */
+const documentKindIcons: Record<string, PhosphorIcon> = {
+  ID: IdentificationCardIcon,
+  สิทธิ์: SealCheckIcon,
+  ประกัน: ShieldCheckIcon,
+  PDF: FileTextIcon,
+};
 
 const timelineIcons: Record<FamilyEvent['type'], PhosphorIcon> = {
   'check-in': CheckCircleIcon,
@@ -67,24 +55,89 @@ const timelineIcons: Record<FamilyEvent['type'], PhosphorIcon> = {
   emergency: WarningCircleIcon,
 };
 
-/** "โปรไฟล์" tab — per the reference design's screen 10. The reference also
- *  has "บันทึกส่งต่อเวร" (handoff notes) and "เอกสารและสิทธิ์" (documents),
- *  which this app has no storage for at all — not built here rather than
- *  faked, unlike the labeled Messages/spend previews elsewhere. */
+/** "โปรไฟล์" tab — per the reference design's screen 10, including
+ *  "บันทึกส่งต่อเวร" (handoff notes) and "เอกสารและสิทธิ์" (documents),
+ *  both backed by real endpoints (handoff-notes-api.ts / documents-api.ts). */
 export default function ProfileScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { user, logout } = useAuth();
-  const { currentHousehold, currentRole, currentMembershipId, canEdit, medications, appointments, timeline, checkIn } =
-    useFamilyContext();
+  const {
+    currentHousehold,
+    currentHouseholdId,
+    currentRole,
+    currentMembershipId,
+    canEdit,
+    medications,
+    appointments,
+    timeline,
+    checkIn,
+  } = useFamilyContext();
 
-  const [handoffNotes, setHandoffNotes] = useState<HandoffNote[]>(seedNotes);
+  const [handoffNotes, setHandoffNotes] = useState<ApiHandoffNote[]>([]);
+  const [isLoadingNotes, setIsLoadingNotes] = useState(true);
   const [draftNote, setDraftNote] = useState('');
-  const addHandoffNote = () => {
+  const [isSavingNote, setIsSavingNote] = useState(false);
+
+  const [documents, setDocuments] = useState<ApiDocument[]>([]);
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(true);
+
+  // react-hooks/set-state-in-effect flags the synchronous setState calls
+  // below — same situation as family-context.tsx's identically-suppressed
+  // effects: React 19 batches every setState call made during one effect
+  // execution into a single re-render, so there's no real cascade here to
+  // restructure around.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!currentHouseholdId) {
+      setHandoffNotes([]);
+      setDocuments([]);
+      setIsLoadingNotes(false);
+      setIsLoadingDocuments(false);
+      return;
+    }
+    let cancelled = false;
+
+    setIsLoadingNotes(true);
+    handoffNotesApi
+      .getHandoffNotes(currentHouseholdId)
+      .then((notes) => {
+        if (!cancelled) setHandoffNotes(notes);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingNotes(false);
+      });
+
+    setIsLoadingDocuments(true);
+    documentsApi
+      .getDocuments(currentHouseholdId)
+      .then((docs) => {
+        if (!cancelled) setDocuments(docs);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingDocuments(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentHouseholdId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  const addHandoffNote = async () => {
     const text = draftNote.trim();
-    if (!text || !canEdit) return;
-    setHandoffNotes((current) => [{ id: `local-${Date.now()}`, who: user?.name ?? 'ฉัน', time: nowLabel(), text }, ...current]);
-    setDraftNote('');
+    if (!text || !canEdit || !currentHouseholdId) return;
+    setIsSavingNote(true);
+    try {
+      const created = await handoffNotesApi.createHandoffNote(currentHouseholdId, text);
+      setHandoffNotes((current) => [created, ...current]);
+      setDraftNote('');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+      Alert.alert('บันทึกไม่สำเร็จ', message);
+    } finally {
+      setIsSavingNote(false);
+    }
   };
 
   const myMedication = useMemo(
@@ -191,17 +244,11 @@ export default function ProfileScreen() {
       </View>
 
       <SectionHeader title="บันทึกส่งต่อเวร" />
-      <View style={[styles.previewBanner, { backgroundColor: theme.warningSoft }]}>
-        <InfoIcon weight="duotone" size={18} color={theme.warningText} />
-        <ThemedText type="small" style={{ color: theme.warningText, flex: 1 }}>
-          หน้านี้เป็นตัวอย่างการออกแบบเท่านั้น — แอปยังไม่มีระบบบันทึกส่งต่อเวรจริง ข้อความที่พิมพ์จะไม่ถูกบันทึกไว้ที่ไหน
-        </ThemedText>
-      </View>
       <View style={styles.list}>
         <TextInput
           value={draftNote}
           onChangeText={setDraftNote}
-          editable={canEdit}
+          editable={canEdit && !isSavingNote}
           multiline
           numberOfLines={3}
           placeholder={canEdit ? 'เพิ่มบันทึกสำหรับผู้ดูแลคนถัดไป' : 'ดูได้เท่านั้น — บันทึกไม่ได้'}
@@ -212,49 +259,72 @@ export default function ProfileScreen() {
             { backgroundColor: theme.backgroundElement, color: theme.text, shadowColor: theme.shadow },
           ]}
         />
-        <AppButton label="บันทึก" disabled={!canEdit || !draftNote.trim()} onPress={addHandoffNote} />
-        {handoffNotes.map((note) => (
-          <Card key={note.id} gap={Spacing.half}>
-            <View style={styles.noteHead}>
-              <ThemedText type="smallBold">{note.who}</ThemedText>
-              <ThemedText type="caption" themeColor="textMuted">
-                {note.time}
-              </ThemedText>
-            </View>
+        <AppButton
+          label="บันทึก"
+          disabled={!canEdit || !draftNote.trim() || isSavingNote}
+          loading={isSavingNote}
+          onPress={addHandoffNote}
+        />
+        {isLoadingNotes ? (
+          <ThemedText type="small" themeColor="textSecondary">
+            กำลังโหลดบันทึก...
+          </ThemedText>
+        ) : handoffNotes.length === 0 ? (
+          <Card tone="sunken" elevation="flat">
             <ThemedText type="small" themeColor="textSecondary">
-              {note.text}
+              ยังไม่มีบันทึกส่งต่อเวร
             </ThemedText>
           </Card>
-        ))}
+        ) : (
+          handoffNotes.map((note) => (
+            <Card key={note._id} gap={Spacing.half}>
+              <View style={styles.noteHead}>
+                <ThemedText type="smallBold">{note.authorMemberId.displayName}</ThemedText>
+                <ThemedText type="caption" themeColor="textMuted">
+                  {new Date(note.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                </ThemedText>
+              </View>
+              <ThemedText type="small" themeColor="textSecondary">
+                {note.text}
+              </ThemedText>
+            </Card>
+          ))
+        )}
       </View>
 
       <SectionHeader title="เอกสารและสิทธิ์" />
-      <View style={[styles.previewBanner, { backgroundColor: theme.warningSoft }]}>
-        <InfoIcon weight="duotone" size={18} color={theme.warningText} />
-        <ThemedText type="small" style={{ color: theme.warningText, flex: 1 }}>
-          ตัวอย่างดีไซน์ — แอปยังไม่มีระบบจัดเก็บเอกสารจริง
-        </ThemedText>
-      </View>
       <View style={styles.list}>
-        {demoDocuments.map((doc) => {
-          const DocIcon = doc.icon;
-          return (
-            <Card key={doc.id} gap={Spacing.three} style={styles.docRow}>
-              <DocIcon weight="duotone" size={26} color={theme.primaryText} />
-              <View style={styles.docBody}>
-                <ThemedText type="smallBold">{doc.name}</ThemedText>
-                <ThemedText type="caption" themeColor="textMuted">
-                  {doc.meta}
-                </ThemedText>
-              </View>
-              <View style={[styles.kindPill, { backgroundColor: theme.primarySoft }]}>
-                <ThemedText type="caption" style={{ color: theme.primaryText, fontWeight: '700' }}>
-                  {doc.kind}
-                </ThemedText>
-              </View>
-            </Card>
-          );
-        })}
+        {isLoadingDocuments ? (
+          <ThemedText type="small" themeColor="textSecondary">
+            กำลังโหลดเอกสาร...
+          </ThemedText>
+        ) : documents.length === 0 ? (
+          <Card tone="sunken" elevation="flat">
+            <ThemedText type="small" themeColor="textSecondary">
+              ยังไม่มีเอกสารในกลุ่มบ้านนี้
+            </ThemedText>
+          </Card>
+        ) : (
+          documents.map((doc) => {
+            const DocIcon = documentKindIcons[doc.kind] ?? FileTextIcon;
+            return (
+              <Card key={doc._id} gap={Spacing.three} style={styles.docRow}>
+                <DocIcon weight="duotone" size={26} color={theme.primaryText} />
+                <View style={styles.docBody}>
+                  <ThemedText type="smallBold">{doc.name}</ThemedText>
+                  <ThemedText type="caption" themeColor="textMuted">
+                    {doc.meta}
+                  </ThemedText>
+                </View>
+                <View style={[styles.kindPill, { backgroundColor: theme.primarySoft }]}>
+                  <ThemedText type="caption" style={{ color: theme.primaryText, fontWeight: '700' }}>
+                    {doc.kind}
+                  </ThemedText>
+                </View>
+              </Card>
+            );
+          })
+        )}
       </View>
 
       {/* Not in the reference design's own Profile screen — these are real
@@ -338,13 +408,6 @@ const styles = StyleSheet.create({
   rowBody: { flex: 1, gap: 2 },
   pressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
 
-  previewBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.two,
-    borderRadius: Radius.md,
-    padding: Spacing.three,
-  },
   textarea: {
     minHeight: 88,
     borderRadius: Radius.lg,

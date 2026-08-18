@@ -2,11 +2,17 @@ import { apiGet, apiPatch, apiPost } from './api-client';
 
 export type HouseholdRole = 'owner' | 'caregiver' | 'elder' | 'viewer';
 export type ApiMemberStatus = 'normal' | 'monitor' | 'urgent';
+export type HouseholdKind = 'parents' | 'partner' | 'relatives' | 'other';
 
 export type ApiHousehold = {
   _id: string;
   name: string;
   ownerUserId: string;
+  // What kind of group this is (parents' house, partner's, relatives',
+  // other) — drives the switcher's icon and meta line. Defaults to 'other'
+  // server-side, so always present even on households created before this
+  // field existed.
+  kind: HouseholdKind;
   inviteCode: string;
   inviteCodeRotatedAt: string;
 };
@@ -30,6 +36,10 @@ export type ApiHouseholdMember = {
   membershipState: 'active' | 'pending';
   claimCode?: string | null;
   claimCodeExpiresAt?: string | null;
+  // True for the one household this account opens on sign-in — a per-user
+  // choice on the *membership*, not the household, since two people in the
+  // same household can each pick a different default (see setDefaultHousehold).
+  isDefault: boolean;
 };
 
 export type HouseholdWithMembership = { household: ApiHousehold; membership: ApiHouseholdMember };
@@ -40,8 +50,8 @@ export type ApiUserLookup = { _id: string; name: string; userCode: string | null
 
 export type ApiPendingInvite = { household: ApiHousehold; membership: ApiHouseholdMember };
 
-export const createHousehold = (name: string, displayName: string, relation: string) =>
-  apiPost<HouseholdWithMembership>('/households', { name, displayName, relation });
+export const createHousehold = (name: string, displayName: string, relation: string, kind?: HouseholdKind) =>
+  apiPost<HouseholdWithMembership>('/households', { name, displayName, relation, kind });
 
 export const joinHousehold = (
   inviteCode: string,
@@ -109,3 +119,9 @@ export const generateClaimCode = (householdId: string, memberId: string) =>
 
 export const claimMembership = (claimCode: string) =>
   apiPost<ApiHouseholdMember>('/households/claim', { claimCode });
+
+/** Sets the caller's own "กลุ่มเริ่มต้น" (default household) — a per-user,
+ *  per-household flag, so this never touches anyone else's default. Returns
+ *  the caller's updated membership. */
+export const setDefaultHousehold = (householdId: string) =>
+  apiPost<ApiHouseholdMember>(`/households/${householdId}/set-default`);
