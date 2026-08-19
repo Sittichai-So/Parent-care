@@ -30,7 +30,8 @@ export default function AppointmentDetailScreen() {
   const router = useRouter();
   const theme = useTheme();
   const params = useLocalSearchParams<{ id?: string }>();
-  const { appointments, medications, familyMembers, canManageFor, updateAppointment } = useFamilyContext();
+  const { appointments, medications, familyMembers, canManageFor, updateAppointment, isLoadingData } =
+    useFamilyContext();
   const [checked, setChecked] = useState<string[]>(['card']);
   const [isTogglingReminder, setIsTogglingReminder] = useState(false);
 
@@ -55,6 +56,19 @@ export default function AppointmentDetailScreen() {
     setChecked((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
 
   if (!appointment) {
+    // Same reasoning as medication-confirm.tsx: a deep link from a
+    // notification may have just switched the active household, so
+    // `appointments` hasn't caught up from the server yet — that's not the
+    // same as the appointment actually being gone.
+    if (params.id && isLoadingData) {
+      return (
+        <Screen center gap={Spacing.three}>
+          <ThemedText type="small" themeColor="textSecondary">
+            กำลังโหลดนัดหมาย…
+          </ThemedText>
+        </Screen>
+      );
+    }
     return (
       <Screen center gap={Spacing.three}>
         <ScreenHeader title="ไม่พบนัดหมาย" />

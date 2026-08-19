@@ -32,7 +32,11 @@ type VitalsSummaryProps = {
 export function VitalsSummary({ memberId, showAddButton = true }: VitalsSummaryProps) {
   const theme = useTheme();
   const router = useRouter();
-  const { vitalLogs } = useFamilyContext();
+  const { vitalLogs, canManageFor } = useFamilyContext();
+  // Owner/Caregiver may log for anyone, Elder only themself, Viewer never —
+  // same permission vitals-form.tsx itself enforces, checked here too so the
+  // button isn't offered somewhere it's guaranteed to be rejected.
+  const canAdd = showAddButton && canManageFor(memberId);
 
   const recent = useMemo(
     () =>
@@ -47,7 +51,7 @@ export function VitalsSummary({ memberId, showAddButton = true }: VitalsSummaryP
     <Card gap={Spacing.two}>
       <View style={styles.head}>
         <ThemedText type="smallBold">สุขภาพล่าสุด</ThemedText>
-        {showAddButton ? (
+        {canAdd ? (
           <Pressable
             onPress={() => router.push({ pathname: '/vitals-form', params: { memberId } })}
             accessibilityRole="button"

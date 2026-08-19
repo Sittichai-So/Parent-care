@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { TextField } from '@/components/ui/text-field';
+import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useFamilyContext } from '@/context/family-context';
 
@@ -20,10 +21,20 @@ const toNumber = (value: string) => {
 export default function VitalsFormScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ memberId?: string }>();
-  const { familyMembers, primaryElderId, addVitalLog } = useFamilyContext();
+  const { familyMembers, primaryElderId, currentRole, currentMembershipId, canManageFor, addVitalLog } =
+    useFamilyContext();
 
-  const memberId = params.memberId ?? primaryElderId;
+  // Every call site passes memberId explicitly today, but falls back the
+  // same way medication-form.tsx/appointment-form.tsx do (self for Elder,
+  // else the household's primary elder) rather than always primaryElderId,
+  // in case a future entry point ever opens this with none.
+  const memberId = params.memberId ?? (currentRole === 'Elder' ? (currentMembershipId ?? primaryElderId) : primaryElderId);
   const member = familyMembers.find((m) => m.id === memberId);
+
+  // Mirrors the backend's per-member write permission — gated here (not
+  // just the "+ บันทึกใหม่" button that links here) so a deep link can't
+  // reach a form that's guaranteed to fail on save. See medication-form.tsx.
+  const canManageThis = canManageFor(memberId);
 
   const [systolic, setSystolic] = useState('');
   const [diastolic, setDiastolic] = useState('');
@@ -66,6 +77,21 @@ export default function VitalsFormScreen() {
       setIsSaving(false);
     }
   };
+
+  if (!canManageThis) {
+    return (
+      <Screen center gap={Spacing.three}>
+        <ScreenHeader title="บันทึกสุขภาพ" />
+        <Card tone="sunken" elevation="flat" gap={Spacing.two}>
+          <ThemedText type="smallBold">ไม่มีสิทธิ์บันทึกข้อมูลสุขภาพนี้</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            บันทึกข้อมูลสุขภาพของตัวเองได้ หรือให้เจ้าของบ้าน/ผู้ดูแล (Caregiver) บันทึกแทนสำหรับสมาชิกคนอื่น
+          </ThemedText>
+        </Card>
+        <AppButton label="กลับ" onPress={() => router.back()} />
+      </Screen>
+    );
+  }
 
   return (
     <Screen

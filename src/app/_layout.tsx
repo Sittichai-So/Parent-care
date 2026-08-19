@@ -109,7 +109,6 @@ function RootLayoutNav() {
            *  "not allowed" card rather than real data. */}
           <Stack.Screen name="household-access" />
           <Stack.Screen name="audit-log" />
-          {/* Design preview only — see the in-screen banner; no messaging backend exists yet. */}
           <Stack.Screen name="messages" />
           <Stack.Screen name="notices" />
         </Stack.Protected>

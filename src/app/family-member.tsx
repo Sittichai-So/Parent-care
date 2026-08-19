@@ -23,7 +23,8 @@ import { daysFromToday, formatDateKey, isToday } from '@/utils/date';
 export default function FamilyMemberScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { selectedMemberId, familyMembers, medications, appointments, canEdit, generateClaimCode } = useFamilyContext();
+  const { selectedMemberId, familyMembers, medications, appointments, canEdit, canManageFor, generateClaimCode } =
+    useFamilyContext();
   const member = familyMembers.find((item) => item.id === selectedMemberId) ?? familyMembers[0];
   const [isGeneratingClaim, setIsGeneratingClaim] = useState(false);
   const [pinged, setPinged] = useState(false);
@@ -101,7 +102,7 @@ export default function FamilyMemberScreen() {
             }
             accessibilityHint={canEdit ? undefined : 'ดูได้เท่านั้น'}
           />
-          {primaryMedication ? (
+          {primaryMedication && (primaryMedTakenToday || canManageFor(primaryMedication.memberId)) ? (
             <AppButton
               label={primaryMedTakenToday ? 'ดูภาพยืนยันการทานยา' : `ยืนยันการทานยา ${primaryMedication.schedule[0] ?? ''}`}
               variant="secondary"
@@ -173,8 +174,12 @@ export default function FamilyMemberScreen() {
       <SectionHeader
         title="รายการยา"
         count={memberMedications.length}
-        actionLabel="+ เพิ่มยา"
-        onActionPress={() => router.push({ pathname: '/medication-form', params: { memberId: member.id } })}
+        actionLabel={canManageFor(member.id) ? '+ เพิ่มยา' : undefined}
+        onActionPress={
+          canManageFor(member.id)
+            ? () => router.push({ pathname: '/medication-form', params: { memberId: member.id } })
+            : undefined
+        }
       />
       {memberMedications.length === 0 ? (
         <Card tone="sunken" elevation="flat">
@@ -204,8 +209,12 @@ export default function FamilyMemberScreen() {
 
       <SectionHeader
         title="นัดหมายที่จะถึง"
-        actionLabel="+ เพิ่มนัดหมาย"
-        onActionPress={() => router.push({ pathname: '/appointment-form', params: { memberId: member.id } })}
+        actionLabel={canManageFor(member.id) ? '+ เพิ่มนัดหมาย' : undefined}
+        onActionPress={
+          canManageFor(member.id)
+            ? () => router.push({ pathname: '/appointment-form', params: { memberId: member.id } })
+            : undefined
+        }
       />
       {nextAppointment ? (
         <Pressable

@@ -128,7 +128,7 @@ export default function MedicationsScreen() {
                         label={takenToday ? 'ทานแล้ววันนี้' : 'ยังไม่ทานวันนี้'}
                         tone={takenToday ? 'success' : 'warning'}
                       />
-                      {med.active ? (
+                      {med.active && canEditThis ? (
                         <Pressable
                           onPress={() => router.push({ pathname: '/medication-confirm', params: { id: med.id } })}
                           accessibilityRole="button"

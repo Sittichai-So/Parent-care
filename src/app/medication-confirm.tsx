@@ -50,8 +50,16 @@ export default function MedicationConfirmScreen() {
   const theme = useTheme();
   const { user } = useAuth();
   const params = useLocalSearchParams<{ id?: string }>();
-  const { medications, familyMembers, primaryElderId, currentMembershipId, canEdit, confirmMedicationTaken } =
-    useFamilyContext();
+  const {
+    medications,
+    familyMembers,
+    primaryElderId,
+    currentMembershipId,
+    canEdit,
+    canManageFor,
+    confirmMedicationTaken,
+    isLoadingData,
+  } = useFamilyContext();
 
   // Real camera capture — `photoUri` is the local file the OS camera handed
   // back (via expo-image-picker's native camera UI), `shotAt` the real
@@ -83,8 +91,16 @@ export default function MedicationConfirmScreen() {
   const stage: 'idle' | 'review' | 'done' = takenToday ? 'done' : photoUri ? 'review' : 'idle';
   const currentStepIndex = stage === 'done' ? 2 : stage === 'review' ? 1 : 0;
 
+  // Viewing stays open to everyone in the household (Viewer included) — only
+  // the write actions below (photo capture, retake, confirm) are gated
+  // per-record, same as medication-form.tsx: Owner/Caregiver may confirm
+  // anyone's dose, Elder only their own. Checked against `canEdit` alone
+  // used to let e.g. an Elder start (and photograph!) another member's
+  // confirm flow only to have the backend reject it at the very last step.
+  const canManageThis = medication ? canManageFor(medication.memberId) : false;
+
   const takePhoto = async () => {
-    if (!canEdit) return;
+    if (!canManageThis) return;
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
       Alert.alert('ต้องอนุญาตใช้กล้อง', 'กรุณาอนุญาตให้แอปใช้กล้องในตั้งค่าเครื่อง เพื่อถ่ายภาพยืนยันการทานยา');
@@ -105,14 +121,14 @@ export default function MedicationConfirmScreen() {
   };
 
   const retake = () => {
-    if (!canEdit) return;
+    if (!canManageThis) return;
     setPhotoUri(null);
     setShotAt(null);
     takePhoto();
   };
 
   const handleConfirm = async () => {
-    if (!medication || !photoUri || !shotAt) return;
+    if (!medication || !canManageThis || !photoUri || !shotAt) return;
     setIsConfirming(true);
 
     // Split into two try/catches (not one) so a failure names which step it
@@ -139,6 +155,21 @@ export default function MedicationConfirmScreen() {
   };
 
   if (!medication) {
+    // Opened via a deep link (e.g. a medicine reminder from the "การแจ้งเตือน"
+    // screen) while the matching household's data is still being fetched —
+    // that link may have just switched the active household, so `medications`
+    // hasn't caught up yet. Show a neutral loading state instead of "ยังไม่มี
+    // รายการยา" here, which would be actively wrong (the record does exist,
+    // it just hasn't loaded) and would send the user to create a duplicate.
+    if (params.id && isLoadingData) {
+      return (
+        <Screen center gap={Spacing.three}>
+          <ThemedText type="small" themeColor="textSecondary">
+            กำลังโหลดรายการยา…
+          </ThemedText>
+        </Screen>
+      );
+    }
     return (
       <Screen center gap={Spacing.three}>
         <Card tone="sunken" elevation="flat" gap={Spacing.two}>
@@ -172,11 +203,11 @@ export default function MedicationConfirmScreen() {
               label="ทานแล้ว และยืนยัน"
               phosphorIcon={PillIcon}
               size="xlarge"
-              disabled={!canEdit || !photoUri || isConfirming}
+              disabled={!canManageThis || !photoUri || isConfirming}
               loading={isConfirming}
               onPress={handleConfirm}
               accessibilityHint={
-                !canEdit ? 'ดูได้เท่านั้น' : photoUri ? 'บันทึกว่าคุณทานยาแล้ว' : 'ต้องถ่ายรูปยืนยันก่อนจึงจะกดได้'
+                !canManageThis ? 'ดูได้เท่านั้น' : photoUri ? 'บันทึกว่าคุณทานยาแล้ว' : 'ต้องถ่ายรูปยืนยันก่อนจึงจะกดได้'
               }
             />
           )}
@@ -184,6 +215,18 @@ export default function MedicationConfirmScreen() {
         </>
       }>
       <ReadOnlyBanner />
+      {/* ReadOnlyBanner only fires for Viewer (household-level `canEdit`) —
+       *  an Elder can generally edit, just not *this* record if it belongs
+       *  to someone else, so that case needs its own explanation here.
+       *  (`canEdit` check avoids double-showing this alongside ReadOnlyBanner
+       *  for Viewer, who is already `!canManageThis` for every record.) */}
+      {canEdit && !canManageThis ? (
+        <Card tone="readOnly" elevation="flat" gap={Spacing.one}>
+          <ThemedText type="small" themeColor="textSecondary">
+            ดูได้เท่านั้น — ยืนยันการทานยาแทนคนอื่นได้เฉพาะเจ้าของบ้านหรือผู้ดูแล (Caregiver) เท่านั้น
+          </ThemedText>
+        </Card>
+      ) : null}
 
       <View style={styles.headerRow}>
         <View style={[styles.headerChip, { backgroundColor: theme.primarySoft }]}>
@@ -243,10 +286,10 @@ export default function MedicationConfirmScreen() {
             label="ถ่ายภาพยืนยัน"
             phosphorIcon={CameraIcon}
             size="xlarge"
-            disabled={!canEdit}
+            disabled={!canManageThis}
             loading={isCapturing}
             onPress={takePhoto}
-            accessibilityHint={canEdit ? undefined : 'ดูได้เท่านั้น'}
+            accessibilityHint={canManageThis ? undefined : 'ดูได้เท่านั้น'}
           />
         </Card>
       ) : null}
@@ -289,7 +332,7 @@ export default function MedicationConfirmScreen() {
               phosphorIcon={ArrowCounterClockwiseIcon}
               variant="secondary"
               size="large"
-              disabled={!canEdit || isCapturing}
+              disabled={!canManageThis || isCapturing}
               loading={isCapturing}
               onPress={retake}
             />

@@ -61,14 +61,30 @@ type Notice = {
 export default function NoticesScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { familyMembers, pendingInvites, appointments, notifications, markNotificationRead, setSelectedMemberId } =
-    useFamilyContext();
+  const {
+    familyMembers,
+    pendingInvites,
+    appointments,
+    notifications,
+    markNotificationRead,
+    setSelectedMemberId,
+    currentHouseholdId,
+    setCurrentHouseholdId,
+  } = useFamilyContext();
 
   const notices = useMemo<Notice[]>(() => {
     const serverNotices: Notice[] = notifications.map((item) => {
       const meta = SERVER_NOTICE_META[item.type];
       const openTarget = () => {
         if (!item.isRead) markNotificationRead(item._id).catch(() => {});
+        // Notifications span every household the account belongs to, but
+        // the medicine/appointment lists loaded into context are scoped to
+        // whichever household is currently active — switch first so the
+        // target screen's lookup (by id, within that scoped list) actually
+        // finds the record instead of landing on its "not found" state.
+        if (item.householdId && item.householdId !== currentHouseholdId) {
+          setCurrentHouseholdId(item.householdId);
+        }
         if (item.type === 'MEDICINE' && item.data.medicineId) {
           router.push({ pathname: '/medication-confirm', params: { id: item.data.medicineId } });
         } else if (item.type === 'APPOINTMENT' && item.data.appointmentId) {
@@ -130,7 +146,17 @@ export default function NoticesScreen() {
       }));
 
     return [...serverNotices, ...attentionNotices, ...inviteNotices, ...soonAppointments];
-  }, [notifications, familyMembers, pendingInvites, appointments, router, setSelectedMemberId, markNotificationRead]);
+  }, [
+    notifications,
+    familyMembers,
+    pendingInvites,
+    appointments,
+    router,
+    setSelectedMemberId,
+    markNotificationRead,
+    currentHouseholdId,
+    setCurrentHouseholdId,
+  ]);
 
   const toneColor: Record<BadgeTone, { chipBg: string; ink: string }> = {
     neutral: { chipBg: theme.surfaceSunken, ink: theme.textSecondary },
