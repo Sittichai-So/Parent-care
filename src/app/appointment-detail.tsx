@@ -16,7 +16,6 @@ import { SectionHeader } from '@/components/ui/section-header';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Spacing } from '@/constants/theme';
 import { useFamilyContext } from '@/context/family-context';
-import { useRestoreHouseholdOnLeave } from '@/hooks/use-restore-household-on-leave';
 import { useTheme } from '@/hooks/use-theme';
 import { daysFromToday, formatDateKey, relativeDayLabel } from '@/utils/date';
 
@@ -30,12 +29,9 @@ const preparationChecklist = [
 export default function AppointmentDetailScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const params = useLocalSearchParams<{ id?: string; restoreHouseholdId?: string }>();
+  const params = useLocalSearchParams<{ id?: string }>();
   const { appointments, medications, familyMembers, canManageFor, updateAppointment, isLoadingData } =
     useFamilyContext();
-
-  useRestoreHouseholdOnLeave(params.restoreHouseholdId);
-
   const [checked, setChecked] = useState<string[]>(['card']);
   const [isTogglingReminder, setIsTogglingReminder] = useState(false);
 

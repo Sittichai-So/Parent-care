@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 
 import { CheckCircleIcon, SirenIcon, UserIcon, WarningCircleIcon } from 'phosphor-react-native';
 
@@ -10,7 +10,6 @@ import { Card } from '@/components/ui/card';
 import { Screen } from '@/components/ui/screen';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFamilyContext } from '@/context/family-context';
-import { useRestoreHouseholdOnLeave } from '@/hooks/use-restore-household-on-leave';
 import { useTheme } from '@/hooks/use-theme';
 
 type Phase = 'ask' | 'sending' | 'sent';
@@ -19,10 +18,6 @@ export default function EmergencyScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { familyMembers, triggerEmergency } = useFamilyContext();
-  const params = useLocalSearchParams<{ restoreHouseholdId?: string }>();
-
-  useRestoreHouseholdOnLeave(params.restoreHouseholdId);
-
   const [phase, setPhase] = useState<Phase>('ask');
   const [error, setError] = useState<string | null>(null);
 

@@ -191,11 +191,16 @@ type FamilyContextValue = {
   pendingInvites: PendingInvite[];
   refreshPendingInvites: () => Promise<void>;
 
-  /** The account's server-side notification inbox — medicine/appointment
-   *  due-time reminders, new chat messages, emergency alerts. Account-wide
-   *  like pendingInvites, not scoped to currentHouseholdId. Newest-first
-   *  (server sorts by createdAt). Polled every 60s while authenticated, in
-   *  addition to the explicit refresh below. */
+  /** The server-side notification inbox for `currentHouseholdId` — medicine/
+   *  appointment due-time reminders, new chat messages, emergency alerts, for
+   *  whichever household is currently selected (same scope as medications/
+   *  appointments/etc.), plus any account-wide SYSTEM notices with no single
+   *  household of their own. Unlike pendingInvites, this is *not* account-wide
+   *  — switching households changes what's in here, on purpose: a
+   *  notification belongs to the household it's about, not to every
+   *  household the account happens to also belong to. Newest-first (server
+   *  sorts by createdAt). Polled every 60s while authenticated, in addition
+   *  to the explicit refresh below. */
   notifications: ApiNotification[];
   refreshNotifications: () => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
@@ -447,6 +452,21 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const currentHousehold = households.find((household) => household.id === currentHouseholdId) ?? null;
   const currentMembershipId = currentHousehold?.membershipId ?? null;
   const currentRole = currentHousehold?.role ?? null;
+
+  // The server fetches every household's notifications in one account-wide
+  // call (`notifications` above, kept as-is so read/unread state is never
+  // lost switching households), but what's actually shown is narrowed to
+  // whichever household is currently selected — same scope as
+  // medications/appointments/etc. `householdId: null` (SYSTEM notices with
+  // no single household they belong to) always passes through. Tapping a
+  // medicine/appointment reminder in this list can then trust it always
+  // belongs to the household already loaded, with no household-switching
+  // needed — see notices.tsx.
+  const householdNotifications = useMemo(
+    () => notifications.filter((item) => item.householdId === null || item.householdId === currentHouseholdId),
+    [notifications, currentHouseholdId]
+  );
+
   const canEdit = currentRole !== 'Viewer';
   const canManage = currentRole === 'Owner' || currentRole === 'Caregiver';
   const canManageFor = useCallback(
@@ -771,7 +791,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
 
       pendingInvites,
       refreshPendingInvites,
-      notifications,
+      notifications: householdNotifications,
       refreshNotifications,
       markNotificationRead,
       markAllNotificationsRead,
@@ -827,7 +847,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       vitalLogs,
       pendingInvites,
       refreshPendingInvites,
-      notifications,
+      householdNotifications,
       refreshNotifications,
       markNotificationRead,
       markAllNotificationsRead,

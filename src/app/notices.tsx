@@ -61,44 +61,26 @@ type Notice = {
 export default function NoticesScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const {
-    familyMembers,
-    pendingInvites,
-    appointments,
-    notifications,
-    markNotificationRead,
-    setSelectedMemberId,
-    currentHouseholdId,
-    setCurrentHouseholdId,
-  } = useFamilyContext();
+  const { familyMembers, pendingInvites, appointments, notifications, markNotificationRead, setSelectedMemberId } =
+    useFamilyContext();
 
   const notices = useMemo<Notice[]>(() => {
     const serverNotices: Notice[] = notifications.map((item) => {
       const meta = SERVER_NOTICE_META[item.type];
       const openTarget = () => {
         if (!item.isRead) markNotificationRead(item._id).catch(() => {});
-        // Notifications span every household the account belongs to, but
-        // the medicine/appointment lists loaded into context are scoped to
-        // whichever household is currently active — switch first so the
-        // target screen's lookup (by id, within that scoped list) actually
-        // finds the record instead of landing on its "not found" state.
-        // `restoreHouseholdId` carries the household that *was* active back
-        // to the destination screen, which restores it on the way out
-        // (useRestoreHouseholdOnLeave) — so opening someone else's
-        // notification never leaves the household switcher pointed
-        // somewhere the caller didn't choose, even after just backing out.
-        const isSwitching = item.householdId && item.householdId !== currentHouseholdId;
-        const restoreHouseholdId = isSwitching ? (currentHouseholdId ?? undefined) : undefined;
-        if (isSwitching) setCurrentHouseholdId(item.householdId);
-
+        // `notifications` is already scoped to the currently selected
+        // household (see family-context.tsx#householdNotifications), so
+        // every id below is guaranteed to belong to it — no household
+        // switch needed to find the record.
         if (item.type === 'MEDICINE' && item.data.medicineId) {
-          router.push({ pathname: '/medication-confirm', params: { id: item.data.medicineId, restoreHouseholdId } });
+          router.push({ pathname: '/medication-confirm', params: { id: item.data.medicineId } });
         } else if (item.type === 'APPOINTMENT' && item.data.appointmentId) {
-          router.push({ pathname: '/appointment-detail', params: { id: item.data.appointmentId, restoreHouseholdId } });
+          router.push({ pathname: '/appointment-detail', params: { id: item.data.appointmentId } });
         } else if (item.type === 'MESSAGE') {
-          router.push({ pathname: '/messages', params: { restoreHouseholdId } });
+          router.push('/messages');
         } else if (item.type === 'EMERGENCY') {
-          router.push({ pathname: '/emergency', params: { restoreHouseholdId } });
+          router.push('/emergency');
         }
       };
       return {
@@ -152,17 +134,7 @@ export default function NoticesScreen() {
       }));
 
     return [...serverNotices, ...attentionNotices, ...inviteNotices, ...soonAppointments];
-  }, [
-    notifications,
-    familyMembers,
-    pendingInvites,
-    appointments,
-    router,
-    setSelectedMemberId,
-    markNotificationRead,
-    currentHouseholdId,
-    setCurrentHouseholdId,
-  ]);
+  }, [notifications, familyMembers, pendingInvites, appointments, router, setSelectedMemberId, markNotificationRead]);
 
   const toneColor: Record<BadgeTone, { chipBg: string; ink: string }> = {
     neutral: { chipBg: theme.surfaceSunken, ink: theme.textSecondary },

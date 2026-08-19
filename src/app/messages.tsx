@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
 
 import { PaperPlaneRightIcon } from 'phosphor-react-native';
 
@@ -11,7 +10,6 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { Elevation, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useFamilyContext } from '@/context/family-context';
-import { useRestoreHouseholdOnLeave } from '@/hooks/use-restore-household-on-leave';
 import { useTheme } from '@/hooks/use-theme';
 import * as messagesApi from '@/services/messages-api';
 import type { ApiMessage } from '@/services/messages-api';
@@ -31,9 +29,6 @@ export default function MessagesScreen() {
   const theme = useTheme();
   const { token } = useAuth();
   const { currentHouseholdId, currentMembershipId, canEdit } = useFamilyContext();
-  const params = useLocalSearchParams<{ restoreHouseholdId?: string }>();
-
-  useRestoreHouseholdOnLeave(params.restoreHouseholdId);
 
   const [messages, setMessages] = useState<ApiMessage[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
