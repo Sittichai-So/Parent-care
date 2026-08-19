@@ -25,6 +25,7 @@ import { Screen } from '@/components/ui/screen';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useFamilyContext } from '@/context/family-context';
+import { useRestoreHouseholdOnLeave } from '@/hooks/use-restore-household-on-leave';
 import { useTheme } from '@/hooks/use-theme';
 import * as uploadsApi from '@/services/uploads-api';
 import { isToday } from '@/utils/date';
@@ -49,7 +50,7 @@ export default function MedicationConfirmScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { user } = useAuth();
-  const params = useLocalSearchParams<{ id?: string }>();
+  const params = useLocalSearchParams<{ id?: string; restoreHouseholdId?: string }>();
   const {
     medications,
     familyMembers,
@@ -60,6 +61,8 @@ export default function MedicationConfirmScreen() {
     confirmMedicationTaken,
     isLoadingData,
   } = useFamilyContext();
+
+  useRestoreHouseholdOnLeave(params.restoreHouseholdId);
 
   // Real camera capture — `photoUri` is the local file the OS camera handed
   // back (via expo-image-picker's native camera UI), `shotAt` the real

@@ -82,17 +82,23 @@ export default function NoticesScreen() {
         // whichever household is currently active — switch first so the
         // target screen's lookup (by id, within that scoped list) actually
         // finds the record instead of landing on its "not found" state.
-        if (item.householdId && item.householdId !== currentHouseholdId) {
-          setCurrentHouseholdId(item.householdId);
-        }
+        // `restoreHouseholdId` carries the household that *was* active back
+        // to the destination screen, which restores it on the way out
+        // (useRestoreHouseholdOnLeave) — so opening someone else's
+        // notification never leaves the household switcher pointed
+        // somewhere the caller didn't choose, even after just backing out.
+        const isSwitching = item.householdId && item.householdId !== currentHouseholdId;
+        const restoreHouseholdId = isSwitching ? (currentHouseholdId ?? undefined) : undefined;
+        if (isSwitching) setCurrentHouseholdId(item.householdId);
+
         if (item.type === 'MEDICINE' && item.data.medicineId) {
-          router.push({ pathname: '/medication-confirm', params: { id: item.data.medicineId } });
+          router.push({ pathname: '/medication-confirm', params: { id: item.data.medicineId, restoreHouseholdId } });
         } else if (item.type === 'APPOINTMENT' && item.data.appointmentId) {
-          router.push({ pathname: '/appointment-detail', params: { id: item.data.appointmentId } });
+          router.push({ pathname: '/appointment-detail', params: { id: item.data.appointmentId, restoreHouseholdId } });
         } else if (item.type === 'MESSAGE') {
-          router.push('/messages');
+          router.push({ pathname: '/messages', params: { restoreHouseholdId } });
         } else if (item.type === 'EMERGENCY') {
-          router.push('/emergency');
+          router.push({ pathname: '/emergency', params: { restoreHouseholdId } });
         }
       };
       return {
