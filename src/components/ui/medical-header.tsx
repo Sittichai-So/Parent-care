@@ -17,6 +17,8 @@ type MedicalHeaderProps = {
   onLogoutPress: () => void;
   /** Omit to hide the button — not every screen that uses this header has somewhere for it to go. */
   onMessagesPress?: () => void;
+  /** Badge count on the messages icon (unread chat notifications) — omit or 0 to hide. */
+  messageCount?: number;
   /** Slot above the title — the household switcher pill, when the caller has one. */
   topSlot?: ReactNode;
   /** Slot for a `SearchPill`, rendered below the subtitle. */
@@ -34,6 +36,7 @@ export function MedicalHeader({
   onNotificationPress,
   onLogoutPress,
   onMessagesPress,
+  messageCount = 0,
   topSlot,
   children,
 }: MedicalHeaderProps) {
@@ -58,10 +61,17 @@ export function MedicalHeader({
             <Pressable
               onPress={onMessagesPress}
               accessibilityRole="button"
-              accessibilityLabel="ข้อความครอบครัว (ตัวอย่าง)"
+              accessibilityLabel={messageCount > 0 ? `ข้อความครอบครัว ${messageCount} ข้อความใหม่` : 'ข้อความครอบครัว'}
               hitSlop={Spacing.two}
               style={({ pressed }) => [styles.iconButton, { backgroundColor: theme.heroSurface }, pressed && styles.pressed]}>
               <ChatTeardropDotsIcon weight="duotone" size={22} color={theme.heroText} />
+              {messageCount > 0 ? (
+                <View style={[styles.badge, { backgroundColor: theme.accentYellow, borderColor: theme.hero }]}>
+                  <ThemedText style={[styles.badgeLabel, { color: theme.accentYellowText }]}>
+                    {messageCount > 9 ? '9+' : messageCount}
+                  </ThemedText>
+                </View>
+              ) : null}
             </Pressable>
           ) : null}
 

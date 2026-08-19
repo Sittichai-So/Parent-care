@@ -9,6 +9,7 @@ export type ApiUser = {
   // accounts created before this field existed.
   userCode: string | null;
   phone: string | null;
+  address: string | null;
   profileImage: string | null;
   role: string;
   isActive: boolean;
@@ -18,5 +19,5 @@ export type AuthResult = { user: ApiUser; token: string };
 
 export const login = (email: string, password: string) => apiPost<AuthResult>('/auth/login', { email, password });
 
-export const register = (name: string, email: string, password: string, phone?: string) =>
-  apiPost<AuthResult>('/auth/register', { name, email, password, phone });
+export const register = (name: string, email: string, password: string, phone: string, address?: string) =>
+  apiPost<AuthResult>('/auth/register', { name, email, password, phone, address });

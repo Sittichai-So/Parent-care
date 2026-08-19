@@ -16,7 +16,16 @@ export type User = {
   /** Shareable lookup code — lets another account find and invite this one
    *  (see family-context.tsx#lookupUser) without an open name search. */
   userCode: string | null;
+  phone: string | null;
+  address: string | null;
 };
+
+/** Step 1's fields, held only in memory (never persisted) while the caller
+ *  fills out step 2 — register.tsx no longer calls the API itself; whichever
+ *  household action the user completes in household-setup.tsx calls
+ *  `register(...)` first, so the account is only ever created once both
+ *  steps have real, validated data. See household-setup.tsx#ensureRegistered. */
+export type PendingRegistration = { name: string; email: string; phone: string; address?: string; password: string };
 
 type AuthContextValue = {
   user: User | null;
@@ -29,9 +38,11 @@ type AuthContextValue = {
    *  shouldn't rely on `user` from context, since that only reflects the
    *  *next* render after this promise resolves. */
   login: (email: string, password: string) => Promise<User>;
-  register: (name: string, email: string, password: string, phone?: string) => Promise<User>;
+  register: (name: string, email: string, password: string, phone: string, address?: string) => Promise<User>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
+  pendingRegistration: PendingRegistration | null;
+  setPendingRegistration: (draft: PendingRegistration | null) => void;
 };
 
 const STORAGE_KEY = 'parent-care.session';
@@ -43,6 +54,8 @@ const toUser = (apiUser: authApi.ApiUser): User => ({
   name: apiUser.name,
   email: apiUser.email,
   userCode: apiUser.userCode,
+  phone: apiUser.phone,
+  address: apiUser.address,
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -50,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingRegistration, setPendingRegistration] = useState<PendingRegistration | null>(null);
 
   // Restore a persisted session once on boot, so the app doesn't bounce to
   // the login screen on every reload.
@@ -92,10 +106,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (name: string, email: string, password: string, phone?: string) => {
+  const register = async (name: string, email: string, password: string, phone: string, address?: string) => {
     setIsLoading(true);
     try {
-      const result = await authApi.register(name.trim(), email.trim(), password, phone);
+      const result = await authApi.register(name.trim(), email.trim(), password, phone, address);
       const nextUser = toUser(result.user);
       await persist(result.token, nextUser);
       return nextUser;
@@ -121,8 +135,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       register,
       logout,
       isAuthenticated: !!user,
+      pendingRegistration,
+      setPendingRegistration,
     }),
-    [user, token, isRestoring, isLoading]
+    [user, token, isRestoring, isLoading, pendingRegistration]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

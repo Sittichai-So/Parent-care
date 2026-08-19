@@ -10,10 +10,12 @@ import { OnboardingHeader } from '@/components/ui/onboarding-header';
 import { Screen } from '@/components/ui/screen';
 import { SegmentedToggle } from '@/components/ui/segmented-toggle';
 import { TextField } from '@/components/ui/text-field';
+import { HouseholdKindMeta } from '@/constants/household';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
+import type { HouseholdKind } from '@/services/households-api';
 
 type Mode = 'create' | 'join' | 'claim';
 
@@ -23,6 +25,11 @@ const roleOptions = [
   { value: 'viewer', label: 'ดูอย่างเดียว' },
 ] as const;
 
+const kindOptions = (Object.keys(HouseholdKindMeta) as HouseholdKind[]).map((value) => ({
+  value,
+  label: HouseholdKindMeta[value].label,
+}));
+
 const modeOptions = [
   { value: 'create', label: 'สร้างกลุ่ม' },
   { value: 'join', label: 'เข้าร่วม' },
@@ -30,20 +37,44 @@ const modeOptions = [
 ] as const;
 
 /**
- * Shown after login/register to any account that doesn't belong to a
- * household yet — the root layout guard (_layout.tsx) routes here instead
- * of the tabs. Create starts a new household as its owner; Join redeems an
+ * Step 2 of signup (reached from register.tsx before the account even
+ * exists yet — see `ensureRegistered` below), and also shown after login to
+ * any already-registered account that doesn't belong to a household yet —
+ * the root layout guard (_layout.tsx) routes here instead of the tabs in
+ * that case. Create starts a new household as its owner; Join redeems an
  * invite code from someone who already created one.
  */
 export default function HouseholdSetupScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { logout } = useAuth();
+  const { logout, register, pendingRegistration, setPendingRegistration } = useAuth();
   const { households, createHousehold, joinHousehold, claimMembership } = useFamilyContext();
-  // A signed-in account with at least one household lands here on demand
-  // (e.g. "มีรหัสผูกบัญชี?" on the dashboard), not as a forced landing
-  // screen — so let them back out instead of only offering logout.
-  const canGoBack = households.length > 0;
+  // Two different reasons this screen has nothing but "สร้างบัญชี" step 2 to
+  // show: a brand-new signup (pendingRegistration still set), or the account
+  // is genuinely authenticated but somehow has zero households. Either way
+  // it reads as onboarding, distinct from a signed-in account with at least
+  // one household landing here on demand (e.g. "มีรหัสผูกบัญชี?").
+  const isOnboarding = households.length === 0;
+  // A back destination exists either way: mid-signup, back returns to
+  // register.tsx (still on the stack, fields intact, nothing to undo yet —
+  // register() hasn't been called); post-signup with existing households,
+  // back returns wherever this screen was opened from.
+  const canGoBack = pendingRegistration !== null || households.length > 0;
+
+  // Only ever called once per successful signup: register() genuinely
+  // creates the account, so pendingRegistration is cleared immediately after
+  // so a retry (if the household action below fails) never calls it twice.
+  const ensureRegistered = async () => {
+    if (!pendingRegistration) return;
+    await register(
+      pendingRegistration.name,
+      pendingRegistration.email,
+      pendingRegistration.password,
+      pendingRegistration.phone,
+      pendingRegistration.address
+    );
+    setPendingRegistration(null);
+  };
 
   const [mode, setMode] = useState<Mode>('create');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,6 +83,7 @@ export default function HouseholdSetupScreen() {
   const [householdName, setHouseholdName] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [relation, setRelation] = useState('');
+  const [kind, setKind] = useState<HouseholdKind>('parents');
 
   const [inviteCode, setInviteCode] = useState('');
   const [role, setRole] = useState<(typeof roleOptions)[number]['value']>('caregiver');
@@ -66,7 +98,8 @@ export default function HouseholdSetupScreen() {
     setError(null);
     setIsSubmitting(true);
     try {
-      const household = await createHousehold(householdName.trim(), displayName.trim(), relation.trim());
+      await ensureRegistered();
+      const household = await createHousehold(householdName.trim(), displayName.trim(), relation.trim(), kind);
       // The invite code only ever shows here and on the dashboard's invite
       // card — there's no dedicated household-settings screen yet, so this
       // is the one guaranteed moment the owner sees it right after creation.
@@ -92,6 +125,7 @@ export default function HouseholdSetupScreen() {
     setError(null);
     setIsSubmitting(true);
     try {
+      await ensureRegistered();
       await joinHousehold(inviteCode.trim().toUpperCase(), role, displayName.trim(), relation.trim());
       router.replace('/');
     } catch (err) {
@@ -111,6 +145,7 @@ export default function HouseholdSetupScreen() {
     setError(null);
     setIsSubmitting(true);
     try {
+      await ensureRegistered();
       await claimMembership(claimCode.trim().toUpperCase());
       router.replace('/');
     } catch (err) {
@@ -128,8 +163,8 @@ export default function HouseholdSetupScreen() {
       gap={Spacing.four}
       header={
         <OnboardingHeader
-          title={canGoBack ? 'กลุ่มบ้าน' : 'สร้างบัญชี'}
-          step={canGoBack ? undefined : 2}
+          title={isOnboarding ? 'สร้างบัญชี' : 'กลุ่มบ้าน'}
+          step={isOnboarding ? 2 : undefined}
           onBack={canGoBack ? () => router.back() : undefined}
         />
       }>
@@ -155,6 +190,10 @@ export default function HouseholdSetupScreen() {
             placeholder="เช่น บ้านสมชาย"
             required
           />
+          <View style={styles.field}>
+            <ThemedText type="smallBold">ประเภทกลุ่ม</ThemedText>
+            <ChipSelect options={kindOptions} selected={[kind]} onToggle={(value) => setKind(value as HouseholdKind)} />
+          </View>
           <TextField
             label="ชื่อของคุณในกลุ่ม"
             value={displayName}
@@ -170,7 +209,8 @@ export default function HouseholdSetupScreen() {
             required
           />
           <ThemedText type="caption" themeColor="textMuted">
-            คุณจะเป็นเจ้าของกลุ่มนี้ และได้รหัสเชิญไว้ส่งให้สมาชิกคนอื่น
+            คุณจะเป็นเจ้าของกลุ่มนี้ และได้รหัสเชิญไว้ส่งให้สมาชิกคนอื่น — กลุ่มแรกของบัญชีนี้จะถูกตั้งเป็น
+            &quot;กลุ่มเริ่มต้น&quot; ให้อัตโนมัติ (เปลี่ยนได้ทีหลังจากตัวสลับกลุ่มบ้าน)
           </ThemedText>
         </Card>
       ) : null}
@@ -235,11 +275,21 @@ export default function HouseholdSetupScreen() {
       />
 
       <Pressable
-        onPress={() => logout()}
+        onPress={() => {
+          // Mid-signup, nothing's been created yet — "ออกจากระบบ" would be
+          // inaccurate (there's no session to log out of), so this clears
+          // the draft and returns to login instead of calling logout().
+          if (pendingRegistration) {
+            setPendingRegistration(null);
+            router.replace('/login');
+          } else {
+            logout();
+          }
+        }}
         accessibilityRole="button"
         style={({ pressed }) => [styles.logoutLink, pressed && styles.pressed]}>
         <ThemedText type="small" themeColor="textSecondary">
-          ออกจากระบบ
+          {pendingRegistration ? 'ยกเลิกการสมัคร' : 'ออกจากระบบ'}
         </ThemedText>
       </Pressable>
     </Screen>

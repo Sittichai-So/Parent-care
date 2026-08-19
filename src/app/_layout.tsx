@@ -17,7 +17,7 @@ import { addReminderResponseListener } from '@/services/notifications';
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
-  const { isAuthenticated, isRestoring } = useAuth();
+  const { isAuthenticated, isRestoring, pendingRegistration } = useAuth();
   const { households, isLoadingHouseholds } = useFamilyContext();
   const router = useRouter();
   const scheme = useColorScheme();
@@ -118,8 +118,15 @@ function RootLayoutNav() {
             that already has a household may still need — e.g. linking to a
             managed profile a relative pre-added in a *different* household.
             So it's reachable regardless of hasHousehold, not nested in the
-            !hasHousehold-only block below. */}
-        <Stack.Protected guard={isAuthenticated}>
+            !hasHousehold-only block below.
+            Also reachable mid-signup while still unauthenticated: register.tsx
+            no longer calls the API on "ต่อไป" — it stashes the fields as
+            pendingRegistration and pushes here, and only the household action
+            the user completes on this screen actually calls register() (see
+            household-setup.tsx#ensureRegistered). Without this OR clause,
+            Stack.Protected would make this route unreachable at exactly the
+            moment register.tsx tries to push it. */}
+        <Stack.Protected guard={isAuthenticated || pendingRegistration !== null}>
           <Stack.Screen name="household-setup" options={{ animation: 'fade' }} />
         </Stack.Protected>
 

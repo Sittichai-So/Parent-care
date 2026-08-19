@@ -55,11 +55,24 @@ export default function CaregiverDashboardScreen() {
     canEdit,
     canManageFor,
     pendingInvites,
+    notifications,
     setSelectedMemberId,
     updateTaskStatus,
   } = useFamilyContext();
 
   const [search, setSearch] = useState('');
+
+  const unreadMessageCount = useMemo(
+    () => notifications.filter((item) => item.type === 'MESSAGE' && !item.isRead).length,
+    [notifications]
+  );
+  // Everything else in the inbox (medicine/appointment reminders, emergency,
+  // etc.) — MESSAGE is excluded here since it already has its own badge on
+  // the chat icon, and counting it in both would double it.
+  const unreadNoticeCount = useMemo(
+    () => notifications.filter((item) => item.type !== 'MESSAGE' && !item.isRead).length,
+    [notifications]
+  );
 
   useEffect(() => {
     if (currentRole === 'Elder') {
@@ -140,10 +153,11 @@ export default function CaregiverDashboardScreen() {
               ? `สวัสดี ${user?.name ?? 'คุณ'} · ${attentionMembers.length} รายการต้องติดตาม`
               : `สวัสดี ${user?.name ?? 'คุณ'} · ทุกอย่างปกติวันนี้`
           }
-          notificationCount={attentionMembers.length + pendingInvites.length}
+          notificationCount={attentionMembers.length + pendingInvites.length + unreadNoticeCount}
           onNotificationPress={() => router.push('/notices')}
           onLogoutPress={confirmLogout}
-          onMessagesPress={() => router.push('/messages')}>
+          onMessagesPress={() => router.push('/messages')}
+          messageCount={unreadMessageCount}>
           <SearchPill
             value={search}
             onChangeText={setSearch}

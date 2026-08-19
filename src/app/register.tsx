@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
@@ -11,47 +11,69 @@ import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useTheme } from '@/hooks/use-theme';
 
+/** Thai phone numbers: a landline is 9 digits starting with 0, a mobile is
+ *  10 — both `0xxxxxxxx`/`0xxxxxxxxx` once formatting is stripped. Whatever
+ *  the user types (dashes, spaces, per the placeholder's `08X-XXX-XXXX`
+ *  shape) is normalized to plain digits before this check and before it's
+ *  ever sent to the API, so the stored value is always consistent
+ *  regardless of how it was typed. */
+const isValidThaiPhone = (digits: string) => /^0\d{8,9}$/.test(digits);
+
 /** Step 1 of the reference design's 2-step register flow — account fields
  *  only. The mock's step 1 also has a role picker (Caregiver/Elder/Viewer),
  *  but that's not a real account attribute here: role is per-household
  *  (`HouseholdRole`), only ever chosen when creating or joining a household
  *  on the next screen — so it's not reproduced here to avoid a field that
- *  looks real but the server has nowhere to put it. */
+ *  looks real but the server has nowhere to put it.
+ *
+ *  Deliberately doesn't call the register API itself: it stashes these
+ *  fields as `pendingRegistration` and pushes (not replaces) to
+ *  household-setup, so — the account only ever gets created once step 2's
+ *  household action actually runs (see household-setup.tsx#ensureRegistered),
+ *  and — since this screen stays on the stack (push, not replace), its own
+ *  "ย้อนกลับ" button naturally returns here with these fields still filled
+ *  in, rather than to an already-committed account with nothing to undo. */
 export default function RegisterScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { register, isLoading } = useAuth();
+  const { setPendingRegistration } = useAuth();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const handleRegister = async () => {
-    if (!name.trim() || !email.trim() || !password) {
-      setError('กรอกชื่อ อีเมล และรหัสผ่านอย่างน้อย 4 ตัวอักษร');
+  const handleNext = () => {
+    if (!name.trim() || !email.trim() || !phone.trim() || !password || !confirmPassword) {
+      setError('กรอกข้อมูลที่จำเป็นให้ครบทุกช่อง');
       return;
     }
-    if (password.length < 4) {
-      setError('รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร');
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (!isValidThaiPhone(phoneDigits)) {
+      setError('เบอร์โทรศัพท์ไม่ถูกต้อง (ต้องขึ้นต้นด้วย 0 และมี 9-10 หลัก)');
+      return;
+    }
+    if (password.length < 6) {
+      setError('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('รหัสผ่านและยืนยันรหัสผ่านไม่ตรงกัน');
       return;
     }
 
     setError(null);
-
-    try {
-      // household-setup (the next screen the root guard sends a fresh
-      // account to) reads useAuth().isAuthenticated, so no explicit
-      // navigation is needed here — replace covers the case where the
-      // guard hasn't re-evaluated yet on some platforms.
-      await register(name.trim(), email.trim(), password, phone.trim() || undefined);
-      router.replace('/household-setup');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
-      setError(message);
-      Alert.alert('สมัครสมาชิกไม่สำเร็จ', message);
-    }
+    setPendingRegistration({
+      name: name.trim(),
+      email: email.trim(),
+      phone: phoneDigits,
+      address: address.trim() || undefined,
+      password,
+    });
+    router.push('/household-setup');
   };
 
   return (
@@ -82,11 +104,15 @@ export default function RegisterScreen() {
           required
         />
         <TextField
-          label="เบอร์โทร (ไม่บังคับ)"
+          label="เบอร์โทร"
           value={phone}
-          onChangeText={setPhone}
+          onChangeText={(value) => {
+            setPhone(value);
+            if (error) setError(null);
+          }}
           placeholder="08X-XXX-XXXX"
           keyboardType="phone-pad"
+          required
         />
         <TextField
           label="รหัสผ่าน"
@@ -95,18 +121,35 @@ export default function RegisterScreen() {
             setPassword(value);
             if (error) setError(null);
           }}
-          placeholder="อย่างน้อย 4 ตัวอักษร"
+          placeholder="อย่างน้อย 6 ตัวอักษร"
           secureTextEntry
           required
+        />
+        <TextField
+          label="ยืนยันรหัสผ่าน"
+          value={confirmPassword}
+          onChangeText={(value) => {
+            setConfirmPassword(value);
+            if (error) setError(null);
+          }}
+          placeholder="กรอกรหัสผ่านอีกครั้ง"
+          secureTextEntry
+          required
+        />
+
+        <TextField
+          label="ที่อยู่ (ไม่บังคับ)"
+          value={address}
+          onChangeText={setAddress}
+          placeholder="บ้านเลขที่ ถนน ตำบล/แขวง อำเภอ/เขต จังหวัด"
+          multiline
         />
 
         <AppButton
           label="ต่อไป · กลุ่มบ้าน"
           size="large"
-          onPress={handleRegister}
-          loading={isLoading}
-          disabled={isLoading}
-          accessibilityHint="สร้างบัญชีใหม่แล้วไปตั้งค่ากลุ่มบ้าน"
+          onPress={handleNext}
+          accessibilityHint="ไปขั้นตอนถัดไป — ตั้งค่ากลุ่มบ้าน แล้วค่อยสร้างบัญชีจริงตอนนั้น"
         />
 
         {error ? (

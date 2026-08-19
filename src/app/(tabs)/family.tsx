@@ -38,6 +38,7 @@ export default function FamilyScreen() {
     familyMembers,
     currentHousehold,
     pendingInvites,
+    notifications,
     canEdit,
     setSelectedMemberId,
     acceptInvite,
@@ -56,6 +57,12 @@ export default function FamilyScreen() {
 
   const normalCount = familyMembers.filter((member) => member.status === 'normal').length;
   const attentionMembers = sortedMembers.filter((member) => member.status !== 'normal');
+  // Matches (tabs)/index.tsx's bell badge exactly — MESSAGE is excluded
+  // since that has its own badge on the chat icon elsewhere.
+  const unreadNoticeCount = useMemo(
+    () => notifications.filter((item) => item.type !== 'MESSAGE' && !item.isRead).length,
+    [notifications]
+  );
 
   const visibleMembers = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -94,7 +101,7 @@ export default function FamilyScreen() {
         <MedicalHeader
           title="ครอบครัว"
           subtitle={currentHousehold ? currentHousehold.name : 'ยังไม่ได้เลือกกลุ่มครอบครัว'}
-          notificationCount={attentionMembers.length + pendingInvites.length}
+          notificationCount={attentionMembers.length + pendingInvites.length + unreadNoticeCount}
           onNotificationPress={() => router.push('/notices')}
           onLogoutPress={confirmLogout}>
           <SearchPill

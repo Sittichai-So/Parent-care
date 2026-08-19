@@ -4,8 +4,12 @@ import { useRouter } from 'expo-router';
 
 import {
   CalendarPlusIcon,
+  ChatTeardropDotsIcon,
   CheckCircleIcon,
   EnvelopeOpenIcon,
+  InfoIcon,
+  ListChecksIcon,
+  PillIcon,
   WarningCircleIcon,
   type Icon as PhosphorIcon,
 } from 'phosphor-react-native';
@@ -19,7 +23,22 @@ import type { BadgeTone } from '@/components/ui/status-badge';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
+import type { NotificationType } from '@/services/notifications-inbox-api';
 import { daysFromToday, relativeDayLabel } from '@/utils/date';
+
+/** Icon + tone per server notification type — the medicine/appointment
+ *  due-time reminders and chat pings that come from the account's real
+ *  notification inbox (`family-context.tsx#notifications`), alongside the
+ *  client-derived categories below. */
+const SERVER_NOTICE_META: Record<NotificationType, { icon: PhosphorIcon; tone: BadgeTone }> = {
+  MEDICINE: { icon: PillIcon, tone: 'warning' },
+  APPOINTMENT: { icon: CalendarPlusIcon, tone: 'primary' },
+  MESSAGE: { icon: ChatTeardropDotsIcon, tone: 'primary' },
+  EMERGENCY: { icon: WarningCircleIcon, tone: 'danger' },
+  TASK: { icon: ListChecksIcon, tone: 'primary' },
+  VITALS: { icon: ListChecksIcon, tone: 'neutral' },
+  SYSTEM: { icon: InfoIcon, tone: 'neutral' },
+};
 
 type Notice = {
   id: string;
@@ -34,15 +53,43 @@ type Notice = {
   onPress?: () => void;
 };
 
-/** Assembled from real signals already in `family-context.tsx` (attention
- *  status, pending invites, appointments within the next 2 days) — not a
- *  separate notifications feed/backend, since the app doesn't have one. */
+/** Assembled from two sources: the account's real server-side notification
+ *  inbox (medicine/appointment due-time reminders, chat pings, emergency —
+ *  see `family-context.tsx#notifications`) plus signals derived client-side
+ *  from data already in context (member attention status, pending invites,
+ *  appointments within the next 2 days) that have no equivalent inbox row. */
 export default function NoticesScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { familyMembers, pendingInvites, appointments, setSelectedMemberId } = useFamilyContext();
+  const { familyMembers, pendingInvites, appointments, notifications, markNotificationRead, setSelectedMemberId } =
+    useFamilyContext();
 
   const notices = useMemo<Notice[]>(() => {
+    const serverNotices: Notice[] = notifications.map((item) => {
+      const meta = SERVER_NOTICE_META[item.type];
+      const openTarget = () => {
+        if (!item.isRead) markNotificationRead(item._id).catch(() => {});
+        if (item.type === 'MEDICINE' && item.data.medicineId) {
+          router.push({ pathname: '/medication-confirm', params: { id: item.data.medicineId } });
+        } else if (item.type === 'APPOINTMENT' && item.data.appointmentId) {
+          router.push({ pathname: '/appointment-detail', params: { id: item.data.appointmentId } });
+        } else if (item.type === 'MESSAGE') {
+          router.push('/messages');
+        } else if (item.type === 'EMERGENCY') {
+          router.push('/emergency');
+        }
+      };
+      return {
+        id: `notif-${item._id}`,
+        title: item.title,
+        detail: item.message,
+        time: new Date(item.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+        icon: meta.icon,
+        tone: meta.tone,
+        onPress: openTarget,
+      };
+    });
+
     const attentionNotices: Notice[] = familyMembers
       .filter((member) => member.status !== 'normal')
       .map((member) => ({
@@ -82,8 +129,8 @@ export default function NoticesScreen() {
         onPress: () => router.push({ pathname: '/appointment-detail', params: { id: apt.id } }),
       }));
 
-    return [...attentionNotices, ...inviteNotices, ...soonAppointments];
-  }, [familyMembers, pendingInvites, appointments, router, setSelectedMemberId]);
+    return [...serverNotices, ...attentionNotices, ...inviteNotices, ...soonAppointments];
+  }, [notifications, familyMembers, pendingInvites, appointments, router, setSelectedMemberId, markNotificationRead]);
 
   const toneColor: Record<BadgeTone, { chipBg: string; ink: string }> = {
     neutral: { chipBg: theme.surfaceSunken, ink: theme.textSecondary },

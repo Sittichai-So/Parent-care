@@ -14,6 +14,8 @@ import * as householdsApi from '@/services/households-api';
 import type { ApiHouseholdMember, HouseholdKind, HouseholdRole } from '@/services/households-api';
 import * as medicinesApi from '@/services/medicines-api';
 import type { ApiMedicine } from '@/services/medicines-api';
+import * as notificationsInboxApi from '@/services/notifications-inbox-api';
+import type { ApiNotification } from '@/services/notifications-inbox-api';
 import * as tasksApi from '@/services/tasks-api';
 import type { ApiTask } from '@/services/tasks-api';
 import * as timelineApi from '@/services/timeline-api';
@@ -161,7 +163,12 @@ type FamilyContextValue = {
    *  `memberId` — Owner/Caregiver: anyone; Elder: only themself; Viewer:
    *  never. Mirrors household-scope.js's resolveWriteMemberId exactly. */
   canManageFor: (memberId: string) => boolean;
-  createHousehold: (name: string, displayName: string, relation: string) => Promise<HouseholdSummary>;
+  createHousehold: (
+    name: string,
+    displayName: string,
+    relation: string,
+    kind?: HouseholdKind
+  ) => Promise<HouseholdSummary>;
   joinHousehold: (
     inviteCode: string,
     role: Exclude<HouseholdRole, 'owner'>,
@@ -183,6 +190,16 @@ type FamilyContextValue = {
    *  account can see (not just currentHouseholdId). */
   pendingInvites: PendingInvite[];
   refreshPendingInvites: () => Promise<void>;
+
+  /** The account's server-side notification inbox — medicine/appointment
+   *  due-time reminders, new chat messages, emergency alerts. Account-wide
+   *  like pendingInvites, not scoped to currentHouseholdId. Newest-first
+   *  (server sorts by createdAt). Polled every 60s while authenticated, in
+   *  addition to the explicit refresh below. */
+  notifications: ApiNotification[];
+  refreshNotifications: () => Promise<void>;
+  markNotificationRead: (id: string) => Promise<void>;
+  markAllNotificationsRead: () => Promise<void>;
 
   /** The family's Elder member — used as the default "me" on elder-facing screens. */
   primaryElderId: string;
@@ -346,6 +363,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const [isLoadingHouseholds, setIsLoadingHouseholds] = useState(true);
   const [currentHouseholdId, setCurrentHouseholdId] = useState<string | null>(null);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+  const [notifications, setNotifications] = useState<ApiNotification[]>([]);
 
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
@@ -386,15 +404,22 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     setPendingInvites(invites.map(toPendingInvite));
   }, []);
 
+  const refreshNotifications = useCallback(async () => {
+    const items = await notificationsInboxApi.getNotifications();
+    setNotifications(items);
+  }, []);
+
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (isAuthenticated) {
       refreshHouseholds();
       refreshPendingInvites();
+      refreshNotifications();
     } else {
       setHouseholds([]);
       setCurrentHouseholdId(null);
       setPendingInvites([]);
+      setNotifications([]);
       setFamilyMembers([]);
       setTasks([]);
       setTimeline([]);
@@ -403,8 +428,21 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       setVitalLogs([]);
       setIsLoadingHouseholds(false);
     }
-  }, [isAuthenticated, refreshHouseholds, refreshPendingInvites]);
+  }, [isAuthenticated, refreshHouseholds, refreshPendingInvites, refreshNotifications]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Polls the notification inbox every 60s while logged in — there's no
+  // push mechanism (Expo Go on Android can't even receive one, see
+  // services/notifications.ts), and the chat socket only connects while
+  // messages.tsx itself is mounted, so this is what keeps the message badge
+  // and medicine/appointment reminders reasonably live without either.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const interval = setInterval(() => {
+      refreshNotifications();
+    }, 60_000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated, refreshNotifications]);
 
   const currentHousehold = households.find((household) => household.id === currentHouseholdId) ?? null;
   const currentMembershipId = currentHousehold?.membershipId ?? null;
@@ -476,9 +514,9 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     appointments.forEach((appointment) => syncAppointmentReminder(appointment).catch(() => {}));
   }, [appointments]);
 
-  const createHousehold = useCallback(
-    async (name: string, displayName: string, relation: string) => {
-      const result = await householdsApi.createHousehold(name, displayName, relation);
+  const createHousehold = useCallback<FamilyContextValue['createHousehold']>(
+    async (name, displayName, relation, kind) => {
+      const result = await householdsApi.createHousehold(name, displayName, relation, kind);
       const summary = toSummary(result);
       await refreshHouseholds();
       setCurrentHouseholdId(summary.id);
@@ -671,6 +709,16 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     [refreshPendingInvites]
   );
 
+  const markNotificationRead = useCallback<FamilyContextValue['markNotificationRead']>(async (id) => {
+    await notificationsInboxApi.markNotificationRead(id);
+    setNotifications((current) => current.map((item) => (item._id === id ? { ...item, isRead: true } : item)));
+  }, []);
+
+  const markAllNotificationsRead = useCallback<FamilyContextValue['markAllNotificationsRead']>(async () => {
+    await notificationsInboxApi.markAllNotificationsRead();
+    setNotifications((current) => current.map((item) => ({ ...item, isRead: true })));
+  }, []);
+
   const generateClaimCode = useCallback<FamilyContextValue['generateClaimCode']>(
     async (memberId) => {
       if (!currentHouseholdId) throw new Error('ยังไม่ได้เลือกครอบครัว');
@@ -723,6 +771,10 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
 
       pendingInvites,
       refreshPendingInvites,
+      notifications,
+      refreshNotifications,
+      markNotificationRead,
+      markAllNotificationsRead,
 
       primaryElderId,
       selectedMemberId,
@@ -775,6 +827,10 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       vitalLogs,
       pendingInvites,
       refreshPendingInvites,
+      notifications,
+      refreshNotifications,
+      markNotificationRead,
+      markAllNotificationsRead,
       primaryElderId,
       selectedMemberId,
       checkIn,
