@@ -23,15 +23,12 @@ import { ReportHeader } from './report-header';
 /** Personal report for the Elder role — no household roster, no other
  *  members' data, just this person's own medication adherence and vitals
  *  trends over time, the two things a health report about *them* is
- *  actually for. Mirrors the "me" resolution in `(tabs)/explore.tsx`. */
+ *  actually for. */
 export function ElderReport() {
   const router = useRouter();
   const theme = useTheme();
   const { user } = useAuth();
-  const { medications, appointments, vitalLogs, primaryElderId, currentMembershipId, currentHousehold } =
-    useFamilyContext();
-
-  const selfMemberId = currentMembershipId ?? primaryElderId;
+  const { medications, appointments, vitalLogs, selfMemberId, currentHousehold } = useFamilyContext();
 
   const myMedications = useMemo(
     () => medications.filter((med) => med.memberId === selfMemberId),

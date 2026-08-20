@@ -52,12 +52,78 @@ function getTodayLabel() {
   return new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
+type ElderActionCardProps = {
+  action: ElderAction;
+  onPress: () => void;
+};
+
+function ElderActionCard({ action, onPress }: ElderActionCardProps) {
+  const theme = useTheme();
+  const ActionIcon = action.icon;
+  const isDanger = action.tone === 'danger';
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={action.label}
+      accessibilityHint={action.detail}
+      style={({ pressed }) => pressed && styles.pressed}>
+      <Card
+        tone={isDanger ? 'danger' : 'surface'}
+        accented
+        gap={Spacing.three}
+        padding={Spacing.four}
+        style={[styles.actionCard, !isDanger && { borderColor: theme.backgroundSelected }]}>
+        <View style={[styles.actionIconWrap, { backgroundColor: isDanger ? theme.dangerSoft : theme.primarySoft }]}>
+          <ActionIcon weight="duotone" size={32} color={isDanger ? theme.danger : theme.primaryText} />
+        </View>
+        <View style={styles.actionText}>
+          <ThemedText style={[styles.actionLabel, isDanger && { color: theme.dangerText }]}>{action.label}</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {action.detail}
+          </ThemedText>
+        </View>
+        <CaretRightIcon weight="bold" size={20} color={theme.textMuted} />
+      </Card>
+    </Pressable>
+  );
+}
+
+type ScheduleRowProps = {
+  item: ScheduleItem;
+  isLast: boolean;
+  onPress: () => void;
+};
+
+function ScheduleRow({ item, isLast, onPress }: ScheduleRowProps) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${item.title} เวลา ${item.time} ${item.done ? 'ทำแล้ว' : 'ยังไม่ทำ'}`}
+      accessibilityHint={item.kind === 'medication' ? 'เปิดหน้าถ่ายรูปและยืนยันการทานยา' : 'ดูรายละเอียดนัดหมาย'}
+      style={({ pressed }) => pressed && styles.pressed}>
+      <View style={[styles.scheduleRow, !isLast && { borderBottomWidth: 1, borderBottomColor: theme.border }]}>
+        <ThemedText style={[styles.scheduleTime, { color: theme.textSecondary }]}>{item.time}</ThemedText>
+        <View style={styles.scheduleBody}>
+          <ThemedText style={styles.scheduleTitle}>{item.title}</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {item.detail}
+          </ThemedText>
+        </View>
+        <StatusBadge label={item.done ? 'ทำแล้ว' : 'ยังไม่ทำ'} tone={item.done ? 'success' : 'neutral'} />
+      </View>
+    </Pressable>
+  );
+}
+
 export default function ElderHomeScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { user, logout } = useAuth();
-  const { medications, appointments, primaryElderId, currentMembershipId, currentRole, canEdit, checkIn } =
-    useFamilyContext();
+  const { medications, appointments, selfMemberId, currentRole, canEdit, checkIn } = useFamilyContext();
 
   // Mirrors the guard in (tabs)/index.tsx — a pure-Caregiver role has no
   // "explore" trigger in the tab bar, so bounce them back to their own screen.
@@ -66,13 +132,6 @@ export default function ElderHomeScreen() {
       router.replace('/');
     }
   }, [currentRole, router]);
-
-  // "Me" always means the *caller's own* membership in this household —
-  // every member (Owner, Caregiver, Elder, Viewer) can track their own
-  // medications/appointments here, separately from the family members they
-  // manage from the "ผู้ดูแล" tab. Only fall back to `primaryElderId` if
-  // the caller somehow has no membership id yet (e.g. mid-load).
-  const selfMemberId = currentMembershipId ?? primaryElderId;
 
   const myMedications = useMemo(
     () => medications.filter((med) => med.memberId === selfMemberId && med.active),
@@ -153,8 +212,7 @@ export default function ElderHomeScreen() {
       });
   };
 
-  // Mirrors the caregiver dashboard's confirm-then-logout flow — this
-  // screen previously had no way out of the account at all.
+  // Mirrors the caregiver dashboard's confirm-then-logout flow.
   const confirmLogout = () => {
     Alert.alert('ออกจากระบบ', 'ต้องการออกจากระบบใช่หรือไม่?', [
       { text: 'ยกเลิก', style: 'cancel' },
@@ -226,40 +284,9 @@ export default function ElderHomeScreen() {
 
       <SectionHeader title="สิ่งที่ทำได้" />
       <View style={styles.actions}>
-        {elderActions.map((action) => {
-          const ActionIcon = action.icon;
-          const isDanger = action.tone === 'danger';
-          return (
-            <Pressable
-              key={action.label}
-              onPress={() => router.push(action.route)}
-              accessibilityRole="button"
-              accessibilityLabel={action.label}
-              accessibilityHint={action.detail}
-              style={({ pressed }) => pressed && styles.pressed}>
-              <Card
-                tone={isDanger ? 'danger' : 'surface'}
-                accented
-                gap={Spacing.three}
-                padding={Spacing.four}
-                style={[styles.actionCard, !isDanger && { borderColor: theme.backgroundSelected }]}>
-                <View
-                  style={[styles.actionIconWrap, { backgroundColor: isDanger ? theme.dangerSoft : theme.primarySoft }]}>
-                  <ActionIcon weight="duotone" size={32} color={isDanger ? theme.danger : theme.primaryText} />
-                </View>
-                <View style={styles.actionText}>
-                  <ThemedText style={[styles.actionLabel, isDanger && { color: theme.dangerText }]}>
-                    {action.label}
-                  </ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {action.detail}
-                  </ThemedText>
-                </View>
-                <CaretRightIcon weight="bold" size={20} color={theme.textMuted} />
-              </Card>
-            </Pressable>
-          );
-        })}
+        {elderActions.map((action) => (
+          <ElderActionCard key={action.label} action={action} onPress={() => router.push(action.route)} />
+        ))}
       </View>
 
       <SectionHeader title="ตารางวันนี้" />
@@ -272,8 +299,10 @@ export default function ElderHomeScreen() {
       ) : (
         <Card gap={0} padding={Spacing.three}>
           {todaySchedule.map((item, index) => (
-            <Pressable
+            <ScheduleRow
               key={item.key}
+              item={item}
+              isLast={index === todaySchedule.length - 1}
               onPress={() => {
                 if (item.kind === 'medication') {
                   router.push({ pathname: '/medication-confirm', params: { id: item.medicationId } });
@@ -281,25 +310,7 @@ export default function ElderHomeScreen() {
                   router.push({ pathname: '/appointment-detail', params: { id: item.appointmentId } });
                 }
               }}
-              accessibilityRole="button"
-              accessibilityLabel={`${item.title} เวลา ${item.time} ${item.done ? 'ทำแล้ว' : 'ยังไม่ทำ'}`}
-              accessibilityHint={item.kind === 'medication' ? 'เปิดหน้าถ่ายรูปและยืนยันการทานยา' : 'ดูรายละเอียดนัดหมาย'}
-              style={({ pressed }) => pressed && styles.pressed}>
-              <View
-                style={[
-                  styles.scheduleRow,
-                  index < todaySchedule.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.border },
-                ]}>
-                <ThemedText style={[styles.scheduleTime, { color: theme.textSecondary }]}>{item.time}</ThemedText>
-                <View style={styles.scheduleBody}>
-                  <ThemedText style={styles.scheduleTitle}>{item.title}</ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {item.detail}
-                  </ThemedText>
-                </View>
-                <StatusBadge label={item.done ? 'ทำแล้ว' : 'ยังไม่ทำ'} tone={item.done ? 'success' : 'neutral'} />
-              </View>
-            </Pressable>
+            />
           ))}
         </Card>
       )}

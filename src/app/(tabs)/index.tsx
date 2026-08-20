@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import {
@@ -28,7 +28,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { StatusPriority, TaskStatusMeta } from '@/constants/status';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
-import { useFamilyContext, type FamilyTask } from '@/context/family-context';
+import { useFamilyContext, type FamilyTask, type Medication } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
 import { daysFromToday, isToday } from '@/utils/date';
 
@@ -39,6 +39,112 @@ const taskIcons: Record<FamilyTask['relatedType'], PhosphorIcon> = {
   vitals: ListChecksIcon,
   custom: CheckIcon,
 };
+
+// Shared by every Viewer-gated Pressable on this screen (medicine/task rows)
+// — same dim-when-read-only, no-press-feedback-when-disabled treatment each
+// time, instead of repeating `!canEdit && styles.readOnly, pressed &&
+// canEdit && styles.pressed` at each call site.
+const gatedPressableStyle = (
+  canEdit: boolean,
+  pressed: boolean,
+  ...extra: (StyleProp<ViewStyle> | false | undefined)[]
+): StyleProp<ViewStyle> => [...extra, !canEdit && styles.readOnly, pressed && canEdit && styles.pressed];
+
+type MedicationRowProps = {
+  title: string;
+  med: Medication;
+  takenToday: boolean;
+  canEdit: boolean;
+  onPress: () => void;
+};
+
+function MedicationRow({ title, med, takenToday, canEdit, onPress }: MedicationRowProps) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      onPress={canEdit ? onPress : undefined}
+      disabled={!canEdit}
+      accessibilityRole="button"
+      accessibilityLabel={`${title} — ${med.name} — ${takenToday ? 'ยืนยันแล้ว' : 'รอยืนยัน'}`}
+      accessibilityState={{ disabled: !canEdit }}
+      style={({ pressed }) => gatedPressableStyle(canEdit, pressed)}>
+      <Card gap={Spacing.three} style={styles.medRow}>
+        <View style={[styles.medChip, { backgroundColor: takenToday ? theme.successSoft : theme.warningSoft }]}>
+          {takenToday ? (
+            <CheckCircleIcon weight="fill" size={22} color={theme.successText} />
+          ) : (
+            <PillIcon weight="duotone" size={22} color={theme.warningText} />
+          )}
+        </View>
+        <View style={styles.medBody}>
+          <ThemedText type="smallBold">{title}</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+            {med.name} {med.dosage} · {takenToday ? 'ยืนยันพร้อมรูปแล้ว' : 'รอถ่ายภาพยืนยัน'}
+          </ThemedText>
+        </View>
+        <ThemedText
+          type="caption"
+          style={{ color: takenToday ? theme.successText : theme.warningText, fontWeight: '700' }}>
+          {takenToday ? 'ยืนยันแล้ว' : 'รอยืนยัน'}
+        </ThemedText>
+      </Card>
+    </Pressable>
+  );
+}
+
+type TaskRowProps = {
+  task: FamilyTask;
+  canEdit: boolean;
+  onToggle: () => void;
+};
+
+function TaskRow({ task, canEdit, onToggle }: TaskRowProps) {
+  const theme = useTheme();
+  const isDone = task.status === 'done';
+  const meta = TaskStatusMeta[task.status];
+  const TaskIcon = taskIcons[task.relatedType];
+
+  return (
+    <Pressable
+      onPress={canEdit ? onToggle : undefined}
+      disabled={!canEdit}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: isDone, disabled: !canEdit }}
+      accessibilityLabel={`${task.title} — ${meta.label}`}
+      accessibilityHint={canEdit ? 'แตะเพื่อสลับสถานะงาน' : 'ดูได้เท่านั้น'}
+      style={({ pressed }) => gatedPressableStyle(canEdit, pressed)}>
+      <Card gap={Spacing.three} style={styles.taskCard}>
+        <View
+          style={[
+            styles.checkbox,
+            {
+              borderColor: isDone ? theme.success : theme.borderStrong,
+              backgroundColor: isDone ? theme.success : 'transparent',
+            },
+          ]}>
+          {isDone ? <CheckIcon weight="bold" size={14} color={theme.onPrimary} /> : null}
+        </View>
+
+        <View style={styles.taskBody}>
+          <View style={styles.taskTitleRow}>
+            <TaskIcon weight="duotone" size={16} color={isDone ? theme.textMuted : theme.textSecondary} />
+            <ThemedText type="smallBold" style={isDone ? [styles.taskDone, { color: theme.textMuted }] : undefined}>
+              {task.title}
+            </ThemedText>
+          </View>
+          <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
+            {task.detail}
+          </ThemedText>
+          <ThemedText type="caption" themeColor="textMuted">
+            ผู้รับผิดชอบ: {task.owner}
+          </ThemedText>
+        </View>
+
+        <StatusBadge label={meta.label} tone={meta.tone} dot={false} />
+      </Card>
+    </Pressable>
+  );
+}
 
 export default function CaregiverDashboardScreen() {
   const router = useRouter();
@@ -118,7 +224,6 @@ export default function CaregiverDashboardScreen() {
           const takenToday = med.lastTakenAt ? isToday(med.lastTakenAt.slice(0, 10)) : false;
           const isMe = member.id === currentMembershipId;
           return {
-            member,
             med,
             takenToday,
             title: `${isMe ? 'ยาของฉัน' : `ยาของ${member.relation}`} · ${med.schedule[0] ?? ''}`,
@@ -225,40 +330,15 @@ export default function CaregiverDashboardScreen() {
         <>
           <SectionHeader title="ยาวันนี้ · รวมของฉัน" />
           <View style={styles.list}>
-            {medicationRows.map(({ member, med, takenToday, title }) => (
-              <Pressable
+            {medicationRows.map(({ med, takenToday, title }) => (
+              <MedicationRow
                 key={med.id}
-                onPress={canEdit ? () => router.push({ pathname: '/medication-confirm', params: { id: med.id } }) : undefined}
-                disabled={!canEdit}
-                accessibilityRole="button"
-                accessibilityLabel={`${title} — ${med.name} — ${takenToday ? 'ยืนยันแล้ว' : 'รอยืนยัน'}`}
-                accessibilityState={{ disabled: !canEdit }}
-                style={({ pressed }) => [!canEdit && styles.readOnly, pressed && canEdit && styles.pressed]}>
-                <Card gap={Spacing.three} style={styles.medRow}>
-                  <View
-                    style={[
-                      styles.medChip,
-                      { backgroundColor: takenToday ? theme.successSoft : theme.warningSoft },
-                    ]}>
-                    {takenToday ? (
-                      <CheckCircleIcon weight="fill" size={22} color={theme.successText} />
-                    ) : (
-                      <PillIcon weight="duotone" size={22} color={theme.warningText} />
-                    )}
-                  </View>
-                  <View style={styles.medBody}>
-                    <ThemedText type="smallBold">{title}</ThemedText>
-                    <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                      {med.name} {med.dosage} · {takenToday ? 'ยืนยันพร้อมรูปแล้ว' : 'รอถ่ายภาพยืนยัน'}
-                    </ThemedText>
-                  </View>
-                  <ThemedText
-                    type="caption"
-                    style={{ color: takenToday ? theme.successText : theme.warningText, fontWeight: '700' }}>
-                    {takenToday ? 'ยืนยันแล้ว' : 'รอยืนยัน'}
-                  </ThemedText>
-                </Card>
-              </Pressable>
+                title={title}
+                med={med}
+                takenToday={takenToday}
+                canEdit={canEdit}
+                onPress={() => router.push({ pathname: '/medication-confirm', params: { id: med.id } })}
+              />
             ))}
           </View>
         </>
@@ -266,63 +346,20 @@ export default function CaregiverDashboardScreen() {
 
       <SectionHeader title="งานอื่นวันนี้" />
       <View style={styles.list}>
-        {tasks.map((task) => {
-          const isDone = task.status === 'done';
-          const meta = TaskStatusMeta[task.status];
-          const TaskIcon = taskIcons[task.relatedType];
-          return (
-            <Pressable
-              key={task.id}
-              onPress={
-                canEdit
-                  ? () => {
-                      updateTaskStatus(task.id, isDone ? 'pending' : 'done').catch((err) => {
-                        const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
-                        Alert.alert('อัปเดตงานไม่สำเร็จ', message);
-                      });
-                    }
-                  : undefined
-              }
-              disabled={!canEdit}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: isDone, disabled: !canEdit }}
-              accessibilityLabel={`${task.title} — ${meta.label}`}
-              accessibilityHint={canEdit ? 'แตะเพื่อสลับสถานะงาน' : 'ดูได้เท่านั้น'}
-              style={({ pressed }) => [!canEdit && styles.readOnly, pressed && canEdit && styles.pressed]}>
-              <Card gap={Spacing.three} style={styles.taskCard}>
-                <View
-                  style={[
-                    styles.checkbox,
-                    {
-                      borderColor: isDone ? theme.success : theme.borderStrong,
-                      backgroundColor: isDone ? theme.success : 'transparent',
-                    },
-                  ]}>
-                  {isDone ? <CheckIcon weight="bold" size={14} color={theme.onPrimary} /> : null}
-                </View>
-
-                <View style={styles.taskBody}>
-                  <View style={styles.taskTitleRow}>
-                    <TaskIcon weight="duotone" size={16} color={isDone ? theme.textMuted : theme.textSecondary} />
-                    <ThemedText
-                      type="smallBold"
-                      style={isDone ? [styles.taskDone, { color: theme.textMuted }] : undefined}>
-                      {task.title}
-                    </ThemedText>
-                  </View>
-                  <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-                    {task.detail}
-                  </ThemedText>
-                  <ThemedText type="caption" themeColor="textMuted">
-                    ผู้รับผิดชอบ: {task.owner}
-                  </ThemedText>
-                </View>
-
-                <StatusBadge label={meta.label} tone={meta.tone} dot={false} />
-              </Card>
-            </Pressable>
-          );
-        })}
+        {tasks.map((task) => (
+          <TaskRow
+            key={task.id}
+            task={task}
+            canEdit={canEdit}
+            onToggle={() => {
+              const nextStatus = task.status === 'done' ? 'pending' : 'done';
+              updateTaskStatus(task.id, nextStatus).catch((err) => {
+                const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                Alert.alert('อัปเดตงานไม่สำเร็จ', message);
+              });
+            }}
+          />
+        ))}
       </View>
 
       {/* Owner-only tools — role management and the household's real

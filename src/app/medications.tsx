@@ -16,20 +16,84 @@ import { useFamilyContext, type Medication } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
 import { isToday } from '@/utils/date';
 
+type MedicationCardProps = {
+  med: Medication;
+  canEdit: boolean;
+  onPress: () => void;
+  onConfirmPress: () => void;
+};
+
+function MedicationCard({ med, canEdit, onPress, onConfirmPress }: MedicationCardProps) {
+  const theme = useTheme();
+  const takenToday = med.lastTakenAt ? isToday(med.lastTakenAt.slice(0, 10)) : false;
+
+  return (
+    <Pressable
+      // Owner/Caregiver can edit anyone's, Elder only their own.
+      onPress={canEdit ? onPress : undefined}
+      disabled={!canEdit}
+      accessibilityRole="button"
+      accessibilityLabel={`${med.name} ${med.dosage}`}
+      accessibilityHint={canEdit ? 'แตะเพื่อแก้ไขรายการยา' : undefined}
+      style={({ pressed }) => pressed && canEdit && styles.pressed}>
+      <Card gap={Spacing.two} style={!med.active && styles.inactive}>
+        <View style={styles.row}>
+          <View style={[styles.icon, { backgroundColor: theme.primarySoft }]}>
+            <Ionicons name="medical-outline" size={20} color={theme.primaryText} />
+          </View>
+          <View style={styles.body}>
+            <ThemedText type="smallBold">{med.name}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {med.dosage}
+              {med.reason ? ` · ${med.reason}` : ''}
+            </ThemedText>
+          </View>
+          {!med.active ? <StatusBadge label="หยุดใช้" tone="neutral" dot={false} /> : null}
+        </View>
+
+        <View style={styles.scheduleRow}>
+          {med.schedule.map((time) => (
+            <View key={time} style={[styles.timeChip, { backgroundColor: theme.surfaceSunken }]}>
+              <ThemedText type="caption" themeColor="textSecondary">
+                {time}
+              </ThemedText>
+            </View>
+          ))}
+        </View>
+
+        <View style={[styles.footer, { borderTopColor: theme.border }]}>
+          <StatusBadge
+            label={takenToday ? 'ทานแล้ววันนี้' : 'ยังไม่ทานวันนี้'}
+            tone={takenToday ? 'success' : 'warning'}
+          />
+          {med.active && canEdit ? (
+            <Pressable
+              onPress={onConfirmPress}
+              accessibilityRole="button"
+              accessibilityLabel={`ยืนยันการทานยา ${med.name}`}
+              hitSlop={Spacing.two}
+              style={({ pressed }) => pressed && styles.pressed}>
+              <ThemedText type="linkPrimary">ยืนยันทานยา ›</ThemedText>
+            </Pressable>
+          ) : null}
+        </View>
+      </Card>
+    </Pressable>
+  );
+}
+
 /** Lists one member's medications, or every member's grouped by name when no
  *  `memberId` is given — the caregiver overview entry point. */
 export default function MedicationsScreen() {
   const router = useRouter();
-  const theme = useTheme();
   const params = useLocalSearchParams<{ memberId?: string }>();
-  const { medications, familyMembers, primaryElderId, currentRole, currentMembershipId, canManageFor } =
-    useFamilyContext();
+  const { medications, familyMembers, resolveDefaultMemberId, canManageFor } = useFamilyContext();
 
   const memberId = params.memberId;
   const isOverview = !memberId;
   // Where a new medicine from the "+" button would go: the scoped member if
   // there is one, else self for Elder or the family's Elder otherwise.
-  const addTargetMemberId = memberId ?? (currentRole === 'Elder' ? (currentMembershipId ?? primaryElderId) : primaryElderId);
+  const addTargetMemberId = resolveDefaultMemberId(memberId);
 
   const grouped = useMemo(() => {
     const scoped = memberId ? medications.filter((med) => med.memberId === memberId) : medications;
@@ -85,64 +149,15 @@ export default function MedicationsScreen() {
               </ThemedText>
             ) : null}
 
-            {memberMeds.map((med) => {
-              const takenToday = med.lastTakenAt ? isToday(med.lastTakenAt.slice(0, 10)) : false;
-              const canEditThis = canManageFor(med.memberId);
-              return (
-                <Pressable
-                  key={med.id}
-                  // Owner/Caregiver can edit anyone's, Elder only their own.
-                  onPress={canEditThis ? () => router.push({ pathname: '/medication-form', params: { id: med.id } }) : undefined}
-                  disabled={!canEditThis}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${med.name} ${med.dosage}`}
-                  accessibilityHint={canEditThis ? 'แตะเพื่อแก้ไขรายการยา' : undefined}
-                  style={({ pressed }) => pressed && canEditThis && styles.pressed}>
-                  <Card gap={Spacing.two} style={!med.active && styles.inactive}>
-                    <View style={styles.row}>
-                      <View style={[styles.icon, { backgroundColor: theme.primarySoft }]}>
-                        <Ionicons name="medical-outline" size={20} color={theme.primaryText} />
-                      </View>
-                      <View style={styles.body}>
-                        <ThemedText type="smallBold">{med.name}</ThemedText>
-                        <ThemedText type="small" themeColor="textSecondary">
-                          {med.dosage}
-                          {med.reason ? ` · ${med.reason}` : ''}
-                        </ThemedText>
-                      </View>
-                      {!med.active ? <StatusBadge label="หยุดใช้" tone="neutral" dot={false} /> : null}
-                    </View>
-
-                    <View style={styles.scheduleRow}>
-                      {med.schedule.map((time) => (
-                        <View key={time} style={[styles.timeChip, { backgroundColor: theme.surfaceSunken }]}>
-                          <ThemedText type="caption" themeColor="textSecondary">
-                            {time}
-                          </ThemedText>
-                        </View>
-                      ))}
-                    </View>
-
-                    <View style={[styles.footer, { borderTopColor: theme.border }]}>
-                      <StatusBadge
-                        label={takenToday ? 'ทานแล้ววันนี้' : 'ยังไม่ทานวันนี้'}
-                        tone={takenToday ? 'success' : 'warning'}
-                      />
-                      {med.active && canEditThis ? (
-                        <Pressable
-                          onPress={() => router.push({ pathname: '/medication-confirm', params: { id: med.id } })}
-                          accessibilityRole="button"
-                          accessibilityLabel={`ยืนยันการทานยา ${med.name}`}
-                          hitSlop={Spacing.two}
-                          style={({ pressed }) => pressed && styles.pressed}>
-                          <ThemedText type="linkPrimary">ยืนยันทานยา ›</ThemedText>
-                        </Pressable>
-                      ) : null}
-                    </View>
-                  </Card>
-                </Pressable>
-              );
-            })}
+            {memberMeds.map((med) => (
+              <MedicationCard
+                key={med.id}
+                med={med}
+                canEdit={canManageFor(med.memberId)}
+                onPress={() => router.push({ pathname: '/medication-form', params: { id: med.id } })}
+                onConfirmPress={() => router.push({ pathname: '/medication-confirm', params: { id: med.id } })}
+              />
+            ))}
           </View>
         ))
       )}

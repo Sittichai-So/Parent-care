@@ -25,6 +25,7 @@ import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
 import type { NotificationType } from '@/services/notifications-inbox-api';
 import { daysFromToday, relativeDayLabel } from '@/utils/date';
+import { chipToneColors } from '@/utils/tone-colors';
 
 /** Icon + tone per server notification type — the medicine/appointment
  *  due-time reminders and chat pings that come from the account's real
@@ -136,13 +137,7 @@ export default function NoticesScreen() {
     return [...serverNotices, ...attentionNotices, ...inviteNotices, ...soonAppointments];
   }, [notifications, familyMembers, pendingInvites, appointments, router, setSelectedMemberId, markNotificationRead]);
 
-  const toneColor: Record<BadgeTone, { chipBg: string; ink: string }> = {
-    neutral: { chipBg: theme.surfaceSunken, ink: theme.textSecondary },
-    primary: { chipBg: theme.primarySoft, ink: theme.primaryText },
-    success: { chipBg: theme.successSoft, ink: theme.successText },
-    warning: { chipBg: theme.warningSoft, ink: theme.warningText },
-    danger: { chipBg: theme.dangerSoft, ink: theme.dangerText },
-  };
+  const toneColor = chipToneColors(theme);
 
   return (
     <Screen gap={Spacing.three}>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { CaretRightIcon, EnvelopeOpenIcon, WarningCircleIcon } from 'phosphor-react-native';
@@ -17,7 +17,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { MemberStatusMeta, StatusPriority } from '@/constants/status';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
-import { useFamilyContext } from '@/context/family-context';
+import { useFamilyContext, type PendingInvite } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
 
 const STATUS_TONE: Record<'normal' | 'monitor' | 'urgent', CardTone> = {
@@ -26,10 +26,57 @@ const STATUS_TONE: Record<'normal' | 'monitor' | 'urgent', CardTone> = {
   urgent: 'danger',
 };
 
-/** "ครอบครัว" tab — the reference design's own screen 02, separate from
- *  Home. This is where the full searchable member roster, pending invites
- *  and "add member" now live (moved off Home so Home's top-of-scroll
- *  matches the reference design's leaner layout). */
+// Shared by every Viewer-gated Pressable on this screen (the invite
+// accept/decline buttons, "+ เพิ่มสมาชิกเข้ากลุ่ม") — same dim-when-read-only,
+// no-press-feedback-when-disabled treatment each time.
+const gatedPressableStyle = (
+  canEdit: boolean,
+  pressed: boolean,
+  ...extra: (StyleProp<ViewStyle> | false | undefined)[]
+): StyleProp<ViewStyle> => [...extra, !canEdit && styles.readOnly, pressed && canEdit && styles.pressed];
+
+type PendingInviteRowProps = {
+  invite: PendingInvite;
+  canEdit: boolean;
+  onAccept: () => void;
+  onDecline: () => void;
+};
+
+function PendingInviteRow({ invite, canEdit, onAccept, onDecline }: PendingInviteRowProps) {
+  const theme = useTheme();
+  return (
+    <View style={styles.inviteRow}>
+      <View style={styles.inviteBody}>
+        <ThemedText type="small" style={{ color: theme.primaryText }}>
+          {invite.householdName} · {invite.role}
+        </ThemedText>
+      </View>
+      <View style={styles.inviteActions}>
+        <Pressable
+          onPress={canEdit ? onDecline : undefined}
+          disabled={!canEdit}
+          accessibilityRole="button"
+          accessibilityLabel={`ปฏิเสธคำขอเข้าร่วม ${invite.householdName}`}
+          accessibilityState={{ disabled: !canEdit }}
+          style={({ pressed }) => gatedPressableStyle(canEdit, pressed, styles.inviteDecline, { borderColor: theme.border })}>
+          <ThemedText type="caption">ปฏิเสธ</ThemedText>
+        </Pressable>
+        <Pressable
+          onPress={canEdit ? onAccept : undefined}
+          disabled={!canEdit}
+          accessibilityRole="button"
+          accessibilityLabel={`ยอมรับคำขอเข้าร่วม ${invite.householdName}`}
+          accessibilityState={{ disabled: !canEdit }}
+          style={({ pressed }) => gatedPressableStyle(canEdit, pressed, styles.inviteAccept, { backgroundColor: theme.primary })}>
+          <ThemedText type="caption" style={{ color: theme.onPrimary, fontWeight: '700' }}>
+            ยอมรับ
+          </ThemedText>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 export default function FamilyScreen() {
   const router = useRouter();
   const theme = useTheme();
@@ -129,47 +176,13 @@ export default function FamilyScreen() {
             </ThemedText>
           </View>
           {pendingInvites.map((invite) => (
-            <View key={invite.membershipId} style={styles.inviteRow}>
-              <View style={styles.inviteBody}>
-                <ThemedText type="small" style={{ color: theme.primaryText }}>
-                  {invite.householdName} · {invite.role}
-                </ThemedText>
-              </View>
-              <View style={styles.inviteActions}>
-                <Pressable
-                  onPress={canEdit ? () => handleDeclineInvite(invite.householdId, invite.membershipId) : undefined}
-                  disabled={!canEdit}
-                  accessibilityRole="button"
-                  accessibilityLabel={`ปฏิเสธคำขอเข้าร่วม ${invite.householdName}`}
-                  accessibilityState={{ disabled: !canEdit }}
-                  style={({ pressed }) => [
-                    styles.inviteDecline,
-                    { borderColor: theme.border },
-                    !canEdit && styles.readOnly,
-                    pressed && canEdit && styles.pressed,
-                  ]}>
-                  <ThemedText type="caption">ปฏิเสธ</ThemedText>
-                </Pressable>
-                <Pressable
-                  onPress={
-                    canEdit ? () => handleAcceptInvite(invite.householdId, invite.membershipId, invite.householdName) : undefined
-                  }
-                  disabled={!canEdit}
-                  accessibilityRole="button"
-                  accessibilityLabel={`ยอมรับคำขอเข้าร่วม ${invite.householdName}`}
-                  accessibilityState={{ disabled: !canEdit }}
-                  style={({ pressed }) => [
-                    styles.inviteAccept,
-                    { backgroundColor: theme.primary },
-                    !canEdit && styles.readOnly,
-                    pressed && canEdit && styles.pressed,
-                  ]}>
-                  <ThemedText type="caption" style={{ color: theme.onPrimary, fontWeight: '700' }}>
-                    ยอมรับ
-                  </ThemedText>
-                </Pressable>
-              </View>
-            </View>
+            <PendingInviteRow
+              key={invite.membershipId}
+              invite={invite}
+              canEdit={canEdit}
+              onAccept={() => handleAcceptInvite(invite.householdId, invite.membershipId, invite.householdName)}
+              onDecline={() => handleDeclineInvite(invite.householdId, invite.membershipId)}
+            />
           ))}
         </Card>
       ) : null}
@@ -182,7 +195,7 @@ export default function FamilyScreen() {
           accessibilityLabel={`${currentHousehold.name} เพิ่มสมาชิก`}
           accessibilityState={{ disabled: !canEdit }}
           accessibilityHint={canEdit ? 'เปิดหน้าเพิ่มสมาชิกเข้ากลุ่มครอบครัว' : 'ดูได้เท่านั้น'}
-          style={({ pressed }) => [!canEdit && styles.readOnly, pressed && canEdit && styles.pressed]}>
+          style={({ pressed }) => gatedPressableStyle(canEdit, pressed)}>
           <Card tone="sunken" elevation="flat" gap={Spacing.half} style={styles.inviteCard}>
             <ThemedText type="caption" themeColor="textMuted">
               {currentHousehold.name}

@@ -209,6 +209,24 @@ type FamilyContextValue = {
   /** The family's Elder member — used as the default "me" on elder-facing screens. */
   primaryElderId: string;
 
+  /** The caller's own membership id in the current household — "me" on
+   *  every self-service screen (my medicine, my vitals, my report), for
+   *  every role, not just Elder: Owner/Caregiver/Viewer all track their own
+   *  records here too, separately from the members they manage elsewhere.
+   *  Falls back to `primaryElderId` only if the caller somehow has no
+   *  membership id yet (e.g. mid-load). */
+  selfMemberId: string;
+
+  /** Where a new medicine/appointment should default to when the caller
+   *  didn't pick a member explicitly (e.g. opening "เพิ่มยา" from the
+   *  overview instead of a specific member's page) — Owner/Caregiver default
+   *  to the household's primary elder, Elder to themself. Pass the route's
+   *  own memberId param (if any) as `explicitMemberId` to let it take
+   *  priority. Mirrors this same "who's it for by default" logic previously
+   *  duplicated across medications.tsx/appointments.tsx/medication-form.tsx/
+   *  appointment-form.tsx. */
+  resolveDefaultMemberId: (explicitMemberId?: string) => string;
+
   selectedMemberId: string | null;
   setSelectedMemberId: (id: string | null) => void;
 
@@ -525,6 +543,13 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     return elder?.id ?? familyMembers[0]?.id ?? '';
   }, [familyMembers]);
 
+  const selfMemberId = currentMembershipId ?? primaryElderId;
+
+  const resolveDefaultMemberId = useCallback(
+    (explicitMemberId?: string) =>
+      explicitMemberId ?? (currentRole === 'Elder' ? (currentMembershipId ?? primaryElderId) : primaryElderId),
+    [currentRole, currentMembershipId, primaryElderId]
+  );
 
   useEffect(() => {
     medications.forEach((medication) => syncMedicationReminders(medication).catch(() => {}));
@@ -797,6 +822,8 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       markAllNotificationsRead,
 
       primaryElderId,
+      selfMemberId,
+      resolveDefaultMemberId,
       selectedMemberId,
       setSelectedMemberId,
 
@@ -852,6 +879,8 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       markNotificationRead,
       markAllNotificationsRead,
       primaryElderId,
+      selfMemberId,
+      resolveDefaultMemberId,
       selectedMemberId,
       checkIn,
       updateTaskStatus,

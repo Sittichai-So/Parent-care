@@ -21,14 +21,12 @@ const toNumber = (value: string) => {
 export default function VitalsFormScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ memberId?: string }>();
-  const { familyMembers, primaryElderId, currentRole, currentMembershipId, canManageFor, addVitalLog } =
-    useFamilyContext();
+  const { familyMembers, resolveDefaultMemberId, canManageFor, addVitalLog } = useFamilyContext();
 
   // Every call site passes memberId explicitly today, but falls back the
-  // same way medication-form.tsx/appointment-form.tsx do (self for Elder,
-  // else the household's primary elder) rather than always primaryElderId,
-  // in case a future entry point ever opens this with none.
-  const memberId = params.memberId ?? (currentRole === 'Elder' ? (currentMembershipId ?? primaryElderId) : primaryElderId);
+  // same way medication-form.tsx/appointment-form.tsx do in case a future
+  // entry point ever opens this with none.
+  const memberId = resolveDefaultMemberId(params.memberId);
   const member = familyMembers.find((m) => m.id === memberId);
 
   // Mirrors the backend's per-member write permission — gated here (not

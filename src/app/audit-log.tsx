@@ -20,6 +20,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFamilyContext, type FamilyEvent } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
+import { chipToneColors } from '@/utils/tone-colors';
 
 /** Icon + tone per real event type — mirrors the mapping used for the family
  *  timeline on the home screen, so "audit log" and "timeline" read as the
@@ -42,13 +43,7 @@ export default function AuditLogScreen() {
   const theme = useTheme();
   const { currentRole, currentHousehold, timeline } = useFamilyContext();
 
-  const toneColor: Record<BadgeTone, { chipBg: string; ink: string }> = {
-    neutral: { chipBg: theme.surfaceSunken, ink: theme.textSecondary },
-    primary: { chipBg: theme.primarySoft, ink: theme.primaryText },
-    success: { chipBg: theme.successSoft, ink: theme.successText },
-    warning: { chipBg: theme.warningSoft, ink: theme.warningText },
-    danger: { chipBg: theme.dangerSoft, ink: theme.dangerText },
-  };
+  const toneColor = chipToneColors(theme);
 
   if (currentRole !== 'Owner') {
     return (

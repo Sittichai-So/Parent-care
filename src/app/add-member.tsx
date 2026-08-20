@@ -13,7 +13,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { SegmentedToggle } from '@/components/ui/segmented-toggle';
 import { TextField } from '@/components/ui/text-field';
 import { Radius, Spacing } from '@/constants/theme';
-import { useFamilyContext } from '@/context/family-context';
+import { useFamilyContext, type HouseholdSummary } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
 import type { ApiUserLookup } from '@/services/households-api';
 
@@ -36,6 +36,133 @@ const inviteRoleOptions = [
   { value: 'viewer', label: 'ดูอย่างเดียว' },
 ] as const;
 
+function InviteCodeCard({ household, onShare }: { household: HouseholdSummary | null; onShare: () => void }) {
+  const theme = useTheme();
+  return (
+    <Card gap={Spacing.three}>
+      <ThemedText type="small" themeColor="textSecondary">
+        เหมาะกับสมาชิกที่สมัครบัญชีเองได้ — ส่งรหัสนี้ให้เขากรอกตอนสมัคร/เข้าร่วมกลุ่ม
+      </ThemedText>
+      <View style={[styles.codeBox, { backgroundColor: theme.surfaceSunken, borderColor: theme.border }]}>
+        <ThemedText type="display">{household?.inviteCode ?? '—'}</ThemedText>
+      </View>
+      <AppButton label="แชร์รหัสเชิญ" icon="share-social-outline" onPress={onShare} />
+    </Card>
+  );
+}
+
+type ManagedMemberCardProps = {
+  name: string;
+  onNameChange: (value: string) => void;
+  relation: string;
+  onRelationChange: (value: string) => void;
+  role: (typeof managedRoleOptions)[number]['value'];
+  onRoleChange: (value: (typeof managedRoleOptions)[number]['value']) => void;
+  isSaving: boolean;
+  onSubmit: () => void;
+};
+
+function ManagedMemberCard({
+  name,
+  onNameChange,
+  relation,
+  onRelationChange,
+  role,
+  onRoleChange,
+  isSaving,
+  onSubmit,
+}: ManagedMemberCardProps) {
+  return (
+    <Card gap={Spacing.three}>
+      <ThemedText type="small" themeColor="textSecondary">
+        เหมาะกับสมาชิกที่ไม่มีสมาร์ตโฟนหรือไม่สะดวกสมัครบัญชีเอง เช่น คุณตาคุณยาย — คุณจัดการข้อมูลแทนได้เลย
+        และภายหลังสร้างรหัสให้เขาผูกบัญชีของตัวเองทีหลังได้ (ประวัติเดิมไม่หาย)
+      </ThemedText>
+      <TextField label="ชื่อ" value={name} onChangeText={onNameChange} placeholder="เช่น คุณยายสมศรี" required />
+      <TextField label="ความสัมพันธ์" value={relation} onChangeText={onRelationChange} placeholder="เช่น แม่" required />
+      <View style={styles.field}>
+        <ThemedText type="smallBold">บทบาทในกลุ่ม *</ThemedText>
+        <ChipSelect options={managedRoleOptions} selected={[role]} onToggle={(value) => onRoleChange(value as typeof role)} />
+      </View>
+      <AppButton label="เพิ่มสมาชิก" onPress={onSubmit} loading={isSaving} disabled={isSaving} />
+    </Card>
+  );
+}
+
+type SearchAccountCardProps = {
+  query: string;
+  onQueryChange: (value: string) => void;
+  isSearching: boolean;
+  onSearch: () => void;
+  searchError: string | null;
+  foundUser: ApiUserLookup | null;
+  relation: string;
+  onRelationChange: (value: string) => void;
+  role: (typeof inviteRoleOptions)[number]['value'];
+  onRoleChange: (value: (typeof inviteRoleOptions)[number]['value']) => void;
+  isSendingInvite: boolean;
+  onSendInvite: () => void;
+};
+
+function SearchAccountCard({
+  query,
+  onQueryChange,
+  isSearching,
+  onSearch,
+  searchError,
+  foundUser,
+  relation,
+  onRelationChange,
+  role,
+  onRoleChange,
+  isSendingInvite,
+  onSendInvite,
+}: SearchAccountCardProps) {
+  const theme = useTheme();
+  return (
+    <Card gap={Spacing.three}>
+      <ThemedText type="small" themeColor="textSecondary">
+        เหมาะกับสมาชิกที่มีบัญชีอยู่แล้ว — ค้นหาด้วยอีเมลหรือรหัสประจำตัวของเขา แล้วส่งคำขอ
+        ระบบจะเพิ่มเข้ากลุ่มก็ต่อเมื่อเขากดยอมรับคำขอเท่านั้น
+      </ThemedText>
+      <TextField
+        label="อีเมล หรือ รหัสประจำตัว"
+        value={query}
+        onChangeText={onQueryChange}
+        placeholder="เช่น somchai@email.com หรือ BBGB4SL4"
+        required
+      />
+      <AppButton label="ค้นหา" variant="secondary" onPress={onSearch} loading={isSearching} disabled={isSearching || !query.trim()} />
+
+      {searchError ? (
+        <View style={[styles.errorBox, { backgroundColor: theme.dangerSoft, flexDirection: 'row', alignItems: 'center', gap: Spacing.two }]}>
+          <Ionicons name="alert-circle-outline" size={16} color={theme.dangerText} />
+          <ThemedText type="small" style={{ color: theme.dangerText, flex: 1 }}>
+            {searchError}
+          </ThemedText>
+        </View>
+      ) : null}
+
+      {foundUser ? (
+        <>
+          <View style={[styles.foundBox, { backgroundColor: theme.primarySoft, borderColor: theme.primary }]}>
+            <ThemedText type="smallBold">{foundUser.name}</ThemedText>
+            <ThemedText type="caption" themeColor="textMuted">
+              รหัสประจำตัว {foundUser.userCode ?? '—'}
+            </ThemedText>
+          </View>
+          <View style={styles.field}>
+            <ThemedText type="smallBold">บทบาทในกลุ่ม *</ThemedText>
+            <ChipSelect options={inviteRoleOptions} selected={[role]} onToggle={(value) => onRoleChange(value as typeof role)} />
+          </View>
+          <TextField label="ความสัมพันธ์" value={relation} onChangeText={onRelationChange} placeholder="เช่น พี่สาว" required />
+          <AppButton label="ส่งคำขอเชิญ" onPress={onSendInvite} loading={isSendingInvite} disabled={isSendingInvite} />
+        </>
+      ) : null}
+    </Card>
+  );
+}
+
 /**
  * Three ways to grow a household, picked based on who's joining:
  * - invite-code: the existing flow — someone who'll self-register.
@@ -47,7 +174,6 @@ const inviteRoleOptions = [
  */
 export default function AddMemberScreen() {
   const router = useRouter();
-  const theme = useTheme();
   const { currentHousehold, addManagedMember, lookupUser, inviteExistingUser } = useFamilyContext();
 
   const [mode, setMode] = useState<Mode>('invite-code');
@@ -141,89 +267,36 @@ export default function AddMemberScreen() {
 
       <SegmentedToggle options={modeOptions} value={mode} onChange={setMode} />
 
-      {mode === 'invite-code' ? (
-        <Card gap={Spacing.three}>
-          <ThemedText type="small" themeColor="textSecondary">
-            เหมาะกับสมาชิกที่สมัครบัญชีเองได้ — ส่งรหัสนี้ให้เขากรอกตอนสมัคร/เข้าร่วมกลุ่ม
-          </ThemedText>
-          <View style={[styles.codeBox, { backgroundColor: theme.surfaceSunken, borderColor: theme.border }]}>
-            <ThemedText type="display">{currentHousehold?.inviteCode ?? '—'}</ThemedText>
-          </View>
-          <AppButton label="แชร์รหัสเชิญ" icon="share-social-outline" onPress={handleShareInviteCode} />
-        </Card>
-      ) : null}
+      {mode === 'invite-code' ? <InviteCodeCard household={currentHousehold} onShare={handleShareInviteCode} /> : null}
 
       {mode === 'managed' ? (
-        <Card gap={Spacing.three}>
-          <ThemedText type="small" themeColor="textSecondary">
-            เหมาะกับสมาชิกที่ไม่มีสมาร์ตโฟนหรือไม่สะดวกสมัครบัญชีเอง เช่น คุณตาคุณยาย — คุณจัดการข้อมูลแทนได้เลย
-            และภายหลังสร้างรหัสให้เขาผูกบัญชีของตัวเองทีหลังได้ (ประวัติเดิมไม่หาย)
-          </ThemedText>
-          <TextField label="ชื่อ" value={managedName} onChangeText={setManagedName} placeholder="เช่น คุณยายสมศรี" required />
-          <TextField label="ความสัมพันธ์" value={managedRelation} onChangeText={setManagedRelation} placeholder="เช่น แม่" required />
-          <View style={styles.field}>
-            <ThemedText type="smallBold">บทบาทในกลุ่ม *</ThemedText>
-            <ChipSelect
-              options={managedRoleOptions}
-              selected={[managedRole]}
-              onToggle={(value) => setManagedRole(value as typeof managedRole)}
-            />
-          </View>
-          <AppButton label="เพิ่มสมาชิก" onPress={handleAddManaged} loading={isSavingManaged} disabled={isSavingManaged} />
-        </Card>
+        <ManagedMemberCard
+          name={managedName}
+          onNameChange={setManagedName}
+          relation={managedRelation}
+          onRelationChange={setManagedRelation}
+          role={managedRole}
+          onRoleChange={setManagedRole}
+          isSaving={isSavingManaged}
+          onSubmit={handleAddManaged}
+        />
       ) : null}
 
       {mode === 'search' ? (
-        <Card gap={Spacing.three}>
-          <ThemedText type="small" themeColor="textSecondary">
-            เหมาะกับสมาชิกที่มีบัญชีอยู่แล้ว — ค้นหาด้วยอีเมลหรือรหัสประจำตัวของเขา แล้วส่งคำขอ
-            ระบบจะเพิ่มเข้ากลุ่มก็ต่อเมื่อเขากดยอมรับคำขอเท่านั้น
-          </ThemedText>
-          <TextField
-            label="อีเมล หรือ รหัสประจำตัว"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="เช่น somchai@email.com หรือ BBGB4SL4"
-            required
-          />
-          <AppButton
-            label="ค้นหา"
-            variant="secondary"
-            onPress={handleSearch}
-            loading={isSearching}
-            disabled={isSearching || !searchQuery.trim()}
-          />
-
-          {searchError ? (
-            <View style={[styles.errorBox, { backgroundColor: theme.dangerSoft, flexDirection: 'row', alignItems: 'center', gap: Spacing.two }]}>
-              <Ionicons name="alert-circle-outline" size={16} color={theme.dangerText} />
-              <ThemedText type="small" style={{ color: theme.dangerText, flex: 1 }}>
-                {searchError}
-              </ThemedText>
-            </View>
-          ) : null}
-
-          {foundUser ? (
-            <>
-              <View style={[styles.foundBox, { backgroundColor: theme.primarySoft, borderColor: theme.primary }]}>
-                <ThemedText type="smallBold">{foundUser.name}</ThemedText>
-                <ThemedText type="caption" themeColor="textMuted">
-                  รหัสประจำตัว {foundUser.userCode ?? '—'}
-                </ThemedText>
-              </View>
-              <View style={styles.field}>
-                <ThemedText type="smallBold">บทบาทในกลุ่ม *</ThemedText>
-                <ChipSelect
-                  options={inviteRoleOptions}
-                  selected={[inviteRole]}
-                  onToggle={(value) => setInviteRole(value as typeof inviteRole)}
-                />
-              </View>
-              <TextField label="ความสัมพันธ์" value={inviteRelation} onChangeText={setInviteRelation} placeholder="เช่น พี่สาว" required />
-              <AppButton label="ส่งคำขอเชิญ" onPress={handleSendInvite} loading={isSendingInvite} disabled={isSendingInvite} />
-            </>
-          ) : null}
-        </Card>
+        <SearchAccountCard
+          query={searchQuery}
+          onQueryChange={setSearchQuery}
+          isSearching={isSearching}
+          onSearch={handleSearch}
+          searchError={searchError}
+          foundUser={foundUser}
+          relation={inviteRelation}
+          onRelationChange={setInviteRelation}
+          role={inviteRole}
+          onRoleChange={setInviteRole}
+          isSendingInvite={isSendingInvite}
+          onSendInvite={handleSendInvite}
+        />
       ) : null}
     </Screen>
   );

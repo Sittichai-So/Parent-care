@@ -12,20 +12,61 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { SectionHeader } from '@/components/ui/section-header';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Spacing } from '@/constants/theme';
-import { useFamilyContext } from '@/context/family-context';
+import { useFamilyContext, type Appointment } from '@/context/family-context';
 import { daysFromToday, formatDateKey, relativeDayLabel } from '@/utils/date';
+
+type AppointmentRowProps = {
+  appointment: Appointment;
+  memberName?: string;
+  variant: 'upcoming' | 'past';
+  onPress: () => void;
+};
+
+function AppointmentRow({ appointment, memberName, variant, onPress }: AppointmentRowProps) {
+  const isPast = variant === 'past';
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${appointment.title} ${formatDateKey(appointment.date)}`}
+      style={({ pressed }) => pressed && styles.pressed}>
+      <Card elevation={isPast ? 'flat' : undefined} tone={isPast ? 'sunken' : undefined} style={styles.row} gap={Spacing.three}>
+        <AppointmentDateBlock date={appointment.date} tone={isPast ? 'muted' : undefined} />
+        <View style={styles.body}>
+          <ThemedText type="smallBold" numberOfLines={1} themeColor={isPast ? 'textSecondary' : undefined}>
+            {appointment.title}
+          </ThemedText>
+          <ThemedText type="small" themeColor={isPast ? 'textMuted' : 'textSecondary'} numberOfLines={1}>
+            {appointment.time} น. · {appointment.hospital}
+          </ThemedText>
+          {!isPast && memberName ? (
+            <ThemedText type="caption" themeColor="textMuted">
+              {memberName}
+            </ThemedText>
+          ) : null}
+        </View>
+        {!isPast ? (
+          <StatusBadge
+            label={relativeDayLabel(appointment.date)}
+            tone={daysFromToday(appointment.date) === 0 ? 'danger' : 'primary'}
+            dot={false}
+          />
+        ) : null}
+      </Card>
+    </Pressable>
+  );
+}
 
 export default function AppointmentsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ memberId?: string }>();
-  const { appointments, familyMembers, primaryElderId, currentRole, currentMembershipId, canManageFor } =
-    useFamilyContext();
+  const { appointments, familyMembers, resolveDefaultMemberId, canManageFor } = useFamilyContext();
 
   const memberId = params.memberId;
   const member = memberId ? familyMembers.find((m) => m.id === memberId) : undefined;
   // Where a new appointment from the "+" button would go: the scoped member
   // if there is one, else self for Elder or the family's Elder otherwise.
-  const addTargetMemberId = memberId ?? (currentRole === 'Elder' ? (currentMembershipId ?? primaryElderId) : primaryElderId);
+  const addTargetMemberId = resolveDefaultMemberId(memberId);
 
   const scoped = useMemo(
     () => (memberId ? appointments.filter((apt) => apt.memberId === memberId) : appointments),
@@ -77,30 +118,13 @@ export default function AppointmentsScreen() {
           ) : (
             <View style={styles.list}>
               {upcoming.map((apt) => (
-                <Pressable
+                <AppointmentRow
                   key={apt.id}
+                  appointment={apt}
+                  memberName={!memberId ? memberName(apt.memberId) : undefined}
+                  variant="upcoming"
                   onPress={() => router.push({ pathname: '/appointment-detail', params: { id: apt.id } })}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${apt.title} ${formatDateKey(apt.date)}`}
-                  style={({ pressed }) => pressed && styles.pressed}>
-                  <Card style={styles.row} gap={Spacing.three}>
-                    <AppointmentDateBlock date={apt.date} />
-                    <View style={styles.body}>
-                      <ThemedText type="smallBold" numberOfLines={1}>
-                        {apt.title}
-                      </ThemedText>
-                      <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                        {apt.time} น. · {apt.hospital}
-                      </ThemedText>
-                      {!memberId ? (
-                        <ThemedText type="caption" themeColor="textMuted">
-                          {memberName(apt.memberId)}
-                        </ThemedText>
-                      ) : null}
-                    </View>
-                    <StatusBadge label={relativeDayLabel(apt.date)} tone={daysFromToday(apt.date) === 0 ? 'danger' : 'primary'} dot={false} />
-                  </Card>
-                </Pressable>
+                />
               ))}
             </View>
           )}
@@ -110,24 +134,12 @@ export default function AppointmentsScreen() {
               <SectionHeader title="ผ่านมาแล้ว" count={past.length} />
               <View style={styles.list}>
                 {past.map((apt) => (
-                  <Pressable
+                  <AppointmentRow
                     key={apt.id}
+                    appointment={apt}
+                    variant="past"
                     onPress={() => router.push({ pathname: '/appointment-detail', params: { id: apt.id } })}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${apt.title} ${formatDateKey(apt.date)}`}
-                    style={({ pressed }) => pressed && styles.pressed}>
-                    <Card elevation="flat" tone="sunken" style={styles.row} gap={Spacing.three}>
-                      <AppointmentDateBlock date={apt.date} tone="muted" />
-                      <View style={styles.body}>
-                        <ThemedText type="smallBold" numberOfLines={1} themeColor="textSecondary">
-                          {apt.title}
-                        </ThemedText>
-                        <ThemedText type="small" themeColor="textMuted" numberOfLines={1}>
-                          {apt.time} น. · {apt.hospital}
-                        </ThemedText>
-                      </View>
-                    </Card>
-                  </Pressable>
+                  />
                 ))}
               </View>
             </>

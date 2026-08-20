@@ -63,6 +63,7 @@ export default function FamilyMemberScreen() {
   }
 
   const status = MemberStatusMeta[member.status];
+  const canManageMember = canManageFor(member.id);
 
   const handlePing = () => {
     setPinged(true);
@@ -102,7 +103,7 @@ export default function FamilyMemberScreen() {
             }
             accessibilityHint={canEdit ? undefined : 'ดูได้เท่านั้น'}
           />
-          {primaryMedication && (primaryMedTakenToday || canManageFor(primaryMedication.memberId)) ? (
+          {primaryMedication && (primaryMedTakenToday || canManageMember) ? (
             <AppButton
               label={primaryMedTakenToday ? 'ดูภาพยืนยันการทานยา' : `ยืนยันการทานยา ${primaryMedication.schedule[0] ?? ''}`}
               variant="secondary"
@@ -174,11 +175,9 @@ export default function FamilyMemberScreen() {
       <SectionHeader
         title="รายการยา"
         count={memberMedications.length}
-        actionLabel={canManageFor(member.id) ? '+ เพิ่มยา' : undefined}
+        actionLabel={canManageMember ? '+ เพิ่มยา' : undefined}
         onActionPress={
-          canManageFor(member.id)
-            ? () => router.push({ pathname: '/medication-form', params: { memberId: member.id } })
-            : undefined
+          canManageMember ? () => router.push({ pathname: '/medication-form', params: { memberId: member.id } }) : undefined
         }
       />
       {memberMedications.length === 0 ? (
@@ -209,11 +208,9 @@ export default function FamilyMemberScreen() {
 
       <SectionHeader
         title="นัดหมายที่จะถึง"
-        actionLabel={canManageFor(member.id) ? '+ เพิ่มนัดหมาย' : undefined}
+        actionLabel={canManageMember ? '+ เพิ่มนัดหมาย' : undefined}
         onActionPress={
-          canManageFor(member.id)
-            ? () => router.push({ pathname: '/appointment-form', params: { memberId: member.id } })
-            : undefined
+          canManageMember ? () => router.push({ pathname: '/appointment-form', params: { memberId: member.id } }) : undefined
         }
       />
       {nextAppointment ? (

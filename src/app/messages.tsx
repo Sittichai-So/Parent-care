@@ -19,6 +19,31 @@ type SendAck = { ok: boolean; message?: ApiMessage; error?: string };
 type JoinAck = { ok: boolean; error?: string };
 type DeletedAck = { _id: string; householdId: string };
 
+function MessageBubble({ message, mine }: { message: ApiMessage; mine: boolean }) {
+  const theme = useTheme();
+  const time = new Date(message.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+  return (
+    <View
+      style={[
+        styles.bubble,
+        Elevation.low,
+        { shadowColor: theme.shadow },
+        mine
+          ? { alignSelf: 'flex-end', backgroundColor: theme.primary }
+          : { alignSelf: 'flex-start', backgroundColor: theme.backgroundElement },
+      ]}>
+      <View style={styles.bubbleHead}>
+        <ThemedText style={[styles.bubbleName, { color: mine ? theme.heroTextMuted : theme.primaryText }]}>
+          {message.senderMemberId.displayName}
+        </ThemedText>
+        <ThemedText style={[styles.bubbleTime, { color: mine ? theme.heroTextMuted : theme.textMuted }]}>{time}</ThemedText>
+      </View>
+      <ThemedText style={[styles.bubbleText, { color: mine ? theme.onPrimary : theme.text }]}>{message.text}</ThemedText>
+    </View>
+  );
+}
+
 /** ครอบครัว-wide chat — real backend now (`GET /messages` for history,
  *  `send_message`/`receive_message`/`message_deleted` over Socket.IO for
  *  live delivery). The socket connects and joins this household's room only
@@ -182,34 +207,9 @@ export default function MessagesScreen() {
         </ThemedText>
       ) : (
         <View style={styles.bubbles}>
-          {messages.map((message) => {
-            const mine = message.senderMemberId._id === currentMembershipId;
-            const time = new Date(message.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-            return (
-              <View
-                key={message._id}
-                style={[
-                  styles.bubble,
-                  Elevation.low,
-                  { shadowColor: theme.shadow },
-                  mine
-                    ? { alignSelf: 'flex-end', backgroundColor: theme.primary }
-                    : { alignSelf: 'flex-start', backgroundColor: theme.backgroundElement },
-                ]}>
-                <View style={styles.bubbleHead}>
-                  <ThemedText style={[styles.bubbleName, { color: mine ? theme.heroTextMuted : theme.primaryText }]}>
-                    {message.senderMemberId.displayName}
-                  </ThemedText>
-                  <ThemedText style={[styles.bubbleTime, { color: mine ? theme.heroTextMuted : theme.textMuted }]}>
-                    {time}
-                  </ThemedText>
-                </View>
-                <ThemedText style={[styles.bubbleText, { color: mine ? theme.onPrimary : theme.text }]}>
-                  {message.text}
-                </ThemedText>
-              </View>
-            );
-          })}
+          {messages.map((message) => (
+            <MessageBubble key={message._id} message={message} mine={message.senderMemberId._id === currentMembershipId} />
+          ))}
         </View>
       )}
     </Screen>

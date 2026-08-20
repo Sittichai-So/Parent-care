@@ -55,10 +55,62 @@ const ASSIGNABLE_ROLES: { role: Exclude<HouseholdRole, 'owner'>; label: MemberRo
   { role: 'viewer', label: 'Viewer' },
 ];
 
-export default function HouseholdAccessScreen() {
-  const router = useRouter();
+type MemberAccessRowProps = {
+  member: FamilyMember;
+  isMe: boolean;
+  isSaving: boolean;
+  onPress: () => void;
+};
+
+function MemberAccessRow({ member, isMe, isSaving, onPress }: MemberAccessRowProps) {
   const theme = useTheme();
   const { user } = useAuth();
+  const editable = member.role !== 'Owner';
+
+  return (
+    <Pressable
+      disabled={!editable || isSaving}
+      onPress={onPress}
+      accessibilityRole={editable ? 'button' : undefined}
+      accessibilityLabel={editable ? `เปลี่ยนสิทธิ์ของ ${member.name}` : undefined}
+      style={({ pressed }) => pressed && styles.pressed}>
+      <Card gap={Spacing.three}>
+        <View style={styles.head}>
+          <Avatar name={member.name} size={44} shape="rounded" tone={ROLE_TONE[member.role]} />
+          <View style={styles.headBody}>
+            <ThemedText type="smallBold" numberOfLines={1}>
+              {member.name}
+            </ThemedText>
+            {/* Only the signed-in member's own email is available here —
+             *  other members' emails aren't exposed by the household member
+             *  list (privacy-reasonable, and managed members with no account
+             *  have none at all), so this falls back to relation rather than
+             *  fabricating an address. */}
+            <ThemedText type="caption" themeColor="textMuted" numberOfLines={1}>
+              {isMe ? (user?.email ?? member.relation) : member.relation}
+            </ThemedText>
+          </View>
+          <StatusBadge label={member.role} tone={ROLE_TONE[member.role]} dot={false} />
+          {editable ? <CaretRightIcon weight="bold" size={18} color={theme.textMuted} /> : null}
+        </View>
+
+        <View style={styles.perms}>
+          {ROLE_PERMISSIONS[member.role].map((perm) => (
+            <StatusBadge
+              key={perm.label}
+              label={perm.label}
+              tone={perm.granted ? 'success' : 'danger'}
+              phosphorIcon={perm.granted ? CheckCircleIcon : XCircleIcon}
+            />
+          ))}
+        </View>
+      </Card>
+    </Pressable>
+  );
+}
+
+export default function HouseholdAccessScreen() {
+  const router = useRouter();
   const { currentRole, currentHousehold, currentMembershipId, familyMembers, updateMemberRole } = useFamilyContext();
   const [savingId, setSavingId] = useState<string | null>(null);
 
@@ -110,51 +162,15 @@ export default function HouseholdAccessScreen() {
       />
 
       <View style={styles.list}>
-        {familyMembers.map((member) => {
-          const editable = member.role !== 'Owner';
-          const isMe = member.id === currentMembershipId;
-          return (
-            <Pressable
-              key={member.id}
-              disabled={!editable || savingId === member.id}
-              onPress={() => handleChangeRole(member)}
-              accessibilityRole={editable ? 'button' : undefined}
-              accessibilityLabel={editable ? `เปลี่ยนสิทธิ์ของ ${member.name}` : undefined}
-              style={({ pressed }) => pressed && styles.pressed}>
-              <Card gap={Spacing.three}>
-                <View style={styles.head}>
-                  <Avatar name={member.name} size={44} shape="rounded" tone={ROLE_TONE[member.role]} />
-                  <View style={styles.headBody}>
-                    <ThemedText type="smallBold" numberOfLines={1}>
-                      {member.name}
-                    </ThemedText>
-                    <ThemedText type="caption" themeColor="textMuted" numberOfLines={1}>
-                      {/* Only the signed-in member's own email is available here —
-                       *  other members' emails aren't exposed by the household
-                       *  member list (privacy-reasonable, and managed members
-                       *  with no account have none at all), so this falls back
-                       *  to relation rather than fabricating an address. */}
-                      {isMe ? (user?.email ?? member.relation) : member.relation}
-                    </ThemedText>
-                  </View>
-                  <StatusBadge label={member.role} tone={ROLE_TONE[member.role]} dot={false} />
-                  {editable ? <CaretRightIcon weight="bold" size={18} color={theme.textMuted} /> : null}
-                </View>
-
-                <View style={styles.perms}>
-                  {ROLE_PERMISSIONS[member.role].map((perm) => (
-                    <StatusBadge
-                      key={perm.label}
-                      label={perm.label}
-                      tone={perm.granted ? 'success' : 'danger'}
-                      phosphorIcon={perm.granted ? CheckCircleIcon : XCircleIcon}
-                    />
-                  ))}
-                </View>
-              </Card>
-            </Pressable>
-          );
-        })}
+        {familyMembers.map((member) => (
+          <MemberAccessRow
+            key={member.id}
+            member={member}
+            isMe={member.id === currentMembershipId}
+            isSaving={savingId === member.id}
+            onPress={() => handleChangeRole(member)}
+          />
+        ))}
       </View>
     </Screen>
   );

@@ -36,6 +36,102 @@ const modeOptions = [
   { value: 'claim', label: 'ผูกบัญชี' },
 ] as const;
 
+type CreateHouseholdCardProps = {
+  householdName: string;
+  onHouseholdNameChange: (value: string) => void;
+  kind: HouseholdKind;
+  onKindChange: (value: HouseholdKind) => void;
+  displayName: string;
+  onDisplayNameChange: (value: string) => void;
+  relation: string;
+  onRelationChange: (value: string) => void;
+};
+
+function CreateHouseholdCard({
+  householdName,
+  onHouseholdNameChange,
+  kind,
+  onKindChange,
+  displayName,
+  onDisplayNameChange,
+  relation,
+  onRelationChange,
+}: CreateHouseholdCardProps) {
+  return (
+    <Card gap={Spacing.three}>
+      <TextField label="ชื่อกลุ่มครอบครัว" value={householdName} onChangeText={onHouseholdNameChange} placeholder="เช่น บ้านสมชาย" required />
+      <View style={styles.field}>
+        <ThemedText type="smallBold">ประเภทกลุ่ม</ThemedText>
+        <ChipSelect options={kindOptions} selected={[kind]} onToggle={(value) => onKindChange(value as HouseholdKind)} />
+      </View>
+      <TextField label="ชื่อของคุณในกลุ่ม" value={displayName} onChangeText={onDisplayNameChange} placeholder="เช่น คุณสมชาย" required />
+      <TextField label="ความสัมพันธ์" value={relation} onChangeText={onRelationChange} placeholder="เช่น ลูกชาย" required />
+      <ThemedText type="caption" themeColor="textMuted">
+        คุณจะเป็นเจ้าของกลุ่มนี้ และได้รหัสเชิญไว้ส่งให้สมาชิกคนอื่น — กลุ่มแรกของบัญชีนี้จะถูกตั้งเป็น
+        &quot;กลุ่มเริ่มต้น&quot; ให้อัตโนมัติ (เปลี่ยนได้ทีหลังจากตัวสลับกลุ่มบ้าน)
+      </ThemedText>
+    </Card>
+  );
+}
+
+type JoinHouseholdCardProps = {
+  inviteCode: string;
+  onInviteCodeChange: (value: string) => void;
+  role: (typeof roleOptions)[number]['value'];
+  onRoleChange: (value: (typeof roleOptions)[number]['value']) => void;
+  displayName: string;
+  onDisplayNameChange: (value: string) => void;
+  relation: string;
+  onRelationChange: (value: string) => void;
+};
+
+function JoinHouseholdCard({
+  inviteCode,
+  onInviteCodeChange,
+  role,
+  onRoleChange,
+  displayName,
+  onDisplayNameChange,
+  relation,
+  onRelationChange,
+}: JoinHouseholdCardProps) {
+  return (
+    <Card gap={Spacing.three}>
+      <TextField
+        label="รหัสเชิญ"
+        value={inviteCode}
+        onChangeText={(value) => onInviteCodeChange(value.toUpperCase())}
+        placeholder="เช่น 2FSQJTN9"
+        required
+      />
+      <View style={styles.field}>
+        <ThemedText type="smallBold">บทบาทของคุณในกลุ่ม *</ThemedText>
+        <ChipSelect options={roleOptions} selected={[role]} onToggle={(value) => onRoleChange(value as typeof role)} />
+      </View>
+      <TextField label="ชื่อของคุณในกลุ่ม" value={displayName} onChangeText={onDisplayNameChange} placeholder="เช่น แม่สมใจ" required />
+      <TextField label="ความสัมพันธ์" value={relation} onChangeText={onRelationChange} placeholder="เช่น แม่" required />
+    </Card>
+  );
+}
+
+function ClaimAccountCard({ claimCode, onClaimCodeChange }: { claimCode: string; onClaimCodeChange: (value: string) => void }) {
+  return (
+    <Card gap={Spacing.three}>
+      <TextField
+        label="รหัสผูกบัญชี"
+        value={claimCode}
+        onChangeText={(value) => onClaimCodeChange(value.toUpperCase())}
+        placeholder="เช่น GG4W2ZD5PP25"
+        required
+      />
+      <ThemedText type="caption" themeColor="textMuted">
+        ใช้เมื่อผู้ดูแลเคยเพิ่มคุณเป็นสมาชิกไว้ล่วงหน้าแบบไม่มีบัญชี แล้วตอนนี้อยากผูกบัญชีของคุณเองเข้ากับโปรไฟล์นั้น
+        ประวัติยา/นัดหมาย/สุขภาพเดิมจะยังอยู่ครบ ไม่ใช่การเริ่มโปรไฟล์ใหม่
+      </ThemedText>
+    </Card>
+  );
+}
+
 /**
  * Step 2 of signup (reached from register.tsx before the account even
  * exists yet — see `ensureRegistered` below), and also shown after login to
@@ -182,84 +278,32 @@ export default function HouseholdSetupScreen() {
       />
 
       {mode === 'create' ? (
-        <Card gap={Spacing.three}>
-          <TextField
-            label="ชื่อกลุ่มครอบครัว"
-            value={householdName}
-            onChangeText={setHouseholdName}
-            placeholder="เช่น บ้านสมชาย"
-            required
-          />
-          <View style={styles.field}>
-            <ThemedText type="smallBold">ประเภทกลุ่ม</ThemedText>
-            <ChipSelect options={kindOptions} selected={[kind]} onToggle={(value) => setKind(value as HouseholdKind)} />
-          </View>
-          <TextField
-            label="ชื่อของคุณในกลุ่ม"
-            value={displayName}
-            onChangeText={setDisplayName}
-            placeholder="เช่น คุณสมชาย"
-            required
-          />
-          <TextField
-            label="ความสัมพันธ์"
-            value={relation}
-            onChangeText={setRelation}
-            placeholder="เช่น ลูกชาย"
-            required
-          />
-          <ThemedText type="caption" themeColor="textMuted">
-            คุณจะเป็นเจ้าของกลุ่มนี้ และได้รหัสเชิญไว้ส่งให้สมาชิกคนอื่น — กลุ่มแรกของบัญชีนี้จะถูกตั้งเป็น
-            &quot;กลุ่มเริ่มต้น&quot; ให้อัตโนมัติ (เปลี่ยนได้ทีหลังจากตัวสลับกลุ่มบ้าน)
-          </ThemedText>
-        </Card>
+        <CreateHouseholdCard
+          householdName={householdName}
+          onHouseholdNameChange={setHouseholdName}
+          kind={kind}
+          onKindChange={setKind}
+          displayName={displayName}
+          onDisplayNameChange={setDisplayName}
+          relation={relation}
+          onRelationChange={setRelation}
+        />
       ) : null}
 
       {mode === 'join' ? (
-        <Card gap={Spacing.three}>
-          <TextField
-            label="รหัสเชิญ"
-            value={inviteCode}
-            onChangeText={(value) => setInviteCode(value.toUpperCase())}
-            placeholder="เช่น 2FSQJTN9"
-            required
-          />
-          <View style={styles.field}>
-            <ThemedText type="smallBold">บทบาทของคุณในกลุ่ม *</ThemedText>
-            <ChipSelect options={roleOptions} selected={[role]} onToggle={(value) => setRole(value as typeof role)} />
-          </View>
-          <TextField
-            label="ชื่อของคุณในกลุ่ม"
-            value={displayName}
-            onChangeText={setDisplayName}
-            placeholder="เช่น แม่สมใจ"
-            required
-          />
-          <TextField
-            label="ความสัมพันธ์"
-            value={relation}
-            onChangeText={setRelation}
-            placeholder="เช่น แม่"
-            required
-          />
-        </Card>
+        <JoinHouseholdCard
+          inviteCode={inviteCode}
+          onInviteCodeChange={setInviteCode}
+          role={role}
+          onRoleChange={setRole}
+          displayName={displayName}
+          onDisplayNameChange={setDisplayName}
+          relation={relation}
+          onRelationChange={setRelation}
+        />
       ) : null}
 
-      {mode === 'claim' ? (
-        <Card gap={Spacing.three}>
-          <TextField
-            label="รหัสผูกบัญชี"
-            value={claimCode}
-            onChangeText={(value) => setClaimCode(value.toUpperCase())}
-            placeholder="เช่น GG4W2ZD5PP25"
-            required
-          />
-          <ThemedText type="caption" themeColor="textMuted">
-            ใช้เมื่อผู้ดูแลเคยเพิ่มคุณเป็นสมาชิกไว้ล่วงหน้าแบบไม่มีบัญชี แล้วตอนนี้อยากผูกบัญชีของคุณเองเข้ากับโปรไฟล์นั้น
-            ประวัติยา/นัดหมาย/สุขภาพเดิมจะยังอยู่ครบ ไม่ใช่การเริ่มโปรไฟล์ใหม่
-          </ThemedText>
-        </Card>
-      ) : null}
+      {mode === 'claim' ? <ClaimAccountCard claimCode={claimCode} onClaimCodeChange={setClaimCode} /> : null}
 
       {error ? (
         <ThemedText type="small" style={[styles.status, { color: theme.warningText }]} accessibilityRole="alert">

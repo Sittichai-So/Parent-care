@@ -53,7 +53,7 @@ export default function MedicationConfirmScreen() {
   const {
     medications,
     familyMembers,
-    primaryElderId,
+    selfMemberId,
     currentMembershipId,
     canEdit,
     canManageFor,
@@ -70,12 +70,9 @@ export default function MedicationConfirmScreen() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
-  // Same reasoning as (tabs)/explore.tsx's selfMemberId — opening this
-  // screen without an explicit medicine id (e.g. a stale deep link) should
-  // fall back to the caller's *own* medicine, not the household's primary
-  // elder (who may be someone else entirely).
-  const selfMemberId = currentMembershipId ?? primaryElderId;
-
+  // Opening this screen without an explicit medicine id (e.g. a stale deep
+  // link) falls back to the caller's *own* medicine via `selfMemberId`, not
+  // the household's primary elder (who may be someone else entirely).
   const medication = useMemo(() => {
     if (params.id) return medications.find((med) => med.id === params.id);
     return medications.find((med) => med.memberId === selfMemberId && med.active);

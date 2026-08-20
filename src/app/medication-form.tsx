@@ -29,9 +29,7 @@ export default function MedicationFormScreen() {
   const {
     medications,
     familyMembers,
-    primaryElderId,
-    currentRole,
-    currentMembershipId,
+    resolveDefaultMemberId,
     canManage,
     canManageFor,
     addMedication,
@@ -43,9 +41,7 @@ export default function MedicationFormScreen() {
 
   // Elder has nothing to pick (always self); for Owner/Caregiver this is
   // just the starting suggestion — the picker below can change it.
-  const [selectedMemberId, setSelectedMemberId] = useState<string>(
-    () => params.memberId ?? (currentRole === 'Elder' ? (currentMembershipId ?? primaryElderId) : primaryElderId)
-  );
+  const [selectedMemberId, setSelectedMemberId] = useState<string>(() => resolveDefaultMemberId(params.memberId));
   const memberId = editing?.memberId ?? selectedMemberId;
   const member = familyMembers.find((m) => m.id === memberId);
   const showMemberPicker = !editing && canManage && familyMembers.length > 1;
