@@ -20,10 +20,6 @@ import { adherenceTone, bloodPressureSeries, medicationAdherence, vitalSeries } 
 
 import { ReportHeader } from './report-header';
 
-/** Personal report for the Elder role — no household roster, no other
- *  members' data, just this person's own medication adherence and vitals
- *  trends over time, the two things a health report about *them* is
- *  actually for. */
 export function ElderReport() {
   const router = useRouter();
   const theme = useTheme();

@@ -1,14 +1,31 @@
-import { CheckCircleIcon, ClockCountdownIcon, WarningCircleIcon, type Icon as PhosphorIcon } from 'phosphor-react-native';
+import {
+  CheckCircleIcon,
+  ClockCountdownIcon,
+  ClockIcon,
+  PillIcon,
+  WarningCircleIcon,
+  type Icon as PhosphorIcon,
+} from 'phosphor-react-native';
 
 import type { BadgeTone } from '@/components/ui/status-badge';
 import type { FamilyTask, MemberStatus } from '@/context/family-context';
+import type { MemberDisplayStatus } from '@/utils/member-status';
 
-/** Single source of truth for how a member's status is worded, coloured and
- *  iconed (`icon` matches the reference design's per-status glyph). */
 export const MemberStatusMeta: Record<MemberStatus, { label: string; tone: BadgeTone; short: string; icon: PhosphorIcon }> = {
   normal: { label: 'ปกติดี', tone: 'success', short: 'ปกติ', icon: CheckCircleIcon },
   monitor: { label: 'ต้องติดตาม', tone: 'warning', short: 'ติดตาม', icon: ClockCountdownIcon },
   urgent: { label: 'ต้องช่วยเหลือ', tone: 'danger', short: 'ด่วน', icon: WarningCircleIcon },
+};
+
+export const MemberDisplayStatusMeta: Record<
+  MemberDisplayStatus,
+  { label: string; tone: BadgeTone; short: string; icon: PhosphorIcon }
+> = {
+  urgent: { label: 'ต้องช่วยเหลือ', tone: 'danger', short: 'ด่วน', icon: WarningCircleIcon },
+  monitor: { label: 'ต้องติดตาม', tone: 'warning', short: 'ติดตาม', icon: ClockCountdownIcon },
+  'awaiting-checkin': { label: 'รอเช็กอิน', tone: 'neutral', short: 'รอ', icon: ClockIcon },
+  'meds-pending': { label: 'สบายดี · ยังไม่ทานยา', tone: 'warning', short: 'ค้างยา', icon: PillIcon },
+  ok: { label: 'ปกติดี', tone: 'success', short: 'ปกติ', icon: CheckCircleIcon },
 };
 
 export const TaskStatusMeta: Record<FamilyTask['status'], { label: string; tone: BadgeTone }> = {
@@ -17,9 +34,10 @@ export const TaskStatusMeta: Record<FamilyTask['status'], { label: string; tone:
   pending: { label: 'รอดำเนินการ', tone: 'warning' },
 };
 
-/** Members needing attention sort to the top of the dashboard. */
-export const StatusPriority: Record<MemberStatus, number> = {
+export const DisplayStatusPriority: Record<MemberDisplayStatus, number> = {
   urgent: 0,
   monitor: 1,
-  normal: 2,
+  'meds-pending': 2,
+  'awaiting-checkin': 3,
+  ok: 4,
 };

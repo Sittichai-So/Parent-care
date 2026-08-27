@@ -44,12 +44,6 @@ function MessageBubble({ message, mine }: { message: ApiMessage; mine: boolean }
   );
 }
 
-/** ครอบครัว-wide chat — real backend now (`GET /messages` for history,
- *  `send_message`/`receive_message`/`message_deleted` over Socket.IO for
- *  live delivery). The socket connects and joins this household's room only
- *  while this screen is mounted, and leaves/disconnects on unmount — the
- *  reference design's chat is a single conversation per household with no
- *  need to stay connected from any other screen. */
 export default function MessagesScreen() {
   const theme = useTheme();
   const { token } = useAuth();
@@ -62,9 +56,6 @@ export default function MessagesScreen() {
   const [draft, setDraft] = useState('');
   const [isSending, setIsSending] = useState(false);
 
-  // History — refetched whenever the selected household changes.
-  // Same react-hooks/set-state-in-effect situation as family-context.tsx
-  // (see its comment there) — batched by React 19 into one render regardless.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!currentHouseholdId) {
@@ -92,10 +83,6 @@ export default function MessagesScreen() {
   }, [currentHouseholdId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Live connection — joins this household's room for as long as the
-  // screen is mounted. Every failure mode here (bad/expired token, rejected
-  // join, dropped connection) gets its own message instead of failing
-  // silently, since a quiet socket looks identical to "no new messages."
   useEffect(() => {
     if (!currentHouseholdId || !token) return;
 
@@ -144,8 +131,6 @@ export default function MessagesScreen() {
       if (ack?.ok && ack.message) {
         const sent = ack.message;
         setDraft('');
-        // Persists + broadcasts server-side — receive_message may already
-        // have added this exact message by the time the ack lands.
         setMessages((current) => (current.some((m) => m._id === sent._id) ? current : [...current, sent]));
       } else {
         Alert.alert('ส่งข้อความไม่สำเร็จ', ack?.error ?? 'เกิดข้อผิดพลาด กรุณาลองใหม่');

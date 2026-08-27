@@ -1,19 +1,6 @@
-/**
- * Local reminder notifications for medications and appointments.
- *
- * IMPORTANT: `expo-notifications` throws synchronously on import when running
- * inside Expo Go on Android — SDK 53+ dropped native push support from Expo
- * Go's Android build, and the module's own auto-registration side effect
- * (`DevicePushTokenAutoRegistration.fx`) crashes as soon as the module loads,
- * before any of our code runs. See https://docs.expo.dev/develop/development-builds/introduction/.
- *
- * Every access to the module here goes through a lazy `require()` inside
- * `getNotifications()`, which is only ever called once `canScheduleLocalNotifications`
- * has confirmed it's safe. Do NOT add a static `import ... from 'expo-notifications'`
- * to this file or to anything that imports this file transitively (app/_layout.tsx,
- * the notification-permission hook, etc.) — a static import crashes immediately
- * on Expo Go/Android regardless of whether the imported names are ever used.
- */
+// Do NOT statically `import ... from 'expo-notifications'` here or in anything
+// that imports this file — it crashes on import in Expo Go/Android. Access is
+// lazy via require() inside getNotifications(), gated on canScheduleLocalNotifications.
 import { isRunningInExpoGo } from 'expo';
 import { Platform } from 'react-native';
 
@@ -21,9 +8,6 @@ import type { Appointment, Medication } from '@/context/family-context';
 
 const isExpoGoAndroid = Platform.OS === 'android' && isRunningInExpoGo();
 
-/** Whether this platform/runtime can schedule local notifications at all — screens
- *  use this to hide reminder-related UI (web, and Expo Go on Android) instead of
- *  showing controls that would silently do nothing. */
 export const canScheduleLocalNotifications =
   (Platform.OS === 'android' || Platform.OS === 'ios') && !isExpoGoAndroid;
 
@@ -73,8 +57,6 @@ async function ensureAndroidChannel(notifications: NotificationsModule) {
   });
 }
 
-/** Requests notification permission if not already granted. Safe to call repeatedly —
- *  only prompts the user once per app session if they haven't decided yet. */
 export async function ensureNotificationPermission(): Promise<boolean> {
   const notifications = getNotifications();
   if (!notifications) return false;
@@ -94,8 +76,6 @@ export async function ensureNotificationPermission(): Promise<boolean> {
   return requested.granted;
 }
 
-/** Current permission status without prompting — used to drive UI (e.g. a banner)
- *  rather than to gate scheduling, which goes through `ensureNotificationPermission`. */
 export async function getNotificationPermissionGranted(): Promise<boolean> {
   const notifications = getNotifications();
   if (!notifications) return false;
@@ -117,13 +97,6 @@ async function cancelAllWithPrefix(prefix: string) {
 const medicationPrefix = (medicationId: string) => `medication-${medicationId}-`;
 const appointmentPrefix = (appointmentId: string) => `appointment-${appointmentId}-`;
 
-/**
- * Re-schedules every daily reminder for a medication so the device's schedule
- * always matches the current record. Call this after every add/edit/delete —
- * it clears old times (including ones removed by this edit) before applying
- * the current schedule, so it's always safe to call rather than needing to
- * diff old vs. new state yourself.
- */
 export async function syncMedicationReminders(medication: Medication): Promise<void> {
   const notifications = getNotifications();
   if (!notifications) return;
@@ -162,11 +135,6 @@ export async function cancelMedicationReminders(medicationId: string): Promise<v
   await cancelAllWithPrefix(medicationPrefix(medicationId));
 }
 
-/**
- * Re-schedules an appointment's reminders: one the evening before at 9 AM and
- * one an hour ahead of the appointment itself. Past trigger times (e.g. editing
- * an appointment that's later today) are skipped rather than firing immediately.
- */
 export async function syncAppointmentReminder(appointment: Appointment): Promise<void> {
   const notifications = getNotifications();
   if (!notifications) return;
@@ -239,9 +207,6 @@ export type ReminderTapData =
   | { kind: 'medication'; medicationId: string }
   | { kind: 'appointment'; appointmentId: string };
 
-/** Subscribes to notification taps so a screen can navigate to the relevant
- *  medication/appointment. Returns a no-op subscription when unsupported, so
- *  callers can always call `.remove()` on cleanup without a platform check. */
 export function addReminderResponseListener(handler: (data: ReminderTapData) => void): { remove: () => void } {
   const notifications = getNotifications();
   if (!notifications) return { remove: () => {} };

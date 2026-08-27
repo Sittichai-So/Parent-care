@@ -6,11 +6,6 @@ import { ViewerReport } from '@/components/reports/viewer-report';
 import { Screen } from '@/components/ui/screen';
 import { useFamilyContext } from '@/context/family-context';
 
-/** The "รายงาน" tab — a single route that renders a different report per
- *  the caller's role in the current household, since Owner, Caregiver,
- *  Elder and Viewer each need to see different things (see
- *  `components/reports/*-report.tsx`). All four are always reachable from
- *  this one tab, unlike `index`/`explore` which hide themselves per role. */
 export default function ReportScreen() {
   const { currentRole, isLoadingHouseholds, isLoadingData } = useFamilyContext();
 

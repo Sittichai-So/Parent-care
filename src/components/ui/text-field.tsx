@@ -16,19 +16,12 @@ type TextFieldProps = {
   required?: boolean;
   multiline?: boolean;
   keyboardType?: KeyboardTypeOptions;
-  /** Masks the value and adds a show/hide eye toggle — for passwords. */
   secureTextEntry?: boolean;
-  /** Leading glyph inside the field — the login screen's envelope/lock icons. Omit for the plain boxed look every other form uses. */
   icon?: keyof typeof Ionicons.glyphMap;
-  /** Phosphor icon component — takes precedence over `icon` when given (see `AppButton`'s `phosphorIcon`). */
   phosphorIcon?: PhosphorIcon;
-  /** `soft` swaps the bordered white box for a borderless filled pill (sunken
-   *  background, larger radius) — used on the login screen's more marketing-led
-   *  layout. `default` is every ordinary data-entry form's boxed, bordered field. */
   variant?: 'default' | 'soft';
 };
 
-/** Label + input pair shared by every form screen so spacing and focus styling stay consistent. */
 export function TextField({
   label,
   value,
@@ -61,10 +54,6 @@ export function TextField({
             backgroundColor: soft ? theme.surfaceSunken : theme.inputBackground,
             borderColor: focused ? theme.primary : soft ? 'transparent' : theme.border,
             borderWidth: focused ? 2 : soft ? 2 : 1,
-            // `soft` matches the reference design's login/register fields —
-            // radius 14, same as `Radius.md` (a bordered `default` field
-            // uses the same token for consistency, not because the mock
-            // calls for it there too).
             borderRadius: Radius.md,
           },
         ]}>

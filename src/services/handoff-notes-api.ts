@@ -9,7 +9,6 @@ export type ApiHandoffNote = {
   updatedAt: string;
 };
 
-/** Newest-first, per the reference design's "บันทึกส่งต่อเวร" list. */
 export const getHandoffNotes = (householdId: string) =>
   apiGet<ApiHandoffNote[]>(`/households/${householdId}/handoff-notes`);
 

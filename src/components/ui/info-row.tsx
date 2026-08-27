@@ -10,15 +10,11 @@ import { useTheme } from '@/hooks/use-theme';
 
 type InfoRowProps = {
   icon?: ComponentProps<typeof Ionicons>['name'];
-  /** Phosphor icon component — takes precedence over `icon` when given (see `AppButton`'s `phosphorIcon`). */
   phosphorIcon?: PhosphorIcon;
   label: string;
   value: string;
 };
 
-/** Icon + label + value line used on the detail screens. With neither `icon`
- *  nor `phosphorIcon`, renders as a plain label-left/value-right line instead
- *  — the reference design's icon-less info-card rows (Member detail). */
 export function InfoRow({ icon, phosphorIcon: PhosphorIconComp, label, value }: InfoRowProps) {
   const theme = useTheme();
   const hasIcon = !!(icon || PhosphorIconComp);

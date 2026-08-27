@@ -33,18 +33,18 @@ export type FamilyMember = {
   status: MemberStatus;
   detail: string;
   relation: string;
-  /** False for a profile someone else manages on this member's behalf
-   *  (e.g. an elderly relative with no phone) — see addManagedMember. */
   hasAccount: boolean;
-  /** 'pending' means an existing account was invited but hasn't accepted
-   *  yet — see inviteExistingUser/acceptInvite/declineInvite. */
   membershipState: 'active' | 'pending';
+  // Raw "last check-in ever" timestamp — the server never resets this daily
+  // (see household-member.model.js on the backend). Never format/compare
+  // this field directly in a screen: always go through isCheckedInToday()/
+  // checkInTime() in utils/member-status.ts, which gate on today's local
+  // date. Reading it raw is exactly how a stale check-in from a previous
+  // day would render next to an "awaiting check-in" badge as if it were
+  // today's.
+  lastCheckInAt: string | null;
 };
 
-/** An invite addressed to *this* account, not yet accepted or declined —
- *  distinct from a household's own member list (which also includes rows
- *  with membershipState: 'pending' for members *of* that household). This
- *  is account-wide, surfaced regardless of which household is selected. */
 export type PendingInvite = {
   householdId: string;
   householdName: string;
@@ -60,8 +60,6 @@ export type FamilyTask = {
   detail: string;
   status: 'pending' | 'in-progress' | 'done';
   owner: string;
-  /** Drives the task's icon — replaces the old lookup keyed on a
-   *  hardcoded task id, which only ever matched the 3 seeded demo tasks. */
   relatedType: 'checkin' | 'medication' | 'appointment' | 'vitals' | 'custom';
 };
 
@@ -71,49 +69,36 @@ export type FamilyEvent = {
   time: string;
   detail: string;
   type: 'check-in' | 'medication' | 'task' | 'appointment' | 'vitals' | 'emergency';
-  /** Full ISO timestamp `time` was derived from — kept alongside the display-only
-   *  `time` (already formatted to HH:mm) so callers that need the calendar day
-   *  (e.g. grouping activity into a report chart) don't have to re-parse it. */
   occurredAt: string;
 };
 
-/** A medication a family member takes, self-managed or entered on their behalf. */
 export type Medication = {
   id: string;
   memberId: string;
   name: string;
   dosage: string;
-  /** What it's for, e.g. "ควบคุมความดันโลหิต". */
   reason?: string;
-  /** 24h "HH:mm" times this is due each day it's active. */
   schedule: string[];
   notes?: string;
   active: boolean;
-  /** ISO timestamp of the last confirmed dose, if any — computed server-side
-   *  from MedicationLog, never stored directly. */
   lastTakenAt?: string;
 };
 
-/** A scheduled visit, optionally tied to medications discussed or adjusted there. */
 export type Appointment = {
   id: string;
   memberId: string;
   title: string;
-  /** "YYYY-MM-DD", local calendar day — see `utils/date`. */
   date: string;
-  /** 24h "HH:mm". */
   time: string;
   hospital: string;
   doctor?: string;
   department?: string;
   notes?: string;
-  /** Medication instructions tied specifically to this visit. */
   medicationNote?: string;
   linkedMedicationIds: string[];
   reminderEnabled: boolean;
 };
 
-/** A self-reported health reading. */
 export type VitalLog = {
   id: string;
   memberId: string;
@@ -125,7 +110,6 @@ export type VitalLog = {
   note?: string;
 };
 
-/** One household this account belongs to, with its role in it. */
 export type HouseholdSummary = {
   id: string;
   name: string;
@@ -133,35 +117,19 @@ export type HouseholdSummary = {
   role: MemberRole;
   membershipId: string;
   kind: HouseholdKind;
-  /** True if this is the household the caller opens on sign-in — a
-   *  per-membership flag, so it's this account's own default, not a
-   *  household-wide setting (see `setDefaultHousehold`). */
   isDefault: boolean;
 };
 
 type FamilyContextValue = {
-  /** Every household this account belongs to — a user can be part of more
-   *  than one (e.g. caring for both sides of the family). */
   households: HouseholdSummary[];
   isLoadingHouseholds: boolean;
   currentHouseholdId: string | null;
   setCurrentHouseholdId: (id: string | null) => void;
-  /** Full record for currentHouseholdId — includes the invite code, so any
-   *  screen can offer "share this code" without a separate fetch. */
   currentHousehold: HouseholdSummary | null;
-  /** The caller's own membership id / role *within* currentHouseholdId. */
   currentMembershipId: string | null;
   currentRole: MemberRole | null;
-  /** Derived from `currentRole` — false only for Viewer. Covers everything a
-   *  non-Viewer may touch except managing the medicine/appointment lists
-   *  themselves — see `canManageFor`. */
   canEdit: boolean;
-  /** True for Owner/Caregiver — can manage *any* member's medicine/appointment
-   *  records, including deleting them (Elder never can, even their own). */
   canManage: boolean;
-  /** True if the caller may create/edit a medicine or appointment for
-   *  `memberId` — Owner/Caregiver: anyone; Elder: only themself; Viewer:
-   *  never. Mirrors household-scope.js's resolveWriteMemberId exactly. */
   canManageFor: (memberId: string) => boolean;
   createHousehold: (
     name: string,
@@ -175,7 +143,6 @@ type FamilyContextValue = {
     displayName: string,
     relation: string
   ) => Promise<HouseholdSummary>;
-  /** Sets `householdId` as the caller's own "กลุ่มเริ่มต้น". */
   setDefaultHousehold: (householdId: string) => Promise<void>;
 
   isLoadingData: boolean;
@@ -186,64 +153,30 @@ type FamilyContextValue = {
   appointments: Appointment[];
   vitalLogs: VitalLog[];
 
-  /** Invites addressed to this account, across every household this
-   *  account can see (not just currentHouseholdId). */
   pendingInvites: PendingInvite[];
   refreshPendingInvites: () => Promise<void>;
 
-  /** The server-side notification inbox for `currentHouseholdId` — medicine/
-   *  appointment due-time reminders, new chat messages, emergency alerts, for
-   *  whichever household is currently selected (same scope as medications/
-   *  appointments/etc.), plus any account-wide SYSTEM notices with no single
-   *  household of their own. Unlike pendingInvites, this is *not* account-wide
-   *  — switching households changes what's in here, on purpose: a
-   *  notification belongs to the household it's about, not to every
-   *  household the account happens to also belong to. Newest-first (server
-   *  sorts by createdAt). Polled every 60s while authenticated, in addition
-   *  to the explicit refresh below. */
   notifications: ApiNotification[];
   refreshNotifications: () => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
   markAllNotificationsRead: () => Promise<void>;
 
-  /** The family's Elder member — used as the default "me" on elder-facing screens. */
   primaryElderId: string;
 
-  /** The caller's own membership id in the current household — "me" on
-   *  every self-service screen (my medicine, my vitals, my report), for
-   *  every role, not just Elder: Owner/Caregiver/Viewer all track their own
-   *  records here too, separately from the members they manage elsewhere.
-   *  Falls back to `primaryElderId` only if the caller somehow has no
-   *  membership id yet (e.g. mid-load). */
   selfMemberId: string;
 
-  /** Where a new medicine/appointment should default to when the caller
-   *  didn't pick a member explicitly (e.g. opening "เพิ่มยา" from the
-   *  overview instead of a specific member's page) — Owner/Caregiver default
-   *  to the household's primary elder, Elder to themself. Pass the route's
-   *  own memberId param (if any) as `explicitMemberId` to let it take
-   *  priority. Mirrors this same "who's it for by default" logic previously
-   *  duplicated across medications.tsx/appointments.tsx/medication-form.tsx/
-   *  appointment-form.tsx. */
   resolveDefaultMemberId: (explicitMemberId?: string) => string;
 
   selectedMemberId: string | null;
   setSelectedMemberId: (id: string | null) => void;
 
-  /** Self check-in ("ฉันสบายดี" / "ตรวจสอบสถานะ") — sets the caller's own
-   *  member status to normal and records a timeline event server-side. */
-  checkIn: () => Promise<void>;
+  checkIn: (memberId?: string) => Promise<void>;
   updateTaskStatus: (taskId: string, status: FamilyTask['status']) => Promise<void>;
-  /** Owner-only in practice (the server rejects anyone else) — changes what
-   *  a member can do in this household, not their account identity. */
   updateMemberRole: (memberId: string, role: HouseholdRole) => Promise<void>;
 
   addMedication: (input: Omit<Medication, 'id' | 'lastTakenAt'>) => Promise<string>;
   updateMedication: (id: string, patch: Partial<Omit<Medication, 'id'>>) => Promise<void>;
   removeMedication: (id: string) => Promise<void>;
-  /** `extra` carries the photo confirmation — `image` (its uploaded URL) and
-   *  `photoTakenAt` (the real capture time, distinct from the server's own
-   *  `takenAt`) — see medication-confirm.tsx. */
   confirmMedicationTaken: (id: string, extra?: { image?: string; photoTakenAt?: string }) => Promise<void>;
 
   addAppointment: (input: Omit<Appointment, 'id'>) => Promise<string>;
@@ -254,8 +187,6 @@ type FamilyContextValue = {
 
   triggerEmergency: (message?: string) => Promise<void>;
 
-  /** Adds a member profile with no linked account of its own — for
-   *  relatives who can't self-register (no phone, not tech-comfortable). */
   addManagedMember: (input: {
     displayName: string;
     relation: string;
@@ -264,9 +195,7 @@ type FamilyContextValue = {
     gender?: string | null;
   }) => Promise<string>;
 
-  /** Exact-match only (userCode or email) — never a name search. */
   lookupUser: (query: { code: string } | { email: string }) => Promise<householdsApi.ApiUserLookup>;
-  /** Sends a pending invite to an existing account found via lookupUser. */
   inviteExistingUser: (
     userId: string,
     role: Exclude<HouseholdRole, 'owner'>,
@@ -276,11 +205,7 @@ type FamilyContextValue = {
   acceptInvite: (householdId: string, membershipId: string) => Promise<void>;
   declineInvite: (householdId: string, membershipId: string) => Promise<void>;
 
-  /** Generates a one-time code (24h TTL) so a userId-less member profile
-   *  can later be linked to a real account. Returns the code to share. */
   generateClaimCode: (memberId: string) => Promise<string>;
-  /** Links the caller's own account to an existing userId-less profile,
-   *  keeping its medication/appointment/vitals history. */
   claimMembership: (claimCode: string) => Promise<void>;
 };
 
@@ -302,6 +227,7 @@ const toFamilyMember = (member: ApiHouseholdMember): FamilyMember => ({
   relation: member.relation,
   hasAccount: member.userId !== null,
   membershipState: member.membershipState,
+  lastCheckInAt: member.lastCheckInAt,
 });
 
 const toMedication = (medicine: ApiMedicine): Medication => ({
@@ -401,17 +327,9 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     setIsLoadingHouseholds(true);
     try {
       const mine = await householdsApi.listMyHouseholds();
-      // A still-pending invite must never become a switchable/current
-      // household — householdMiddleware 403s any data request against it
-      // until the invite is accepted. Those are surfaced separately via
-      // pendingInvites/refreshPendingInvites instead.
       const active = mine.filter(({ membership }) => membership.membershipState !== 'pending');
       const summaries = active.map(toSummary);
       setHouseholds(summaries);
-      // Default to the first household, or clear the selection if it's no
-      // longer in the list (removed, or account switched) — decided here,
-      // right where the fresh list is available, rather than in a second
-      // effect reacting to `households`.
       setCurrentHouseholdId((current) => {
         if (summaries.length === 0) return null;
         if (current && summaries.some((household) => household.id === current)) return current;
@@ -454,11 +372,6 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated, refreshHouseholds, refreshPendingInvites, refreshNotifications]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Polls the notification inbox every 60s while logged in — there's no
-  // push mechanism (Expo Go on Android can't even receive one, see
-  // services/notifications.ts), and the chat socket only connects while
-  // messages.tsx itself is mounted, so this is what keeps the message badge
-  // and medicine/appointment reminders reasonably live without either.
   useEffect(() => {
     if (!isAuthenticated) return;
     const interval = setInterval(() => {
@@ -471,15 +384,6 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const currentMembershipId = currentHousehold?.membershipId ?? null;
   const currentRole = currentHousehold?.role ?? null;
 
-  // The server fetches every household's notifications in one account-wide
-  // call (`notifications` above, kept as-is so read/unread state is never
-  // lost switching households), but what's actually shown is narrowed to
-  // whichever household is currently selected — same scope as
-  // medications/appointments/etc. `householdId: null` (SYSTEM notices with
-  // no single household they belong to) always passes through. Tapping a
-  // medicine/appointment reminder in this list can then trust it always
-  // belongs to the household already loaded, with no household-switching
-  // needed — see notices.tsx.
   const householdNotifications = useMemo(
     () => notifications.filter((item) => item.householdId === null || item.householdId === currentHouseholdId),
     [notifications, currentHouseholdId]
@@ -581,9 +485,10 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     [refreshHouseholds]
   );
 
-  const checkIn = useCallback(async () => {
-    if (!currentHouseholdId || !currentMembershipId) return;
-    await householdsApi.checkIn(currentHouseholdId, currentMembershipId);
+  const checkIn = useCallback(async (memberId?: string) => {
+    const target = memberId ?? currentMembershipId;
+    if (!currentHouseholdId || !target) return;
+    await householdsApi.checkIn(currentHouseholdId, target);
     await refreshAll();
   }, [currentHouseholdId, currentMembershipId, refreshAll]);
 
@@ -734,10 +639,6 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     [currentHouseholdId, refreshAll]
   );
 
-  // acceptInvite/declineInvite act on an invite addressed to *this*
-  // account in a household that isn't necessarily currentHouseholdId (may
-  // not even be in `households` yet) — so they take householdId explicitly
-  // rather than assuming the currently-selected one.
   const acceptInvite = useCallback<FamilyContextValue['acceptInvite']>(
     async (householdId, membershipId) => {
       await householdsApi.acceptInvite(householdId, membershipId);

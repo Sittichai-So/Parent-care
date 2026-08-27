@@ -12,11 +12,6 @@ type SearchPillProps = {
   accessibilityLabel: string;
 };
 
-/** Pill-shaped search field — the capsule search bar from the reference header,
- *  built on the same `TextField` visual language (theme surface, `Radius.full`).
- *  Now sits directly on the page background rather than a dark header panel,
- *  so a hairline border + soft shadow (not just a colour swap) keep the white
- *  pill visually separated from the page's own near-white background. */
 export function SearchPill({ value, onChangeText, placeholder, accessibilityLabel }: SearchPillProps) {
   const theme = useTheme();
 

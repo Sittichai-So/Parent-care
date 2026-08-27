@@ -1,14 +1,3 @@
-/**
- * Design tokens for Parent Care.
- *
- * Every screen is built from these tokens — colours, spacing, radii and elevation.
- * Both `light` and `dark` must define the exact same keys: `ThemeColor` is derived
- * from their intersection, and `useTheme()` swaps the whole palette at runtime.
- *
- * Rule of thumb for screens: never hardcode a hex value. Read it from `useTheme()`
- * so the UI stays correct in both colour schemes.
- */
-
 import '@/global.css';
 
 import { Platform } from 'react-native';
@@ -30,9 +19,7 @@ export const Colors = {
     border: '#E4E9F2',
     borderStrong: '#CBD5E1',
 
-    /* Brand — deep navy, matched to the "Parent Care v3" reference design
-     *  (claude.ai/design) the product picked as the app's look. `teal` stays
-     *  as the secondary/success accent; it's no longer sampled from the logo. */
+    /* Brand */
     primary: '#1E3A8A',
     primaryPressed: '#16295C',
     primarySoft: '#E8EFFB',
@@ -45,28 +32,16 @@ export const Colors = {
     tealText: '#0F7A5C',
     onTeal: '#FFFFFF',
 
-    /** Default tint for `ThemedText type="eyebrow"` — the reference
-     *  design's small-caps role/section labels (e.g. a member's role above
-     *  their name). A step lighter than `primary` so it reads as a label,
-     *  not another heading. */
     eyebrow: '#3B5CB8',
 
-    /* Diagonal sweep used sparingly as a fill on primary CTAs and thin accent
-     *  bars, via `experimental_backgroundImage` — navy deepening to the
-     *  reference design's interactive-blue highlight. */
     brandGradient: 'linear-gradient(135deg, #1E3A8A 0%, #2F4FBE 100%)',
 
-    /* Notification/reminder accent — the lavender bell badge from the
-     *  reference background art has no equivalent among the status tones
-     *  below, so it gets its own token rather than borrowing `primary`. */
+    /* Lavender accent */
     lavender: '#8B7CF6',
     lavenderSoft: '#F1EEFE',
     lavenderText: '#5B4BC4',
 
-    /* Status — `*Soft` is a background, `*Text` is legible on that background.
-     *  `success` is tuned to the brand teal (not a generic forest green) since
-     *  "normal/good" is the most common status shown and should read as
-     *  on-brand rather than a stock traffic-light green. */
+    /* Status */
     success: '#1FBE8C',
     successSoft: '#E3FBF3',
     successText: '#0F7A5C',
@@ -77,19 +52,15 @@ export const Colors = {
     dangerSoft: '#FDECEC',
     dangerText: '#A31818',
 
-    /* Hero / header block — the logo wordmark's own navy, so brand text and
-     *  any dark surface share one colour rather than two unrelated darks. */
+    /* Hero / header block */
     hero: '#16233B',
     heroText: '#FFFFFF',
     heroTextMuted: '#BFCADB',
     heroSurface: 'rgba(255, 255, 255, 0.12)',
 
-    /* Onboarding backdrops and the amber "due soon" status badge — the login
-     *  hero's own light-blue wash, per the reference design. */
+    /* Onboarding */
     sky: '#DBEAFE',
     skySoft: '#EAF2FB',
-    /** Fill behind the login hero's illustration frame — the reference
-     *  design's dedicated `welcomeArt` token, a shade deeper than `sky`. */
     heroArt: '#C7DBFA',
     accentYellow: '#F5C451',
     accentYellowText: '#7A4E06',
@@ -98,9 +69,6 @@ export const Colors = {
     inputBackground: '#FFFFFF',
     placeholder: '#9AA8BA',
 
-    /** Viewer-role "read-only mode" banner background — its own token per
-     *  the reference design (distinct from `warningSoft`, though the icon
-     *  and text on it reuse `warning`/`warningText`). */
     readOnlyBg: '#FFF7E6',
 
     /* Effects */
@@ -123,7 +91,7 @@ export const Colors = {
     border: '#24314A',
     borderStrong: '#33456A',
 
-    /* Brand — same navy family as light mode, lightened for contrast on a dark surface. */
+    /* Brand */
     primary: '#7C9EEF',
     primaryPressed: '#5A7FDD',
     primarySoft: '#1B2A4D',
@@ -144,7 +112,7 @@ export const Colors = {
     lavenderSoft: '#241E42',
     lavenderText: '#C9BFFF',
 
-    /* Status — tuned to the brand teal, mirroring the light theme. */
+    /* Status */
     success: '#3EE7BE',
     successSoft: '#123528',
     successText: '#8FF3D4',
@@ -161,8 +129,7 @@ export const Colors = {
     heroTextMuted: '#AFBDD1',
     heroSurface: 'rgba(255, 255, 255, 0.08)',
 
-    /* Onboarding backdrops and the amber "due soon" status badge — muted,
-     *  low-glare counterparts of the light tones so both read correctly. */
+    /* Onboarding */
     sky: '#243554',
     skySoft: '#17233A',
     heroArt: '#2E4066',
@@ -173,9 +140,6 @@ export const Colors = {
     inputBackground: '#131C2B',
     placeholder: '#6F7E93',
 
-    /** Muted counterpart of the light `readOnlyBg` — not specified by the
-     *  (light-only) reference design, tuned to sit near `warningSoft`
-     *  without being identical to it. */
     readOnlyBg: '#2E2512',
 
     /* Effects */
@@ -189,13 +153,9 @@ export type Theme = (typeof Colors)['light'];
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
   },
   default: {
@@ -222,7 +182,6 @@ export const Spacing = {
   six: 64,
 } as const;
 
-/** Corner radii. Cards use `lg`, controls use `md`, pills use `full`. */
 export const Radius = {
   sm: 10,
   md: 14,
@@ -231,10 +190,6 @@ export const Radius = {
   full: 999,
 } as const;
 
-/**
- * Shadow presets. Compose with the theme's shadow colour so dark mode does not
- * paint a blue-grey haze: `{ ...Elevation.low, shadowColor: theme.shadow }`.
- */
 export const Elevation = {
   low: {
     shadowOffset: { width: 0, height: 1 },
@@ -256,7 +211,6 @@ export const Elevation = {
   },
 } as const;
 
-/** Minimum tap target. Elder-facing controls use `HitSize.large`. */
 export const HitSize = {
   small: 40,
   medium: 48,

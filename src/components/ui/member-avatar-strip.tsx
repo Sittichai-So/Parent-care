@@ -1,48 +1,44 @@
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { CheckCircleIcon, ClockCountdownIcon, WarningCircleIcon, type Icon as PhosphorIcon } from 'phosphor-react-native';
-
 import { ThemedText } from '@/components/themed-text';
 import { getInitials } from '@/components/ui/avatar';
+import { MemberDisplayStatusMeta } from '@/constants/status';
 import { Radius, Spacing } from '@/constants/theme';
-import type { FamilyMember, MemberStatus } from '@/context/family-context';
+import { useFamilyContext, type FamilyMember } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
+import { memberDisplayStatus, statusBucket } from '@/utils/member-status';
 
 type MemberAvatarStripProps = {
   members: FamilyMember[];
   onSelect: (member: FamilyMember) => void;
 };
 
-const STATUS_ICON: Record<MemberStatus, PhosphorIcon> = {
-  normal: CheckCircleIcon,
-  monitor: ClockCountdownIcon,
-  urgent: WarningCircleIcon,
-};
-
-/** "สมาชิกในบ้านวันนี้" — the reference design's horizontal mini-card row:
- *  initials tile, name + status glyph, and a one-line status detail, per
- *  card (not just a bare avatar+name, which is what this used to render). */
 export function MemberAvatarStrip({ members, onSelect }: MemberAvatarStripProps) {
   const theme = useTheme();
+  const { medications } = useFamilyContext();
 
-  const statusColor = (status: MemberStatus) =>
-    status === 'urgent' ? theme.danger : status === 'monitor' ? theme.warning : theme.success;
-  const borderColor = (status: MemberStatus) =>
-    status === 'urgent' ? theme.danger : status === 'monitor' ? theme.warning : theme.border;
+  const toneColor: Record<string, string> = {
+    danger: theme.danger,
+    warning: theme.warning,
+    success: theme.success,
+    neutral: theme.textMuted,
+  };
 
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
       {members.map((member) => {
-        const StatusIcon = STATUS_ICON[member.status];
+        const meta = MemberDisplayStatusMeta[memberDisplayStatus(member, medications)];
+        const attention = statusBucket(memberDisplayStatus(member, medications)) === 'attention';
+        const StatusIcon = meta.icon;
         return (
           <Pressable
             key={member.id}
             onPress={() => onSelect(member)}
             accessibilityRole="button"
-            accessibilityLabel={`${member.name} — ${member.detail}`}
+            accessibilityLabel={`${member.name} — ${meta.label}`}
             style={({ pressed }) => [
               styles.card,
-              { backgroundColor: theme.backgroundElement, borderColor: borderColor(member.status) },
+              { backgroundColor: theme.backgroundElement, borderColor: attention ? toneColor[meta.tone] : theme.border },
               pressed && styles.pressed,
             ]}>
             <View style={[styles.initialsTile, { backgroundColor: theme.primarySoft }]}>
@@ -52,10 +48,10 @@ export function MemberAvatarStrip({ members, onSelect }: MemberAvatarStripProps)
               <ThemedText type="smallBold" numberOfLines={1} style={styles.name}>
                 {member.name}
               </ThemedText>
-              <StatusIcon weight="fill" size={16} color={statusColor(member.status)} />
+              <StatusIcon weight="fill" size={16} color={toneColor[meta.tone] ?? theme.textMuted} />
             </View>
             <ThemedText type="caption" themeColor="textMuted" numberOfLines={2} style={styles.detail}>
-              {member.detail}
+              {meta.label}
             </ThemedText>
           </Pressable>
         );

@@ -33,10 +33,6 @@ export function AnimatedSplashOverlay() {
     },
   });
 
-  // `background.png` is a complete, self-contained splash composition (logo,
-  // tagline, feature icons, hero photo) — it fills the overlay itself, so
-  // unlike the old small centered mark this needs no separate icon layered
-  // on top of a flat colour.
   const image = <Image style={styles.backgroundImage} contentFit="cover" source={require('@/assets/images/background.png')} />;
 
   return animate ? (
@@ -147,9 +143,6 @@ const styles = StyleSheet.create({
   },
   splashOverlay: {
     ...StyleSheet.absoluteFill,
-    // Matches `background.png`'s own light backdrop — this only ever shows
-    // at the image's edges on an aspect ratio that doesn't exactly match the
-    // device screen, so it needs to blend in rather than flash a brand colour.
     backgroundColor: '#EAF2FB',
     alignItems: 'center',
     justifyContent: 'center',

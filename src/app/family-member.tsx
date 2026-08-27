@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Alert, Pressable, Share, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { CaretLeftIcon, ChatTeardropDotsIcon, LinkIcon, PhoneCallIcon } from 'phosphor-react-native';
+import { CaretLeftIcon, ChatTeardropDotsIcon, HandHeartIcon, LinkIcon, PhoneCallIcon } from 'phosphor-react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
@@ -14,28 +14,36 @@ import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { VitalsSummary } from '@/components/ui/vitals-summary';
-import { MemberStatusMeta } from '@/constants/status';
+import { MemberDisplayStatusMeta } from '@/constants/status';
 import { Spacing } from '@/constants/theme';
 import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
 import { daysFromToday, formatDateKey, isToday } from '@/utils/date';
+import { checkInTime, memberDisplayStatus } from '@/utils/member-status';
 
 export default function FamilyMemberScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { selectedMemberId, familyMembers, medications, appointments, canEdit, canManageFor, generateClaimCode } =
-    useFamilyContext();
+  const {
+    selectedMemberId,
+    familyMembers,
+    medications,
+    appointments,
+    currentMembershipId,
+    canEdit,
+    canManageFor,
+    checkIn,
+    generateClaimCode,
+  } = useFamilyContext();
   const member = familyMembers.find((item) => item.id === selectedMemberId) ?? familyMembers[0];
   const [isGeneratingClaim, setIsGeneratingClaim] = useState(false);
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [pinged, setPinged] = useState(false);
 
   const memberMedications = useMemo(
     () => (member ? medications.filter((med) => med.memberId === member.id && med.active) : []),
     [medications, member]
   );
-  // The one medication this screen offers a quick "confirm today's dose" shortcut
-  // for — mirrors Home's one-row-per-member medication list, which also assumes
-  // a single primary active medication per person for that same at-a-glance UI.
   const primaryMedication = memberMedications[0];
   const primaryMedTakenToday = primaryMedication?.lastTakenAt ? isToday(primaryMedication.lastTakenAt.slice(0, 10)) : false;
 
@@ -62,11 +70,25 @@ export default function FamilyMemberScreen() {
     );
   }
 
-  const status = MemberStatusMeta[member.status];
+  const status = MemberDisplayStatusMeta[memberDisplayStatus(member, medications)];
   const canManageMember = canManageFor(member.id);
+  const isSelf = member.id === currentMembershipId;
+  const checkedInAt = checkInTime(member);
 
   const handlePing = () => {
     setPinged(true);
+  };
+
+  const handleCheckIn = () => {
+    setIsCheckingIn(true);
+    checkIn(member.id)
+      .then(() =>
+        Alert.alert('เช็กอินแล้ว', isSelf ? 'บอกครอบครัวแล้วว่าวันนี้สบายดี' : `บันทึกว่า ${member.name} สบายดีวันนี้แล้ว`)
+      )
+      .catch((err) =>
+        Alert.alert('เช็กอินไม่สำเร็จ', err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่')
+      )
+      .finally(() => setIsCheckingIn(false));
   };
 
   const handleGenerateClaimCode = async () => {
@@ -148,6 +170,23 @@ export default function FamilyMemberScreen() {
         </View>
       </Card>
 
+      {member.membershipState === 'active' && canManageMember ? (
+        <AppButton
+          label={
+            checkedInAt
+              ? `เช็กอินแล้ววันนี้ · ${checkedInAt} น.`
+              : isSelf
+                ? 'ฉันสบายดีวันนี้'
+                : `ยืนยันว่า ${member.name} สบายดีวันนี้`
+          }
+          phosphorIcon={HandHeartIcon}
+          variant={checkedInAt ? 'success' : 'primary'}
+          onPress={handleCheckIn}
+          loading={isCheckingIn}
+          disabled={isCheckingIn || !!checkedInAt}
+        />
+      ) : null}
+
       {!member.hasAccount ? (
         <Card tone="sunken" elevation="flat" gap={Spacing.two}>
           <ThemedText type="smallBold">สมาชิกคนนี้ยังไม่มีบัญชีของตัวเอง</ThemedText>
@@ -169,7 +208,9 @@ export default function FamilyMemberScreen() {
       <Card gap={0} padding={Spacing.three}>
         <InfoRow label="ความสัมพันธ์" value={member.relation} />
         <View style={[styles.separator, { backgroundColor: theme.border }]} />
-        <InfoRow label="สถานะ" value={member.detail} />
+        <InfoRow label="สถานะ" value={member.detail || status.label} />
+        <View style={[styles.separator, { backgroundColor: theme.border }]} />
+        <InfoRow label="เช็กอินวันนี้" value={checkedInAt ? `${checkedInAt} น.` : 'ยังไม่เช็กอิน'} />
       </Card>
 
       <SectionHeader

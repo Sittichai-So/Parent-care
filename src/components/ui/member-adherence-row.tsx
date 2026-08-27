@@ -11,19 +11,12 @@ import { useTheme } from '@/hooks/use-theme';
 
 type MemberAdherenceRowProps = {
   name: string;
-  /** 0–100. Coloured the same way `adherenceTone` colours every other
-   *  adherence number in this app (the report's bar chart, etc.) — not the
-   *  reference design's own slightly different 95/85 cutoffs, so the whole
-   *  screen's colour language stays consistent rather than having two
-   *  competing thresholds on one page. */
   pct: number;
   tone: BadgeTone;
   note: string;
   onPress?: () => void;
 };
 
-/** The dashboard's "รายคน" row — avatar, name + percentage, a filled
- *  progress track, and a status note. */
 export function MemberAdherenceRow({ name, pct, tone, note, onPress }: MemberAdherenceRowProps) {
   const theme = useTheme();
   const clamped = Math.max(0, Math.min(100, Math.round(pct)));

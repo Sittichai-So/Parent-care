@@ -11,12 +11,9 @@ import { useTheme } from '@/hooks/use-theme';
 type ScreenHeaderProps = {
   title: string;
   subtitle?: string;
-  /** Show a circular back affordance. Detail screens open from a stack, so default on. */
   showBack?: boolean;
   onBack?: () => void;
-  /** Rendered on the trailing edge, aligned with the title. */
   action?: ReactNode;
-  /** Small label above the title (e.g. the section the screen belongs to). */
   eyebrow?: string;
 };
 

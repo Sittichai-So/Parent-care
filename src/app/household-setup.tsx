@@ -132,34 +132,14 @@ function ClaimAccountCard({ claimCode, onClaimCodeChange }: { claimCode: string;
   );
 }
 
-/**
- * Step 2 of signup (reached from register.tsx before the account even
- * exists yet — see `ensureRegistered` below), and also shown after login to
- * any already-registered account that doesn't belong to a household yet —
- * the root layout guard (_layout.tsx) routes here instead of the tabs in
- * that case. Create starts a new household as its owner; Join redeems an
- * invite code from someone who already created one.
- */
 export default function HouseholdSetupScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { logout, register, pendingRegistration, setPendingRegistration } = useAuth();
   const { households, createHousehold, joinHousehold, claimMembership } = useFamilyContext();
-  // Two different reasons this screen has nothing but "สร้างบัญชี" step 2 to
-  // show: a brand-new signup (pendingRegistration still set), or the account
-  // is genuinely authenticated but somehow has zero households. Either way
-  // it reads as onboarding, distinct from a signed-in account with at least
-  // one household landing here on demand (e.g. "มีรหัสผูกบัญชี?").
   const isOnboarding = households.length === 0;
-  // A back destination exists either way: mid-signup, back returns to
-  // register.tsx (still on the stack, fields intact, nothing to undo yet —
-  // register() hasn't been called); post-signup with existing households,
-  // back returns wherever this screen was opened from.
   const canGoBack = pendingRegistration !== null || households.length > 0;
 
-  // Only ever called once per successful signup: register() genuinely
-  // creates the account, so pendingRegistration is cleared immediately after
-  // so a retry (if the household action below fails) never calls it twice.
   const ensureRegistered = async () => {
     if (!pendingRegistration) return;
     await register(
@@ -196,9 +176,6 @@ export default function HouseholdSetupScreen() {
     try {
       await ensureRegistered();
       const household = await createHousehold(householdName.trim(), displayName.trim(), relation.trim(), kind);
-      // The invite code only ever shows here and on the dashboard's invite
-      // card — there's no dedicated household-settings screen yet, so this
-      // is the one guaranteed moment the owner sees it right after creation.
       Alert.alert(
         'สร้างกลุ่มครอบครัวสำเร็จ',
         `รหัสเชิญของกลุ่ม "${household.name}" คือ ${household.inviteCode}\n\nส่งรหัสนี้ให้สมาชิกคนอื่นเพื่อเข้าร่วมกลุ่ม (ดูรหัสนี้ได้อีกครั้งที่หน้าหลัก)`,
@@ -320,9 +297,6 @@ export default function HouseholdSetupScreen() {
 
       <Pressable
         onPress={() => {
-          // Mid-signup, nothing's been created yet — "ออกจากระบบ" would be
-          // inaccurate (there's no session to log out of), so this clears
-          // the draft and returns to login instead of calling logout().
           if (pendingRegistration) {
             setPendingRegistration(null);
             router.replace('/login');

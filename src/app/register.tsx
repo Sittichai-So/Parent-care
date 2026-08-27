@@ -9,30 +9,11 @@ import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
+import { useFormError } from '@/hooks/use-form-error';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Thai phone numbers: a landline is 9 digits starting with 0, a mobile is
- *  10 — both `0xxxxxxxx`/`0xxxxxxxxx` once formatting is stripped. Whatever
- *  the user types (dashes, spaces, per the placeholder's `08X-XXX-XXXX`
- *  shape) is normalized to plain digits before this check and before it's
- *  ever sent to the API, so the stored value is always consistent
- *  regardless of how it was typed. */
 const isValidThaiPhone = (digits: string) => /^0\d{8,9}$/.test(digits);
 
-/** Step 1 of the reference design's 2-step register flow — account fields
- *  only. The mock's step 1 also has a role picker (Caregiver/Elder/Viewer),
- *  but that's not a real account attribute here: role is per-household
- *  (`HouseholdRole`), only ever chosen when creating or joining a household
- *  on the next screen — so it's not reproduced here to avoid a field that
- *  looks real but the server has nowhere to put it.
- *
- *  Deliberately doesn't call the register API itself: it stashes these
- *  fields as `pendingRegistration` and pushes (not replaces) to
- *  household-setup, so — the account only ever gets created once step 2's
- *  household action actually runs (see household-setup.tsx#ensureRegistered),
- *  and — since this screen stays on the stack (push, not replace), its own
- *  "ย้อนกลับ" button naturally returns here with these fields still filled
- *  in, rather than to an already-committed account with nothing to undo. */
 export default function RegisterScreen() {
   const router = useRouter();
   const theme = useTheme();
@@ -44,7 +25,7 @@ export default function RegisterScreen() {
   const [address, setAddress] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const { error, setError, onFieldChange } = useFormError();
 
   const handleNext = () => {
     if (!name.trim() || !email.trim() || !phone.trim() || !password || !confirmPassword) {
@@ -85,20 +66,14 @@ export default function RegisterScreen() {
         <TextField
           label="ชื่อที่ใช้แสดง"
           value={name}
-          onChangeText={(value) => {
-            setName(value);
-            if (error) setError(null);
-          }}
+          onChangeText={onFieldChange(setName)}
           placeholder="คุณสมชาย"
           required
         />
         <TextField
           label="อีเมล"
           value={email}
-          onChangeText={(value) => {
-            setEmail(value);
-            if (error) setError(null);
-          }}
+          onChangeText={onFieldChange(setEmail)}
           placeholder="you@gmail.com"
           keyboardType="email-address"
           required
@@ -106,10 +81,7 @@ export default function RegisterScreen() {
         <TextField
           label="เบอร์โทร"
           value={phone}
-          onChangeText={(value) => {
-            setPhone(value);
-            if (error) setError(null);
-          }}
+          onChangeText={onFieldChange(setPhone)}
           placeholder="08X-XXX-XXXX"
           keyboardType="phone-pad"
           required
@@ -117,10 +89,7 @@ export default function RegisterScreen() {
         <TextField
           label="รหัสผ่าน"
           value={password}
-          onChangeText={(value) => {
-            setPassword(value);
-            if (error) setError(null);
-          }}
+          onChangeText={onFieldChange(setPassword)}
           placeholder="อย่างน้อย 6 ตัวอักษร"
           secureTextEntry
           required
@@ -128,10 +97,7 @@ export default function RegisterScreen() {
         <TextField
           label="ยืนยันรหัสผ่าน"
           value={confirmPassword}
-          onChangeText={(value) => {
-            setConfirmPassword(value);
-            if (error) setError(null);
-          }}
+          onChangeText={onFieldChange(setConfirmPassword)}
           placeholder="กรอกรหัสผ่านอีกครั้ง"
           secureTextEntry
           required

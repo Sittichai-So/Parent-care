@@ -11,21 +11,12 @@ import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
 import * as householdsApi from '@/services/households-api';
 
-/** The navy header's household pill + switch sheet, per the reference
- *  design — real data only: `households`/`setCurrentHouseholdId`/`kind`/
- *  `isDefault`/`setDefaultHousehold` all come from `family-context.tsx`
- *  (an account can belong to several households, each with its own kind
- *  and its own "กลุ่มเริ่มต้น" flag on this account's membership). */
 export function HouseholdSwitcher() {
   const theme = useTheme();
   const router = useRouter();
   const { households, currentHousehold, currentHouseholdId, setCurrentHouseholdId, setDefaultHousehold } =
     useFamilyContext();
   const [open, setOpen] = useState(false);
-  // Member counts for the "<label> · <n> คน" meta line — not part of
-  // `/households/mine` (that only returns household+membership), so fetched
-  // lazily per household the first time the sheet opens, rather than eagerly
-  // for every household on every login.
   const [memberCounts, setMemberCounts] = useState<Record<string, number>>({});
   const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
 
@@ -62,10 +53,7 @@ export function HouseholdSwitcher() {
     setSettingDefaultId(householdId);
     try {
       await setDefaultHousehold(householdId);
-    } catch {
-      // Non-critical preference — silently ignored, matches the sheet's
-      // otherwise-optimistic switch/close interactions elsewhere here.
-    } finally {
+    } catch {} finally {
       setSettingDefaultId(null);
     }
   };

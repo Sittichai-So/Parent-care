@@ -22,15 +22,8 @@ import { useFamilyContext, type FamilyEvent } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
 import { chipToneColors } from '@/utils/tone-colors';
 
-/** Icon + tone per real event type — mirrors the mapping used for the family
- *  timeline on the home screen, so "audit log" and "timeline" read as the
- *  same underlying data (they are: both come from `timeline-api.ts`), just
- *  presented for the household owner rather than folded into the dashboard. */
 const EVENT_META: Record<FamilyEvent['type'], { icon: PhosphorIcon; tone: BadgeTone }> = {
   'check-in': { icon: CheckCircleIcon, tone: 'success' },
-  // `Camera`, not `Pill` — per the reference design's own audit-log entry for
-  // this exact action ("ยืนยันการทานยาพร้อมรูป"), which is about the photo
-  // confirmation act, not the medication itself.
   medication: { icon: CameraIcon, tone: 'success' },
   task: { icon: ListChecksIcon, tone: 'primary' },
   appointment: { icon: CalendarPlusIcon, tone: 'primary' },

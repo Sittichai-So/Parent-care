@@ -5,7 +5,6 @@ import { Spacing } from '@/constants/theme';
 
 type SectionHeaderProps = {
   title: string;
-  /** Optional count rendered next to the title, e.g. "3". */
   count?: number;
   actionLabel?: string;
   onActionPress?: () => void;

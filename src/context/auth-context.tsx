@@ -4,39 +4,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setAuthToken } from '@/services/api-client';
 import * as authApi from '@/services/auth-api';
 
-// Deliberately no `role` here — the mock data used to conflate "account
-// type" with "role within a household," but those are genuinely different
-// now: a User is just an identity, and role is a per-HouseholdMember thing
-// (see family-context.tsx / households-api.ts) since one account can belong
-// to more than one household with a different role in each.
 export type User = {
   id: string;
   name: string;
   email: string;
-  /** Shareable lookup code — lets another account find and invite this one
-   *  (see family-context.tsx#lookupUser) without an open name search. */
   userCode: string | null;
   phone: string | null;
   address: string | null;
 };
 
-/** Step 1's fields, held only in memory (never persisted) while the caller
- *  fills out step 2 — register.tsx no longer calls the API itself; whichever
- *  household action the user completes in household-setup.tsx calls
- *  `register(...)` first, so the account is only ever created once both
- *  steps have real, validated data. See household-setup.tsx#ensureRegistered. */
 export type PendingRegistration = { name: string; email: string; phone: string; address?: string; password: string };
 
 type AuthContextValue = {
   user: User | null;
   token: string | null;
-  /** True only while restoring a persisted session on app boot — distinct
-   *  from `isLoading`, which covers an in-flight login/register call. */
   isRestoring: boolean;
   isLoading: boolean;
-  /** Resolves with the logged-in user — callers that need to act right away
-   *  shouldn't rely on `user` from context, since that only reflects the
-   *  *next* render after this promise resolves. */
   login: (email: string, password: string) => Promise<User>;
   register: (name: string, email: string, password: string, phone: string, address?: string) => Promise<User>;
   logout: () => Promise<void>;
@@ -65,8 +48,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [pendingRegistration, setPendingRegistration] = useState<PendingRegistration | null>(null);
 
-  // Restore a persisted session once on boot, so the app doesn't bounce to
-  // the login screen on every reload.
   useEffect(() => {
     (async () => {
       try {
@@ -77,9 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setToken(stored.token);
           setUser(stored.user);
         }
-      } catch {
-        // Corrupt/unreadable storage — treat as logged out rather than crash boot.
-      } finally {
+      } catch {} finally {
         setIsRestoring(false);
       }
     })();
@@ -100,8 +79,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await persist(result.token, nextUser);
       return nextUser;
     } finally {
-      // Runs on both success and failure — a failed attempt used to leave
-      // isLoading stuck true, permanently disabling the login form.
       setIsLoading(false);
     }
   };

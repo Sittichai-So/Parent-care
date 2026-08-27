@@ -15,8 +15,6 @@ type PromoCardProps = {
   icon: IconName;
 };
 
-/** The "people at a table" promo banner from the reference Home screen — sits
- *  under the header, illustration on the left, a single pill CTA on the right. */
 export function PromoCard({ title, ctaLabel, onPress, icon }: PromoCardProps) {
   const theme = useTheme();
 

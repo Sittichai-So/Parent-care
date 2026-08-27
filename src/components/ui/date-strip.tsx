@@ -10,15 +10,9 @@ type DateStripProps = {
   value: string | null;
   onChange: (dateKey: string) => void;
   daysAhead?: number;
-  /** Marks a day with the reference design's small dot (has something on that
-   *  day) — omit on a plain date picker like the appointment form's. */
   hasEventOn?: (dateKey: string) => boolean;
 };
 
-/** Horizontal day picker for the next `daysAhead` days — a lighter-weight choice
- *  than a full calendar dependency for a single "pick an upcoming day" control.
- *  Cells are sized as a primary tap target (not a dense calendar grid) since
- *  this is meant to be easy to hit for elder users, not just easy to scan. */
 export function DateStrip({ value, onChange, daysAhead = 30, hasEventOn }: DateStripProps) {
   const theme = useTheme();
 
@@ -32,11 +26,7 @@ export function DateStrip({ value, onChange, daysAhead = 30, hasEventOn }: DateS
       {days.map((date, index) => {
         const key = toDateKey(date);
         const active = key === value;
-        // Naming the first two days outright saves the user from having to
-        // do date math against a weekday abbreviation.
         const dayLabel = index === 0 ? 'วันนี้' : index === 1 ? 'พรุ่งนี้' : date.toLocaleDateString('th-TH', { weekday: 'short' });
-        // Only call out the month when it's not obvious from context — the
-        // very first cell, or wherever the strip crosses into a new month.
         const showMonth = index === 0 || date.getDate() === 1;
         const hasEvent = hasEventOn?.(key) ?? false;
         return (

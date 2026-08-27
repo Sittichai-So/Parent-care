@@ -35,10 +35,6 @@ import * as handoffNotesApi from '@/services/handoff-notes-api';
 import type { ApiHandoffNote } from '@/services/handoff-notes-api';
 import { daysFromToday, isToday, relativeDayLabel } from '@/utils/date';
 
-/** Icon per document `kind` — the backend stores `kind` as this exact Thai
- *  label (see documents-api.ts), so this is keyed on the label itself, not
- *  a slug. Unrecognized kinds (a label this app hasn't seen yet) fall back
- *  to a generic file icon rather than failing to render. */
 const documentKindIcons: Record<string, PhosphorIcon> = {
   ID: IdentificationCardIcon,
   สิทธิ์: SealCheckIcon,
@@ -64,10 +60,6 @@ type QuickLinkRowProps = {
   onPress: () => void;
 };
 
-/** "ยาของฉัน"/"นัดหมายของฉัน" — same row shape, different icon/chip color
- *  per case, so those come in as a rendered element rather than an icon
- *  component reference (myMedication's icon also switches `weight`
- *  fill/duotone depending on whether it's confirmed today). */
 function QuickLinkRow({ icon, chipBackground, title, subtitle, accessibilityLabel, onPress }: QuickLinkRowProps) {
   const theme = useTheme();
   return (
@@ -152,9 +144,6 @@ function TimelineRow({ item, isLast }: { item: FamilyEvent; isLast: boolean }) {
   );
 }
 
-/** "โปรไฟล์" tab — per the reference design's screen 10, including
- *  "บันทึกส่งต่อเวร" (handoff notes) and "เอกสารและสิทธิ์" (documents),
- *  both backed by real endpoints (handoff-notes-api.ts / documents-api.ts). */
 export default function ProfileScreen() {
   const router = useRouter();
   const theme = useTheme();
@@ -179,8 +168,6 @@ export default function ProfileScreen() {
   const [documents, setDocuments] = useState<ApiDocument[]>([]);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(true);
 
-  // Same react-hooks/set-state-in-effect situation as family-context.tsx
-  // (see its comment there) — batched by React 19 into one render regardless.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!currentHouseholdId) {
@@ -373,18 +360,14 @@ export default function ProfileScreen() {
         )}
       </View>
 
-      {/* Not in the reference design's own Profile screen — these are real
-       *  app features (self check-in shortcut, household activity feed)
-       *  that used to sit at the bottom of Home; moved here so Home ends
-       *  exactly where the reference design's Home does. */}
       <SectionHeader title="การดำเนินการด่วน" />
       <View style={styles.list}>
         <AppButton
-          label="ตรวจสอบสถานะ"
+          label="ฉันสบายดีวันนี้"
           phosphorIcon={CheckIcon}
           onPress={() => {
             checkIn()
-              .then(() => Alert.alert('บันทึกสำเร็จ', 'บันทึกการตรวจสอบสถานะเรียบร้อยแล้ว'))
+              .then(() => Alert.alert('เช็กอินแล้ว', 'บอกครอบครัวแล้วว่าวันนี้สบายดี'))
               .catch((err) => {
                 const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
                 Alert.alert('บันทึกไม่สำเร็จ', message);

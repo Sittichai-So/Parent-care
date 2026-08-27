@@ -1,12 +1,3 @@
-/**
- * Local-calendar-day date helpers.
- *
- * Every date in this app is keyed as `YYYY-MM-DD` derived from the device's local
- * time, not `Date#toISOString()` (which is UTC and can roll over to the wrong day
- * near midnight in Thailand's UTC+7). Use `toDateKey`/`todayKey` everywhere a date
- * needs to be compared or stored as a key.
- */
-
 export function toDateKey(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -28,7 +19,6 @@ export function addDays(date: Date, amount: number): Date {
   return next;
 }
 
-/** `dateKey` in `YYYY-MM-DD` → a Thai-locale display string, e.g. "12 สิงหาคม". */
 export function formatDateKey(
   dateKey: string,
   options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long' }
@@ -38,8 +28,6 @@ export function formatDateKey(
   return new Date(year, month - 1, day).toLocaleDateString('th-TH', options);
 }
 
-/** True when `dateKey` falls in the current calendar month/year — used for
- *  "N นัดหมายเดือนนี้"-style monthly counts. */
 export function isDateInCurrentMonth(dateKey: string): boolean {
   const [year, month] = dateKey.split('-').map(Number);
   if (!year || !month) return false;
@@ -47,7 +35,6 @@ export function isDateInCurrentMonth(dateKey: string): boolean {
   return year === today.getFullYear() && month === today.getMonth() + 1;
 }
 
-/** Days between `dateKey` and today. Negative when `dateKey` is in the past. */
 export function daysFromToday(dateKey: string): number {
   const [year, month, day] = dateKey.split('-').map(Number);
   if (!year || !month || !day) return 0;
@@ -58,7 +45,6 @@ export function daysFromToday(dateKey: string): number {
   return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-/** "อีก 2 วัน" / "วันนี้" / "ผ่านมาแล้ว 3 วัน" — used on appointment cards. */
 export function relativeDayLabel(dateKey: string): string {
   const diff = daysFromToday(dateKey);
   if (diff === 0) return 'วันนี้';

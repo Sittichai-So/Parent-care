@@ -17,18 +17,11 @@ type AppButtonProps = {
   onPress?: () => void;
   variant?: ButtonVariant;
   size?: ButtonSize;
-  /** Icon shown alongside the label. Marked as decorative for screen readers. */
   icon?: IconName;
-  /** Phosphor icon component — takes precedence over `icon` when given.
-   *  Newer screens built against the "Parent Care v3" reference design pass
-   *  this instead, since that design's icon set is Phosphor, not Ionicons;
-   *  `icon` stays for every screen that hasn't been migrated yet. */
   phosphorIcon?: PhosphorIcon;
-  /** Which side of the label `icon`/`phosphorIcon` renders on — e.g. `trailing` for a "Continue →" affordance. */
   iconPosition?: 'leading' | 'trailing';
   disabled?: boolean;
   loading?: boolean;
-  /** Supporting line under the label — helps elder-facing actions read clearly. */
   hint?: string;
   accessibilityHint?: string;
   style?: StyleProp<ViewStyle>;
@@ -53,10 +46,6 @@ export function AppButton({
 
   const palette: Record<ButtonVariant, { background: string; text: string; border: string }> = {
     primary: { background: theme.primary, text: theme.onPrimary, border: theme.primary },
-    // Light navy-tinted fill, navy text, no visible border — the reference
-    // design's one consistent "secondary button" look (login's "สร้างบัญชี
-    // ใหม่", medication confirm's "ถ่ายใหม่", etc.), not a neutral
-    // gray/bordered button.
     secondary: { background: theme.primarySoft, text: theme.primaryText, border: theme.primarySoft },
     danger: { background: theme.danger, text: theme.onPrimary, border: theme.danger },
     success: { background: theme.success, text: theme.onPrimary, border: theme.success },
@@ -101,9 +90,6 @@ export function AppButton({
           borderColor: border,
           paddingVertical: hint ? Spacing.two : 0,
         },
-        // The brand's signature blue→teal sweep, on the one button variant
-        // that's the primary call to action everywhere in the app — kept off
-        // `disabled` so a greyed-out button doesn't still read as vibrant.
         variant === 'primary' && !isDisabled && { experimental_backgroundImage: theme.brandGradient },
         raised && !isDisabled && { ...Elevation.medium, shadowColor: background },
         pressed && !isDisabled && styles.pressed,

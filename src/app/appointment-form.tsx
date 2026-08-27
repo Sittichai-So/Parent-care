@@ -34,8 +34,6 @@ export default function AppointmentFormScreen() {
 
   const editing = useMemo(() => appointments.find((apt) => apt.id === params.id), [appointments, params.id]);
 
-  // Elder has nothing to pick (always self); for Owner/Caregiver this is
-  // just the starting suggestion — the picker below can change it.
   const [selectedMemberId, setSelectedMemberId] = useState<string>(() => resolveDefaultMemberId(params.memberId));
   const memberId = editing?.memberId ?? selectedMemberId;
   const member = familyMembers.find((m) => m.id === memberId);
@@ -116,8 +114,6 @@ export default function AppointmentFormScreen() {
     ]);
   };
 
-  // Same restriction as medication-form.tsx — mirrors the backend's
-  // per-member write permission so a deep link can't reach a dead-end form.
   if (!canManageFor(memberId)) {
     return (
       <Screen center gap={Spacing.three}>

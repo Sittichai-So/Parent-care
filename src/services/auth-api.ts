@@ -4,9 +4,6 @@ export type ApiUser = {
   _id: string;
   name: string;
   email: string;
-  // Short code the user can share out-of-band so someone else can look them
-  // up by exact match (see households-api.ts#lookupUser) — null for
-  // accounts created before this field existed.
   userCode: string | null;
   phone: string | null;
   address: string | null;

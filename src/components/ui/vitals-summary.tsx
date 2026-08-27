@@ -11,7 +11,6 @@ import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
 import { formatDateKey, toDateKey } from '@/utils/date';
 
-/** Small inline icon + text pair, sized to sit on one line with the reading's value. */
 function Reading({ icon, children }: { icon: 'pulse-outline' | 'water-outline' | 'scale-outline'; children: ReactNode }) {
   const theme = useTheme();
   return (
@@ -24,18 +23,13 @@ function Reading({ icon, children }: { icon: 'pulse-outline' | 'water-outline' |
 
 type VitalsSummaryProps = {
   memberId: string;
-  /** Caregiver views show whose numbers these are; elder's own screen omits it. */
   showAddButton?: boolean;
 };
 
-/** Compact "last 3 readings" card, reused on the elder home and family-member detail. */
 export function VitalsSummary({ memberId, showAddButton = true }: VitalsSummaryProps) {
   const theme = useTheme();
   const router = useRouter();
   const { vitalLogs, canManageFor } = useFamilyContext();
-  // Owner/Caregiver may log for anyone, Elder only themself, Viewer never —
-  // same permission vitals-form.tsx itself enforces, checked here too so the
-  // button isn't offered somewhere it's guaranteed to be rejected.
   const canAdd = showAddButton && canManageFor(memberId);
 
   const recent = useMemo(

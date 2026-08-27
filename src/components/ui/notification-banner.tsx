@@ -9,10 +9,6 @@ import { Spacing } from '@/constants/theme';
 import { useNotificationPermission } from '@/hooks/use-notification-permission';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Nudges the user to grant notification permission on screens where medication
- *  or appointment reminders matter — without this, reminders are scheduled but
- *  silently never show, which reads as "the feature is broken". Renders nothing
- *  once permission is granted, or on platforms that don't support it (web). */
 export function NotificationBanner() {
   const theme = useTheme();
   const { supported, granted, request } = useNotificationPermission();

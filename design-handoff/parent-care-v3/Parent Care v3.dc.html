@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<script src="./image-slot.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;background:linear-gradient(160deg,#dbeafe 0%,#bfdbfe 55%,#a9cdf7 100%);color:#0f172a;font-family:"Plus Jakarta Sans","Noto Sans Thai",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#1e3a8a;text-decoration:none}a:hover{color:#2f4fbe}
+i{line-height:1;display:inline-block}
+@keyframes v3In{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes v3Up{from{transform:translateY(100%)}to{transform:none}}
+@keyframes v3Fade{from{opacity:0}to{opacity:1}}
+@keyframes v3Pop{0%{transform:scale(.85);opacity:0}60%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+@keyframes v3Ring{0%,100%{box-shadow:0 10px 22px rgba(30,58,138,.4)}50%{box-shadow:0 10px 34px rgba(30,58,138,.62)}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;box-sizing:border-box;padding:64px 48px 88px;display:flex;flex-direction:column;align-items:center;gap:44px">
+
+  <div style="width:100%;max-width:1040px;display:flex;align-items:flex-end;justify-content:space-between;gap:32px;flex-wrap:wrap;animation:v3Fade .4s ease-out">
+    <div>
+      <div style="font-size:13px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#3b5cb8">Parent Care · v3</div>
+      <div style="font-size:38px;font-weight:800;letter-spacing:-0.02em;padding-top:8px">ดูแลพ่อแม่ ง่ายในไม่กี่แตะ</div>
+    </div>
+    <p style="margin:0;max-width:430px;font-size:15px;line-height:1.65;color:#334769">เข้าสู่ระบบด้วยอีเมล + รหัสผ่าน สมัครใหม่พร้อมสร้างกลุ่มบ้านได้หลายกลุ่ม และสลับกลุ่มจากหัวจอ · 4 role มีชุดหน้าจอของตัวเอง (ผู้ดูแล · ผู้สูงอายุ · ผู้จัดการระบบ · ดูได้เท่านั้น) · ข้อมูลจาก repo จริง</p>
+  </div>
+
+  <div style="display:flex;gap:64px;align-items:flex-start;flex-wrap:wrap;justify-content:center">
+
+    <div style="display:flex;flex-direction:column;gap:16px;align-items:center;animation:v3In .5s ease-out both">
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+        <div data-screen-label="01 Login" style="position:relative;height:100%;background:#ffffff;display:flex;flex-direction:column;overflow:hidden">
+          <div style="position:relative;height:246px;background:#dbeafe;flex:none">
+            <div style="position:absolute;inset:56px 40px 78px;border-radius:18px;overflow:hidden;background:#c7dbfa;box-shadow:0 16px 34px rgba(30,58,138,.18)">
+              <image-slot id="v3-welcome-art" shape="rect" placeholder="วางภาพประกอบ"></image-slot>
+            </div>
+            <svg viewBox="0 0 402 70" preserveAspectRatio="none" style="position:absolute;bottom:-1px;left:0;width:100%;height:70px;display:block" aria-hidden="true">
+              <path d="M0 34C86 4 150 62 236 44 300 31 348 8 402 22V70H0Z" fill="#ffffff"></path>
+            </svg>
+          </div>
+
+          <div style="flex:1;overflow-y:auto;padding:2px 30px 36px">
+            <div style="font-size:15.5px;color:#64748b;font-weight:500">เข้าสู่ระบบ</div>
+            <div style="font-size:30px;font-weight:800;line-height:1.15;letter-spacing:-0.025em;padding-top:4px">Parent Care</div>
+
+            <div style="display:flex;flex-direction:column;gap:14px;padding-top:22px">
+              <label style="display:flex;flex-direction:column;gap:7px">
+                <span style="font-size:13px;font-weight:600;color:#475569">อีเมล</span>
+                <span style="display:flex;align-items:center;gap:10px;background:#f4f7fd;border-radius:14px;padding:0 14px;min-height:54px">
+                  <i class="ph-duotone ph-envelope-simple" aria-hidden="true" style="font-size:20px;color:#1e3a8a"></i>
+                  <input ref="{{ emailRef }}" type="email" aria-label="อีเมล" placeholder="caregiver@gmail.com" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:inherit;font-size:15px;min-height:44px">
+                </span>
+              </label>
+              <label style="display:flex;flex-direction:column;gap:7px">
+                <span style="font-size:13px;font-weight:600;color:#475569">รหัสผ่าน</span>
+                <span style="display:flex;align-items:center;gap:10px;background:#f4f7fd;border-radius:14px;padding:0 14px;min-height:54px">
+                  <i class="ph-duotone ph-lock-key" aria-hidden="true" style="font-size:20px;color:#1e3a8a"></i>
+                  <input ref="{{ passRef }}" type="password" aria-label="รหัสผ่าน" placeholder="1234" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:inherit;font-size:15px;min-height:44px">
+                </span>
+              </label>
+              <button onClick="{{ signIn }}" aria-label="เข้าสู่ระบบ" style="min-height:56px;background:#1e3a8a;color:#ffffff;border:none;border-radius:16px;font-family:inherit;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;box-shadow:0 10px 24px rgba(30,58,138,.3);transition:background .18s ease,transform .12s ease" style-hover="background:#2f4fbe" style-active="transform:scale(.985)">เข้าสู่ระบบ<i class="ph-fill ph-arrow-right" aria-hidden="true" style="font-size:18px"></i></button>
+              <div role="status" style="min-height:20px;font-size:13px;color:{{ loginNoteInk }};text-align:center">{{ loginNote }}</div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:12px;padding:20px 0 16px">
+              <span style="flex:1;height:1px;background:#e6ecf7"></span>
+              <span style="font-size:12.5px;color:#94a3b8">หรือ</span>
+              <span style="flex:1;height:1px;background:#e6ecf7"></span>
+            </div>
+            <button onClick="{{ goRegister }}" aria-label="สร้างบัญชีใหม่" style="width:100%;min-height:54px;background:#eef3fd;color:#1e3a8a;border:none;border-radius:16px;font-family:inherit;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:background .18s ease" style-hover="background:#dde7fb"><i class="ph-duotone ph-user-plus" aria-hidden="true" style="font-size:21px"></i>สร้างบัญชีใหม่</button>
+            <div style="text-align:center;font-size:13px;color:#94a3b8;padding-top:14px;line-height:1.5">ลืมรหัสผ่าน? ติดต่อผู้ดูแลกลุ่มบ้านของคุณ</div>
+          </div>
+        </div>
+      </x-import>
+      <div style="font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#3b5cb8">01 Login</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px;align-items:center;animation:v3In .5s .04s ease-out both">
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+        <div data-screen-label="02 Register" style="position:relative;height:100%;background:#ffffff;display:flex;flex-direction:column;overflow:hidden">
+          <div style="background:#1e3a8a;color:#ffffff;padding:52px 24px 22px;flex:none">
+            <div style="display:flex;align-items:center;gap:12px">
+              <button onClick="{{ goLogin }}" aria-label="กลับไปหน้าเข้าสู่ระบบ" style="width:40px;height:40px;border-radius:12px;background:#2a4ba5;border:none;color:#ffffff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none" style-hover="background:#3559bd"><i class="ph-fill ph-caret-left" aria-hidden="true" style="font-size:17px"></i></button>
+              <div style="min-width:0">
+                <div style="font-size:20px;font-weight:700">สร้างบัญชี</div>
+                <div style="font-size:12.5px;color:#bfd3f7;padding-top:3px">ขั้นที่ {{ regStepNum }} จาก 2</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;padding-top:16px">
+              <span style="flex:1;height:4px;border-radius:2px;background:#ffffff"></span>
+              <span style="flex:1;height:4px;border-radius:2px;background:{{ regStep2Bar }}"></span>
+            </div>
+          </div>
+
+          <div style="flex:1;overflow-y:auto;padding:18px 24px 36px;background:#f4f7fd">
+
+            <sc-if value="{{ regStepAccount }}">
+              <div style="animation:v3In .28s ease-out;display:flex;flex-direction:column;gap:14px">
+                <label style="display:flex;flex-direction:column;gap:7px">
+                  <span style="font-size:13px;font-weight:600;color:#475569">ชื่อที่ใช้แสดง</span>
+                  <input ref="{{ regNameRef }}" aria-label="ชื่อที่ใช้แสดง" placeholder="คุณสมชาย" style="min-height:54px;border:none;border-radius:14px;background:#ffffff;padding:0 16px;font-family:inherit;font-size:15px;outline:none;box-shadow:0 6px 16px rgba(15,23,42,.05)">
+                </label>
+                <label style="display:flex;flex-direction:column;gap:7px">
+                  <span style="font-size:13px;font-weight:600;color:#475569">อีเมล</span>
+                  <input ref="{{ regEmailRef }}" type="email" aria-label="อีเมล" placeholder="you@gmail.com" style="min-height:54px;border:none;border-radius:14px;background:#ffffff;padding:0 16px;font-family:inherit;font-size:15px;outline:none;box-shadow:0 6px 16px rgba(15,23,42,.05)">
+                </label>
+                <label style="display:flex;flex-direction:column;gap:7px">
+                  <span style="font-size:13px;font-weight:600;color:#475569">รหัสผ่าน</span>
+                  <input ref="{{ regPassRef }}" type="password" aria-label="รหัสผ่าน" placeholder="อย่างน้อย 4 ตัวอักษร" style="min-height:54px;border:none;border-radius:14px;background:#ffffff;padding:0 16px;font-family:inherit;font-size:15px;outline:none;box-shadow:0 6px 16px rgba(15,23,42,.05)">
+                </label>
+
+                <div style="font-size:13px;font-weight:600;color:#475569;padding-top:6px">บทบาทของคุณ</div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <sc-for list="{{ regRoles }}" as="r" hint-placeholder-count="3">
+                    <button onClick="{{ r.onPick }}" aria-label="{{ r.aria }}" aria-pressed="{{ r.active }}" style="width:100%;min-height:64px;display:grid;grid-template-columns:40px 1fr 22px;gap:12px;align-items:center;text-align:left;background:{{ r.bg }};border:2px solid {{ r.border }};border-radius:14px;padding:10px 12px;cursor:pointer;font-family:inherit;transition:background .18s ease">
+                      <span style="width:40px;height:40px;border-radius:12px;background:#e8effb;color:#1e3a8a;display:flex;align-items:center;justify-content:center"><i class="{{ r.icon }}" aria-hidden="true" style="font-size:21px"></i></span>
+                      <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                        <span style="font-size:14.5px;font-weight:700">{{ r.label }}</span>
+                        <span style="font-size:12.5px;color:#64748b;line-height:1.35">{{ r.detail }}</span>
+                      </span>
+                      <i class="{{ r.check }}" aria-hidden="true" style="font-size:19px;color:{{ r.checkInk }}"></i>
+                    </button>
+                  </sc-for>
+                </div>
+
+                <button onClick="{{ regNext }}" style="min-height:56px;margin-top:8px;background:#1e3a8a;color:#ffffff;border:none;border-radius:16px;font-family:inherit;font-size:16.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:background .18s ease,transform .12s ease" style-hover="background:#2f4fbe" style-active="transform:scale(.985)">ต่อไป · กลุ่มบ้าน<i class="ph-fill ph-arrow-right" aria-hidden="true" style="font-size:17px"></i></button>
+                <div role="status" style="min-height:20px;font-size:13px;color:#b45309;text-align:center">{{ regNote }}</div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ regStepGroups }}">
+              <div style="animation:v3In .28s ease-out">
+                <div style="font-size:16px;font-weight:800">กลุ่มบ้านของคุณ</div>
+                <div style="font-size:13.5px;color:#64748b;padding-top:6px;line-height:1.55">เพิ่มได้หลายกลุ่ม เช่น บ้านพ่อแม่ บ้านแฟน หรือบ้านญาติ แล้วเลือกกลุ่มที่จะเปิดเป็นค่าเริ่มต้น</div>
+
+                <div style="display:flex;flex-direction:column;gap:10px;padding-top:16px">
+                  <sc-for list="{{ regGroups }}" as="g" hint-placeholder-count="2">
+                    <div style="background:#ffffff;border:2px solid {{ g.border }};border-radius:16px;padding:13px 14px;box-shadow:0 6px 16px rgba(15,23,42,.05)">
+                      <div style="display:grid;grid-template-columns:42px 1fr auto;gap:12px;align-items:center">
+                        <span style="width:42px;height:42px;border-radius:13px;background:{{ g.chipBg }};display:flex;align-items:center;justify-content:center"><i class="{{ g.icon }}" aria-hidden="true" style="font-size:22px;color:#1e3a8a"></i></span>
+                        <span style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                          <span style="font-size:15px;font-weight:700">{{ g.name }}</span>
+                          <span style="font-size:12.5px;color:#64748b">{{ g.meta }}</span>
+                        </span>
+                        <button onClick="{{ g.onRemove }}" aria-label="ลบกลุ่ม {{ g.name }}" style="flex:none;width:40px;height:40px;border-radius:12px;background:#f4f7fd;border:none;color:#94a3b8;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="color:#b91c1c"><i class="ph-duotone ph-trash" aria-hidden="true" style="font-size:19px"></i></button>
+                      </div>
+                      <button onClick="{{ g.onDefault }}" aria-label="ตั้ง {{ g.name }} เป็นค่าเริ่มต้น" aria-pressed="{{ g.isDefault }}" style="width:100%;margin-top:11px;min-height:44px;display:flex;align-items:center;justify-content:center;gap:8px;background:{{ g.defBg }};color:{{ g.defInk }};border:none;border-radius:12px;font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;transition:background .18s ease"><i class="{{ g.defIcon }}" aria-hidden="true" style="font-size:17px"></i>{{ g.defLabel }}</button>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <div style="background:#ffffff;border-radius:16px;padding:14px;margin-top:12px;box-shadow:0 6px 16px rgba(15,23,42,.05)">
+                  <div style="font-size:13.5px;font-weight:700;padding-bottom:10px">เพิ่มกลุ่มบ้าน</div>
+                  <div style="display:flex;flex-direction:column;gap:10px">
+                    <input ref="{{ newGroupRef }}" aria-label="ชื่อกลุ่มบ้าน" placeholder="เช่น บ้านแฟน, บ้านคุณย่า" style="min-height:52px;border:none;border-radius:13px;background:#f4f7fd;padding:0 14px;font-family:inherit;font-size:14.5px;outline:none">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                      <sc-for list="{{ groupKinds }}" as="k" hint-placeholder-count="4">
+                        <button onClick="{{ k.onPick }}" aria-label="ประเภท {{ k.label }}" aria-pressed="{{ k.active }}" style="flex:none;min-height:44px;padding:0 14px;display:flex;align-items:center;gap:8px;background:{{ k.bg }};color:{{ k.fg }};border:none;border-radius:999px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .18s ease"><i class="{{ k.icon }}" aria-hidden="true" style="font-size:17px"></i>{{ k.label }}</button>
+                      </sc-for>
+                    </div>
+                    <button onClick="{{ addGroup }}" style="min-height:50px;background:#eef3fd;color:#1e3a8a;border:none;border-radius:13px;font-family:inherit;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;transition:background .18s ease" style-hover="background:#dde7fb"><i class="ph-duotone ph-plus-circle" aria-hidden="true" style="font-size:20px"></i>เพิ่มกลุ่ม</button>
+                  </div>
+                </div>
+
+                <button onClick="{{ finishRegister }}" style="width:100%;margin-top:16px;min-height:58px;background:#1e3a8a;color:#ffffff;border:none;border-radius:16px;font-family:inherit;font-size:17px;font-weight:700;cursor:pointer;transition:background .18s ease,transform .12s ease" style-hover="background:#2f4fbe" style-active="transform:scale(.985)">สร้างบัญชีและเริ่มใช้งาน</button>
+                <button onClick="{{ regBack }}" style="width:100%;margin-top:10px;min-height:50px;background:transparent;color:#1e3a8a;border:none;font-family:inherit;font-size:14.5px;font-weight:600;cursor:pointer">ย้อนกลับ</button>
+              </div>
+            </sc-if>
+
+          </div>
+        </div>
+      </x-import>
+      <div style="font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#3b5cb8">02 Register · กลุ่มบ้าน</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px;align-items:center;animation:v3In .5s .08s ease-out both">
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+        <div style="position:relative;height:100%;background:#f4f7fd;display:flex;flex-direction:column;overflow:hidden">
+
+          <div style="background:#1e3a8a;padding:52px 20px 24px;color:#ffffff;flex:none">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+              <div style="flex:1;min-width:0">
+                <button onClick="{{ toggleGroupMenu }}" aria-label="สลับกลุ่มบ้าน" aria-expanded="{{ groupMenuOpen }}" style="display:flex;align-items:center;gap:8px;background:#2a4ba5;border:none;border-radius:999px;padding:6px 12px;min-height:36px;color:#ffffff;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;max-width:100%;transition:background .18s ease" style-hover="background:#3559bd"><i class="{{ activeGroup.icon }}" aria-hidden="true" style="font-size:16px"></i><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ activeGroup.name }}</span><i class="ph-fill ph-caret-down" aria-hidden="true" style="font-size:12px"></i></button>
+                <div style="font-size:19px;font-weight:700;letter-spacing:-0.01em;text-wrap:balance;padding-top:8px">{{ headerTitle }}</div>
+                <div style="font-size:12.5px;color:#bfd3f7;padding-top:4px">{{ headerSub }}</div>
+              </div>
+              <div style="display:flex;gap:10px;flex:none">
+                <button onClick="{{ goMessages }}" aria-label="ข้อความครอบครัว" style="width:44px;height:44px;border-radius:14px;background:#2a4ba5;border:none;color:#ffffff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .18s ease" style-hover="background:#3559bd"><i class="ph-duotone ph-chat-teardrop-dots" aria-hidden="true" style="font-size:22px"></i></button>
+                <button onClick="{{ goNotices }}" aria-label="การแจ้งเตือน" style="position:relative;width:44px;height:44px;border-radius:14px;background:#2a4ba5;border:none;color:#ffffff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .18s ease" style-hover="background:#3559bd"><i class="ph-duotone ph-bell" aria-hidden="true" style="font-size:22px"></i>
+                  <sc-if value="{{ hasAlert }}">
+                    <span style="position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:50%;background:#fbbf24;box-shadow:0 0 0 2px #2a4ba5"></span>
+                  </sc-if>
+                </button>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;margin-top:18px;background:#ffffff;border-radius:999px;padding:0 16px;min-height:52px;box-shadow:0 8px 18px rgba(15,23,42,.14)">
+              <i class="ph-duotone ph-magnifying-glass" aria-hidden="true" style="font-size:20px;color:#64748b"></i>
+              <input aria-label="ค้นหายา นัดหมาย หรือสมาชิก" placeholder="ค้นหายา นัดหมาย สมาชิก..." style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:inherit;font-size:14.5px;color:#0f172a;min-height:44px">
+              <i class="ph-duotone ph-microphone" aria-hidden="true" style="font-size:20px;color:#1e3a8a"></i>
+            </div>
+          </div>
+
+          <sc-if value="{{ groupMenuOpen }}">
+            <div style="position:absolute;inset:0;background:rgba(15,23,42,.34);z-index:70;display:flex;align-items:flex-end;animation:v3Fade .16s ease-out">
+              <div style="width:100%;background:#ffffff;border-radius:24px 24px 0 0;padding:20px 20px 34px;animation:v3Up .24s cubic-bezier(.2,.8,.2,1)">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+                  <span style="font-size:17px;font-weight:800">กลุ่มบ้านของฉัน</span>
+                  <button onClick="{{ toggleGroupMenu }}" aria-label="ปิด" style="width:40px;height:40px;border-radius:12px;background:#f4f7fd;border:none;color:#64748b;display:flex;align-items:center;justify-content:center;cursor:pointer"><i class="ph-fill ph-x" aria-hidden="true" style="font-size:16px"></i></button>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px;padding-top:14px">
+                  <sc-for list="{{ groupList }}" as="g" hint-placeholder-count="2">
+                    <div style="border:2px solid {{ g.border }};border-radius:16px;padding:12px 14px;background:{{ g.bg }}">
+                      <button onClick="{{ g.onSwitch }}" aria-label="เปลี่ยนไปกลุ่ม {{ g.name }}" style="width:100%;display:grid;grid-template-columns:42px 1fr auto;gap:12px;align-items:center;text-align:left;background:transparent;border:none;padding:0;cursor:pointer;font-family:inherit;min-height:48px">
+                        <span style="width:42px;height:42px;border-radius:13px;background:#eaf1fe;display:flex;align-items:center;justify-content:center"><i class="{{ g.icon }}" aria-hidden="true" style="font-size:22px;color:#1e3a8a"></i></span>
+                        <span style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                          <span style="font-size:15px;font-weight:700">{{ g.name }}</span>
+                          <span style="font-size:12.5px;color:#64748b">{{ g.meta }}</span>
+                        </span>
+                        <i class="{{ g.mark }}" aria-hidden="true" style="font-size:20px;color:{{ g.markInk }}"></i>
+                      </button>
+                      <button onClick="{{ g.onDefault }}" aria-label="ตั้ง {{ g.name }} เป็นค่าเริ่มต้น" aria-pressed="{{ g.isDefault }}" style="width:100%;margin-top:10px;min-height:44px;display:flex;align-items:center;justify-content:center;gap:8px;background:{{ g.defBg }};color:{{ g.defInk }};border:none;border-radius:12px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer"><i class="{{ g.defIcon }}" aria-hidden="true" style="font-size:16px"></i>{{ g.defLabel }}</button>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <div style="background:#f4f7fd;border-radius:16px;padding:14px;margin-top:14px">
+                  <div style="font-size:13.5px;font-weight:700;padding-bottom:10px">เพิ่มบ้านที่ต้องไปดูแล</div>
+                  <div style="display:flex;flex-direction:column;gap:10px">
+                    <input ref="{{ newGroupRef }}" aria-label="ชื่อกลุ่มบ้านใหม่" placeholder="เช่น บ้านคุณย่า" style="min-height:52px;border:none;border-radius:13px;background:#ffffff;padding:0 14px;font-family:inherit;font-size:14.5px;outline:none">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                      <sc-for list="{{ groupKinds }}" as="k" hint-placeholder-count="4">
+                        <button onClick="{{ k.onPick }}" aria-label="ประเภท {{ k.label }}" aria-pressed="{{ k.active }}" style="flex:none;min-height:44px;padding:0 14px;display:flex;align-items:center;gap:8px;background:{{ k.bg }};color:{{ k.fg }};border:none;border-radius:999px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap"><i class="{{ k.icon }}" aria-hidden="true" style="font-size:17px"></i>{{ k.label }}</button>
+                      </sc-for>
+                    </div>
+                    <button onClick="{{ addGroup }}" style="min-height:50px;background:#1e3a8a;color:#ffffff;border:none;border-radius:13px;font-family:inherit;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer" style-hover="background:#2f4fbe"><i class="ph-duotone ph-plus-circle" aria-hidden="true" style="font-size:20px"></i>เพิ่มบ้าน</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <div style="flex:1;overflow-y:auto;padding-bottom:20px">
+
+            <sc-if value="{{ readOnly }}">
+              <div style="margin:-8px 18px 0;background:#fff7e6;border-radius:14px;padding:12px 14px;display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:center">
+                <i class="ph-duotone ph-eye" aria-hidden="true" style="font-size:20px;color:#b45309"></i>
+                <span style="font-size:13px;color:#7c4a03;line-height:1.4">โหมดดูได้เท่านั้น — บันทึกและยืนยันข้อมูลไม่ได้</span>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isElderHome }}">
+              <div data-screen-label="E1 Elder home" style="animation:v3In .3s ease-out;padding-top:6px">
+                <div style="margin:-10px 18px 0;background:#ffffff;border-radius:22px;padding:20px;box-shadow:0 12px 26px rgba(15,23,42,.08);text-align:center">
+                  <div style="font-size:26px;font-weight:800;letter-spacing:-0.015em">สวัสดีครับ {{ elderName }}</div>
+                  <div style="font-size:17px;color:#475569;padding-top:8px;line-height:1.5">{{ elderStatusLine }}</div>
+                  <button onClick="{{ checkIn }}" aria-label="เช็กอินว่าสบายดี" style="width:100%;margin-top:16px;min-height:64px;background:{{ checkInBg }};color:#ffffff;border:none;border-radius:18px;font-family:inherit;font-size:19px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:12px;cursor:pointer;transition:background .2s ease,transform .12s ease" style-active="transform:scale(.985)"><i class="ph-fill ph-hand-heart" aria-hidden="true" style="font-size:26px"></i>{{ checkInLabel }}</button>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:12px;padding:16px 18px 0">
+                  <sc-for list="{{ elderActions }}" as="a" hint-placeholder-count="3">
+                    <button onClick="{{ a.onPick }}" aria-label="{{ a.label }}" style="width:100%;min-height:92px;display:grid;grid-template-columns:56px 1fr 22px;gap:14px;align-items:center;text-align:left;background:#ffffff;border:2px solid {{ a.border }};border-radius:20px;padding:14px;cursor:pointer;box-shadow:0 10px 22px rgba(15,23,42,.07);transition:transform .14s ease,box-shadow .18s ease" style-hover="box-shadow:0 16px 30px rgba(15,23,42,.13)" style-active="transform:scale(.985)">
+                      <span style="width:56px;height:56px;border-radius:18px;background:{{ a.chipBg }};display:flex;align-items:center;justify-content:center"><i class="{{ a.icon }}" aria-hidden="true" style="font-size:32px;color:{{ a.ink }}"></i></span>
+                      <span style="display:flex;flex-direction:column;gap:5px;min-width:0">
+                        <span style="font-size:20px;font-weight:800">{{ a.label }}</span>
+                        <span style="font-size:15px;color:#64748b;line-height:1.4">{{ a.detail }}</span>
+                      </span>
+                      <i class="ph-fill ph-caret-right" aria-hidden="true" style="font-size:20px;color:#94a3b8"></i>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isPerms }}">
+              <div data-screen-label="A1 Members & access" style="animation:v3In .3s ease-out;padding-top:8px">
+                <div style="padding:14px 20px 12px;font-size:18px;font-weight:800">สมาชิกและสิทธิ์การเข้าถึง</div>
+                <div style="display:flex;flex-direction:column;gap:10px;padding:0 18px">
+                  <sc-for list="{{ accessRows }}" as="r" hint-placeholder-count="4">
+                    <div style="background:#ffffff;border-radius:18px;padding:14px;box-shadow:0 8px 18px rgba(15,23,42,.06)">
+                      <div style="display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center">
+                        <span style="width:44px;height:44px;border-radius:13px;background:#e8effb;color:#1e3a8a;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800">{{ r.initials }}</span>
+                        <span style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                          <span style="font-size:15px;font-weight:700">{{ r.name }}</span>
+                          <span style="font-size:12.5px;color:#64748b">{{ r.email }}</span>
+                        </span>
+                        <span style="flex:none;white-space:nowrap;background:{{ r.chipBg }};color:{{ r.ink }};font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:999px">{{ r.role }}</span>
+                      </div>
+                      <div style="display:flex;flex-wrap:wrap;gap:8px;padding-top:12px">
+                        <sc-for list="{{ r.perms }}" as="p" hint-placeholder-count="3">
+                          <span style="display:inline-flex;align-items:center;gap:6px;background:{{ p.bg }};color:{{ p.ink }};font-size:11.5px;font-weight:600;padding:6px 11px;border-radius:999px;white-space:nowrap"><i class="{{ p.icon }}" aria-hidden="true" style="font-size:14px"></i>{{ p.label }}</span>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isAudit }}">
+              <div data-screen-label="A2 Audit log" style="animation:v3In .3s ease-out;padding-top:8px">
+                <div style="padding:14px 20px 12px;font-size:18px;font-weight:800">บันทึกการใช้งานระบบ</div>
+                <div style="display:flex;flex-direction:column;gap:10px;padding:0 18px">
+                  <sc-for list="{{ auditRows }}" as="a" hint-placeholder-count="5">
+                    <div style="display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start;background:#ffffff;border-radius:16px;padding:13px 14px;box-shadow:0 6px 16px rgba(15,23,42,.05)">
+                      <span style="width:40px;height:40px;border-radius:12px;background:{{ a.chipBg }};display:flex;align-items:center;justify-content:center"><i class="{{ a.icon }}" aria-hidden="true" style="font-size:20px;color:{{ a.ink }}"></i></span>
+                      <span style="display:flex;flex-direction:column;gap:4px;min-width:0">
+                        <span style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                          <span style="font-size:14px;font-weight:700">{{ a.title }}</span>
+                          <span style="font-size:11.5px;color:#94a3b8;white-space:nowrap">{{ a.time }}</span>
+                        </span>
+                        <span style="font-size:13px;color:#475569;line-height:1.45">{{ a.detail }}</span>
+                      </span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+              <div data-screen-label="02 Home" style="animation:v3In .3s ease-out">
+                <div style="margin:-14px 18px 0;background:#eaf1fe;border-radius:18px;padding:12px;display:flex;align-items:center;gap:12px;box-shadow:0 12px 26px rgba(30,58,138,.14)">
+                  <div style="width:92px;height:64px;border-radius:12px;flex:none;background:#d5e4fb;display:flex;align-items:center;justify-content:center"><i class="ph-duotone ph-calendar-plus" aria-hidden="true" style="font-size:30px;color:#1e3a8a"></i></div>
+                  <button onClick="{{ goCalendar }}" aria-label="จองนัดหมาย" style="flex:1;min-width:0;white-space:nowrap;min-height:52px;background:#1e3a8a;color:#ffffff;border:none;border-radius:14px;font-family:inherit;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:background .18s ease,transform .12s ease" style-hover="background:#2f4fbe" style-active="transform:scale(.98)">จองนัดหมาย<i class="ph-fill ph-arrow-right" aria-hidden="true" style="font-size:17px"></i></button>
+                </div>
+
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:24px 20px 12px">
+                  <span style="font-size:16px;font-weight:700">นัดหมายของคุณ</span>
+                  <button onClick="{{ goCalendar }}" style="flex:none;white-space:nowrap;background:transparent;border:none;color:#1e3a8a;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;min-height:44px;padding:0">ดูทั้งหมด</button>
+                </div>
+
+                <div style="margin:0 18px;background:#ffffff;border-radius:18px;padding:16px;box-shadow:0 12px 24px rgba(15,23,42,.08)">
+                  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+                    <span style="font-size:14.5px;font-weight:600;color:#1e3a8a">{{ appt.kind }}</span>
+                    <span style="flex:none;white-space:nowrap;background:#fde68a;color:#7c4a03;font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px">{{ appt.tag }}</span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:10px;padding-top:14px">
+                    <div style="display:flex;align-items:center;gap:10px;font-size:15px"><i class="ph-duotone ph-calendar-dots" aria-hidden="true" style="font-size:20px;color:#1e3a8a"></i>{{ appt.date }}</div>
+                    <div style="display:flex;align-items:center;gap:10px;font-size:15px"><i class="ph-duotone ph-clock" aria-hidden="true" style="font-size:20px;color:#1e3a8a"></i>{{ appt.time }}</div>
+                    <div style="display:flex;align-items:center;gap:10px;font-size:15px"><i class="ph-duotone ph-map-pin" aria-hidden="true" style="font-size:20px;color:#1e3a8a"></i>{{ appt.place }}</div>
+                  </div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;padding-top:14px;border-top:1px solid #e6ecf7">
+                    <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                      <span style="font-size:15px;font-weight:700">{{ appt.doctor }}</span>
+                      <span style="font-size:13px;color:#64748b">{{ appt.dept }}</span>
+                    </span>
+                    <button onClick="{{ goMessages }}" aria-label="ส่งข้อความถึงแพทย์" style="flex:none;white-space:nowrap;min-height:44px;padding:0 14px;background:#eef3fd;color:#1e3a8a;border:none;border-radius:12px;font-family:inherit;font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:8px;cursor:pointer;transition:background .18s ease" style-hover="background:#dde7fb">ส่งข้อความ<i class="ph-duotone ph-chat-teardrop-dots" aria-hidden="true" style="font-size:17px"></i></button>
+                  </div>
+                </div>
+
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:26px 20px 12px">
+                  <span style="font-size:16px;font-weight:700">สมาชิกในบ้านวันนี้</span>
+                  <button onClick="{{ goFamily }}" style="flex:none;white-space:nowrap;background:transparent;border:none;color:#1e3a8a;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;min-height:44px;padding:0">ดูทั้งหมด</button>
+                </div>
+                <div style="display:flex;gap:12px;overflow-x:auto;padding:0 18px 6px">
+                  <sc-for list="{{ members }}" as="m" hint-placeholder-count="3">
+                    <button onClick="{{ m.onOpen }}" aria-label="{{ m.aria }}" style="flex:none;width:132px;background:#ffffff;border:1px solid {{ m.border }};border-radius:18px;padding:12px;text-align:left;cursor:pointer;box-shadow:0 8px 20px rgba(15,23,42,.06);transition:transform .14s ease,box-shadow .18s ease" style-hover="box-shadow:0 14px 28px rgba(15,23,42,.12)" style-active="transform:scale(.98)">
+                      <span style="display:flex;align-items:center;justify-content:center;width:100%;height:72px;border-radius:12px;background:#e8effb;color:#1e3a8a;font-size:24px;font-weight:800;letter-spacing:.02em">{{ m.initials }}</span>
+                      <span style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:10px">
+                        <span style="font-size:14.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.name }}</span>
+                        <i class="{{ m.statusIcon }}" aria-hidden="true" style="font-size:18px;color:{{ m.ink }}"></i>
+                      </span>
+                      <span style="display:block;font-size:12.5px;color:#64748b;padding-top:3px;line-height:1.35">{{ m.detail }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+
+                <div style="padding:26px 20px 10px;font-size:16px;font-weight:700">ยาวันนี้ · รวมของฉัน</div>
+                <div style="display:flex;flex-direction:column;gap:10px;padding:0 18px">
+                  <sc-for list="{{ medTasks }}" as="mt" hint-placeholder-count="3">
+                    <button onClick="{{ mt.onOpen }}" aria-label="{{ mt.aria }}" aria-disabled="{{ editDisabled }}" style="width:100%;min-height:72px;display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;text-align:left;background:#ffffff;border:none;border-radius:16px;padding:12px 14px;cursor:{{ editCursor }};opacity:{{ editOpacity }};box-shadow:0 8px 18px rgba(15,23,42,.06);transition:transform .12s ease,box-shadow .18s ease">
+                      <span style="width:44px;height:44px;border-radius:13px;background:{{ mt.chipBg }};display:flex;align-items:center;justify-content:center"><i class="{{ mt.icon }}" aria-hidden="true" style="font-size:23px;color:{{ mt.ink }}"></i></span>
+                      <span style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                        <span style="font-size:15px;font-weight:700">{{ mt.title }}</span>
+                        <span style="font-size:13px;color:#64748b;line-height:1.4">{{ mt.detail }}</span>
+                      </span>
+                      <span style="flex:none;white-space:nowrap;font-size:12.5px;font-weight:700;color:{{ mt.ink }}">{{ mt.statusLabel }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+
+                <div style="padding:26px 20px 10px;font-size:16px;font-weight:700">งานอื่นวันนี้</div>
+                <div style="display:flex;flex-direction:column;gap:10px;padding:0 18px">
+                  <sc-for list="{{ taskList }}" as="t" hint-placeholder-count="3">
+                    <button onClick="{{ t.onToggle }}" aria-label="{{ t.aria }}" aria-pressed="{{ t.done }}" aria-disabled="{{ editDisabled }}" style="width:100%;min-height:68px;display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;text-align:left;background:#ffffff;border:none;border-radius:16px;padding:12px 14px;cursor:{{ editCursor }};opacity:{{ editOpacity }};box-shadow:0 8px 18px rgba(15,23,42,.06);transition:transform .12s ease,box-shadow .18s ease">
+                      <span style="width:44px;height:44px;border-radius:13px;background:{{ t.chipBg }};display:flex;align-items:center;justify-content:center"><i class="{{ t.icon }}" aria-hidden="true" style="font-size:23px;color:{{ t.ink }}"></i></span>
+                      <span style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                        <span style="font-size:15px;font-weight:700">{{ t.title }}</span>
+                        <span style="font-size:13px;color:#64748b;line-height:1.4">{{ t.detail }}</span>
+                      </span>
+                      <span style="flex:none;white-space:nowrap;font-size:12.5px;font-weight:700;color:{{ t.ink }}">{{ t.statusLabel }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isFamily }}">
+              <div data-screen-label="03 Family" style="animation:v3In .3s ease-out;padding-top:8px">
+                <div style="padding:14px 20px 12px;font-size:18px;font-weight:800">สมาชิกในบ้าน</div>
+                <div style="display:flex;flex-direction:column;gap:12px;padding:0 18px">
+                  <sc-for list="{{ members }}" as="m" hint-placeholder-count="3">
+                    <button onClick="{{ m.onOpen }}" aria-label="{{ m.aria }}" style="width:100%;display:grid;grid-template-columns:64px 1fr 22px;gap:14px;align-items:center;text-align:left;background:#ffffff;border:1px solid {{ m.border }};border-radius:18px;padding:14px;cursor:pointer;min-height:92px;box-shadow:0 8px 20px rgba(15,23,42,.06);transition:transform .12s ease,box-shadow .18s ease" style-hover="box-shadow:0 14px 28px rgba(15,23,42,.12)" style-active="transform:scale(.99)">
+                      <span style="display:flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:16px;background:#e8effb;color:#1e3a8a;font-size:21px;font-weight:800;flex:none">{{ m.initials }}</span>
+                      <span style="display:flex;flex-direction:column;gap:6px;min-width:0">
+                        <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                          <span style="font-size:16.5px;font-weight:700">{{ m.name }}</span>
+                          <span style="font-size:13px;color:#64748b">{{ m.relation }}</span>
+                        </span>
+                        <span style="display:inline-flex;align-items:center;gap:6px;align-self:flex-start;background:{{ m.chipBg }};color:{{ m.ink }};font-size:12.5px;font-weight:700;padding:5px 12px;border-radius:999px;white-space:nowrap"><i class="{{ m.statusIcon }}" aria-hidden="true" style="font-size:15px"></i>{{ m.statusLabel }}</span>
+                        <span style="font-size:13.5px;color:#475569;line-height:1.4">{{ m.detail }}</span>
+                      </span>
+                      <i class="ph-fill ph-caret-right" aria-hidden="true" style="font-size:18px;color:#94a3b8"></i>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isMember }}">
+              <div data-screen-label="04 Member" style="animation:v3In .3s ease-out;padding-top:8px">
+                <button onClick="{{ goFamily }}" aria-label="กลับไปสมาชิกในบ้าน" style="margin:12px 18px 0;min-height:44px;padding:0 14px;background:#eef3fd;color:#1e3a8a;border:none;border-radius:12px;font-family:inherit;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap" style-hover="background:#dde7fb"><i class="ph-fill ph-caret-left" aria-hidden="true" style="font-size:16px"></i>สมาชิกในบ้าน</button>
+
+                <div style="margin:14px 18px 0;background:#ffffff;border-radius:20px;padding:16px;box-shadow:0 12px 26px rgba(15,23,42,.08);display:grid;grid-template-columns:132px 1fr;gap:16px;align-items:center">
+                  <span style="width:132px;height:150px;border-radius:16px;overflow:hidden;background:#e8effb;flex:none">
+                    <image-slot id="{{ mem.heroSlot }}" shape="rect" placeholder="วางรูป"></image-slot>
+                  </span>
+                  <span style="display:flex;flex-direction:column;gap:8px;min-width:0">
+                    <span style="font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#3b5cb8">{{ mem.role }}</span>
+                    <span style="font-size:24px;font-weight:800;letter-spacing:-0.015em;line-height:1.15;text-wrap:balance">{{ mem.name }}</span>
+                    <span style="display:inline-flex;align-items:center;gap:6px;align-self:flex-start;background:{{ mem.chipBg }};color:{{ mem.ink }};font-size:12.5px;font-weight:700;padding:5px 12px;border-radius:999px;white-space:nowrap"><i class="{{ mem.statusIcon }}" aria-hidden="true" style="font-size:15px"></i>{{ mem.statusLabel }}</span>
+                  </span>
+                </div>
+
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px 18px 0">
+                  <sc-for list="{{ latestVitals }}" as="v" hint-placeholder-count="3">
+                    <div style="background:#ffffff;border-radius:16px;padding:12px;box-shadow:0 8px 18px rgba(15,23,42,.06);display:flex;flex-direction:column;gap:4px">
+                      <i class="{{ v.icon }}" aria-hidden="true" style="font-size:20px;color:#1e3a8a"></i>
+                      <span style="font-size:19px;font-weight:800;letter-spacing:-0.01em">{{ v.value }}</span>
+                      <span style="font-size:11.5px;color:#64748b;line-height:1.3">{{ v.label }} · {{ v.time }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <div style="margin:16px 18px 0;background:#ffffff;border-radius:18px;padding:6px 16px;box-shadow:0 8px 18px rgba(15,23,42,.06)">
+                  <div style="display:flex;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid #eef2f9;font-size:14.5px"><span style="color:#64748b">ความสัมพันธ์</span><span style="font-weight:600">{{ mem.relation }}</span></div>
+                  <div style="display:flex;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid #eef2f9;font-size:14.5px"><span style="color:#64748b">สถานะ</span><span style="font-weight:600;text-align:right">{{ mem.detail }}</span></div>
+                  <div style="display:flex;justify-content:space-between;gap:12px;padding:13px 0;font-size:14.5px"><span style="color:#64748b">ผู้ดูแลวันนี้</span><span style="font-weight:600">พี่เกษม · 08:00–16:00</span></div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:10px;padding:16px 18px 0">
+                  <button onClick="{{ ping }}" style="min-height:54px;background:#1e3a8a;color:#ffffff;border:none;border-radius:16px;font-family:inherit;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:background .18s ease,transform .12s ease" style-hover="background:#2f4fbe" style-active="transform:scale(.985)"><i class="ph-duotone ph-bell-ringing" aria-hidden="true" style="font-size:21px"></i>{{ pingLabel }}</button>
+                  <sc-if value="{{ mem.hasMed }}">
+                    <button onClick="{{ mem.onMed }}" style="min-height:52px;background:#eef3fd;color:#1e3a8a;border:none;border-radius:16px;font-family:inherit;font-size:15.5px;font-weight:600;cursor:pointer;transition:background .18s ease" style-hover="background:#dde7fb">{{ mem.medLabel }}</button>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isMed }}">
+              <div data-screen-label="05 Medication" style="animation:v3In .3s ease-out;padding-top:8px">
+                <div style="display:flex;align-items:center;gap:14px;padding:16px 20px 0">
+                  <span style="width:52px;height:52px;border-radius:16px;background:#eaf1fe;display:flex;align-items:center;justify-content:center;flex:none"><i class="ph-duotone ph-pill" aria-hidden="true" style="font-size:28px;color:#1e3a8a"></i></span>
+                  <span style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                    <span style="font-size:20px;font-weight:800;letter-spacing:-0.015em">{{ medDrug }}</span>
+                    <span style="font-size:13.5px;color:#64748b">{{ medSubline }}</span>
+                  </span>
+                </div>
+
+                <sc-if value="{{ showMedPeople }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;gap:10px;overflow-x:auto;padding:16px 18px 4px">
+                  <sc-for list="{{ medPeopleVisible }}" as="p" hint-placeholder-count="3">
+                    <button onClick="{{ p.onPick }}" aria-label="{{ p.aria }}" aria-pressed="{{ p.active }}" style="flex:none;min-width:104px;min-height:60px;display:grid;grid-template-columns:32px 1fr;gap:10px;align-items:center;text-align:left;background:{{ p.bg }};color:{{ p.fg }};border:none;border-radius:16px;padding:10px 12px;cursor:pointer;font-family:inherit;box-shadow:0 8px 18px rgba(15,23,42,.07);transition:background .18s ease,transform .12s ease" style-active="transform:scale(.98)">
+                      <span style="position:relative;width:32px;height:32px;border-radius:10px;background:rgba(148,163,184,.22);display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:800">{{ p.initials }}<span style="position:absolute;top:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:{{ p.dot }}"></span></span>
+                      <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                        <span style="font-size:13.5px;font-weight:700;white-space:nowrap">{{ p.label }}</span>
+                        <span style="font-size:11.5px;color:{{ p.sub }}">{{ p.time }}</span>
+                      </span>
+                    </button>
+                  </sc-for>
+                </div>
+                </sc-if>
+
+                <div style="display:flex;gap:8px;padding:16px 18px 0">
+                  <sc-for list="{{ medSteps }}" as="st" hint-placeholder-count="3">
+                    <div style="flex:1;display:flex;flex-direction:column;gap:7px">
+                      <div style="height:4px;border-radius:2px;background:{{ st.bar }};transition:background .25s ease"></div>
+                      <span style="font-size:11.5px;font-weight:700;color:{{ st.ink }}">{{ st.label }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <sc-if value="{{ medCamera }}">
+                  <div style="position:relative;margin:14px 18px 0;height:270px;border-radius:20px;overflow:hidden;background:#0f172a;animation:v3Fade .2s ease-out">
+                    <div style="position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 40%,#334769 0%,#0f172a 100%)"></div>
+                    <div style="position:absolute;inset:26px;border-radius:14px;border:2px dashed rgba(255,255,255,.42)"></div>
+                    <div style="position:absolute;top:16px;left:16px;display:flex;align-items:center;gap:7px;color:#ffffff;font-size:12px;font-weight:700"><span style="width:8px;height:8px;border-radius:50%;background:#f87171;animation:v3Ring 1.6s ease-in-out infinite"></span>กล้อง</div>
+                    <div style="position:absolute;left:0;right:0;bottom:70px;text-align:center;color:#dbeafe;font-size:13.5px;line-height:1.5;padding:0 30px">จัดซองยาให้อยู่ในกรอบ แล้วกดถ่าย</div>
+                    <button onClick="{{ shoot }}" aria-label="ถ่ายภาพ" style="position:absolute;left:50%;bottom:16px;transform:translateX(-50%);width:52px;height:52px;border-radius:50%;background:#ffffff;border:4px solid rgba(255,255,255,.45);cursor:pointer;transition:transform .12s ease" style-active="transform:translateX(-50%) scale(.92)"></button>
+                  </div>
+                  <div style="padding:14px 18px 0">
+                    <button onClick="{{ cancelCamera }}" style="width:100%;min-height:52px;background:#eef3fd;color:#1e3a8a;border:none;border-radius:16px;font-family:inherit;font-size:15.5px;font-weight:600;cursor:pointer" style-hover="background:#dde7fb">ยกเลิก</button>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ medIdle }}">
+                  <div style="margin:14px 18px 0;background:#ffffff;border-radius:20px;padding:20px;box-shadow:0 12px 26px rgba(15,23,42,.08);animation:v3Fade .2s ease-out">
+                    <div style="display:flex;flex-direction:column;gap:12px">
+                      <sc-for list="{{ medHints }}" as="h" hint-placeholder-count="3">
+                        <div style="display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:center">
+                          <span style="width:34px;height:34px;border-radius:11px;background:#eaf1fe;display:flex;align-items:center;justify-content:center"><i class="{{ h.icon }}" aria-hidden="true" style="font-size:19px;color:#1e3a8a"></i></span>
+                          <span style="font-size:14px;color:#475569;line-height:1.45">{{ h.text }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <button onClick="{{ openCamera }}" style="width:100%;margin-top:18px;min-height:58px;background:#1e3a8a;color:#ffffff;border:none;border-radius:16px;font-family:inherit;font-size:16.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:background .18s ease,transform .12s ease" style-hover="background:#2f4fbe" style-active="transform:scale(.985)"><i class="ph-duotone ph-camera" aria-hidden="true" style="font-size:22px"></i>ถ่ายภาพยืนยัน</button>
+                    <div style="text-align:center;font-size:13px;color:#94a3b8;padding-top:12px">หรือลากรูปจากเครื่องลงกรอบด้านล่างในขั้นตอนถัดไป</div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ medHasPhoto }}">
+                  <div style="position:relative;margin:14px 18px 0;height:250px;border-radius:20px;overflow:hidden;background:#e8effb;box-shadow:0 12px 26px rgba(15,23,42,.08);animation:v3Fade .22s ease-out">
+                    <image-slot id="{{ medPhotoSlot }}" shape="rect" placeholder="ลากรูปยาลงที่นี่"></image-slot>
+                    <div style="position:absolute;top:14px;left:14px;display:flex;align-items:center;gap:8px;background:#ffffff;color:{{ stampInk }};border-radius:999px;padding:8px 14px;font-size:13px;font-weight:700;box-shadow:0 8px 18px rgba(15,23,42,.14);animation:v3Pop .4s cubic-bezier(.2,.8,.2,1) both;pointer-events:none"><i class="{{ stampIcon }}" aria-hidden="true" style="font-size:18px"></i>{{ stampText }}</div>
+                  </div>
+
+                  <div style="margin:14px 18px 0;background:#ffffff;border-radius:18px;padding:6px 16px;box-shadow:0 8px 18px rgba(15,23,42,.06)">
+                    <div style="display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #eef2f9;font-size:14px"><span style="color:#64748b">เวลาถ่ายภาพ</span><span style="font-weight:600">{{ shotTime }}</span></div>
+                    <div style="display:flex;justify-content:space-between;gap:12px;padding:12px 0;font-size:14px"><span style="color:#64748b">ผู้บันทึก</span><span style="font-weight:600">{{ medRecorder }}</span></div>
+                  </div>
+
+                  <div style="display:flex;flex-direction:column;gap:10px;padding:16px 18px 0">
+                    <sc-if value="{{ medReview }}">
+                      <button onClick="{{ confirmMed }}" style="min-height:58px;background:#1e3a8a;color:#ffffff;border:none;border-radius:16px;font-family:inherit;font-size:17px;font-weight:700;cursor:pointer;transition:background .18s ease,transform .12s ease" style-hover="background:#2f4fbe" style-active="transform:scale(.985)">ทานแล้วและยืนยัน</button>
+                      <button onClick="{{ openCamera }}" style="min-height:52px;background:#eef3fd;color:#1e3a8a;border:none;border-radius:16px;font-family:inherit;font-size:15.5px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer" style-hover="background:#dde7fb"><i class="ph-duotone ph-arrow-counter-clockwise" aria-hidden="true" style="font-size:19px"></i>ถ่ายใหม่</button>
+                    </sc-if>
+                    <sc-if value="{{ medDone }}">
+                      <sc-if value="{{ showDashLink }}">
+                        <button onClick="{{ goDash }}" style="width:100%;min-height:56px;background:#1e3a8a;color:#ffffff;border:none;border-radius:16px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;transition:background .18s ease" style-hover="background:#2f4fbe">ดูแดชบอร์ดการทานยา</button>
+                      </sc-if>
+                      <button onClick="{{ resetMed }}" style="min-height:52px;background:#eef3fd;color:#1e3a8a;border:none;border-radius:16px;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer" style-hover="background:#dde7fb">เริ่มขั้นตอนใหม่ (สาธิต)</button>
+                    </sc-if>
+                    <div role="status" style="font-size:13.5px;color:#64748b;min-height:22px;line-height:1.5;text-align:center">{{ medNote }}</div>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isCalendar }}">
+              <div data-screen-label="06 Calendar" style="animation:v3In .3s ease-out;padding-top:8px">
+                <div style="padding:14px 20px 12px;font-size:18px;font-weight:800">ปฏิทินครอบครัว</div>
+                <div style="display:flex;gap:10px;overflow-x:auto;padding:0 18px 4px">
+                  <sc-for list="{{ days }}" as="d" hint-placeholder-count="5">
+                    <button onClick="{{ d.onPick }}" aria-label="{{ d.aria }}" aria-pressed="{{ d.active }}" style="flex:none;width:64px;min-height:84px;border:none;border-radius:18px;background:{{ d.bg }};color:{{ d.fg }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;box-shadow:{{ d.shadow }};transition:background .18s ease,transform .12s ease" style-active="transform:scale(.97)">
+                      <span style="font-size:12.5px;font-weight:600;opacity:.8">{{ d.day }}</span>
+                      <span style="font-size:22px;font-weight:800;letter-spacing:-0.01em">{{ d.date }}</span>
+                      <span style="width:6px;height:6px;border-radius:50%;background:{{ d.dot }}"></span>
+                    </button>
+                  </sc-for>
+                </div>
+
+                <div style="margin:16px 18px 0;background:#ffffff;border-radius:20px;padding:16px;box-shadow:0 12px 26px rgba(15,23,42,.08)">
+                  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+                    <span style="font-size:16.5px;font-weight:800;letter-spacing:-0.01em;min-width:0;text-wrap:balance">{{ appt.title }}</span>
+                    <span style="flex:none;white-space:nowrap;background:#fde68a;color:#7c4a03;font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px">{{ appt.tag }}</span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:10px;padding-top:14px">
+                    <div style="display:flex;align-items:center;gap:10px;font-size:14.5px"><i class="ph-duotone ph-calendar-dots" aria-hidden="true" style="font-size:19px;color:#1e3a8a"></i>{{ appt.date }} · {{ appt.time }}</div>
+                    <div style="display:flex;align-items:center;gap:10px;font-size:14.5px"><i class="ph-duotone ph-map-pin" aria-hidden="true" style="font-size:19px;color:#1e3a8a"></i>{{ appt.place }}</div>
+                    <div style="display:flex;align-items:center;gap:10px;font-size:14.5px"><i class="ph-duotone ph-user-focus" aria-hidden="true" style="font-size:19px;color:#1e3a8a"></i>{{ appt.who }}</div>
+                  </div>
+                </div>
+
+                <div style="padding:22px 20px 10px;font-size:15.5px;font-weight:700">Checklist ก่อนไป</div>
+                <div style="display:flex;flex-direction:column;gap:10px;padding:0 18px">
+                  <sc-for list="{{ checklist }}" as="c" hint-placeholder-count="3">
+                    <button onClick="{{ c.onToggle }}" aria-label="{{ c.text }}" aria-pressed="{{ c.done }}" style="width:100%;min-height:56px;display:grid;grid-template-columns:26px 1fr;gap:12px;align-items:center;text-align:left;background:#ffffff;border:none;border-radius:14px;padding:10px 14px;cursor:pointer;font-family:inherit;box-shadow:0 6px 16px rgba(15,23,42,.05)">
+                      <i class="{{ c.icon }}" aria-hidden="true" style="font-size:23px;color:{{ c.ink }}"></i>
+                      <span style="font-size:14.5px;line-height:1.4;color:{{ c.textInk }};text-decoration:{{ c.deco }}">{{ c.text }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+
+                <div style="padding:16px 18px 0">
+                  <button onClick="{{ saveReminder }}" style="width:100%;min-height:56px;background:#1e3a8a;color:#ffffff;border:none;border-radius:16px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;transition:background .18s ease,transform .12s ease" style-hover="background:#2f4fbe" style-active="transform:scale(.985)">{{ reminderLabel }}</button>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isMessages }}">
+              <div data-screen-label="07 Messages" style="animation:v3In .3s ease-out;padding-top:8px">
+                <div style="padding:14px 20px 12px;font-size:18px;font-weight:800">ข้อความครอบครัว</div>
+                <div style="display:flex;flex-direction:column;gap:10px;padding:0 18px">
+                  <sc-for list="{{ messages }}" as="msg" hint-placeholder-count="4">
+                    <div style="background:{{ msg.bg }};border-radius:16px;padding:13px 15px;box-shadow:0 6px 16px rgba(15,23,42,.05);align-self:{{ msg.align }};max-width:86%">
+                      <div style="display:flex;align-items:baseline;gap:10px;justify-content:space-between">
+                        <span style="font-size:12.5px;font-weight:700;color:{{ msg.nameInk }}">{{ msg.who }}</span>
+                        <span style="font-size:11.5px;color:{{ msg.timeInk }};white-space:nowrap">{{ msg.time }}</span>
+                      </div>
+                      <div style="font-size:14.5px;line-height:1.55;padding-top:6px;color:{{ msg.textInk }}">{{ msg.text }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:flex;gap:10px;padding:18px 18px 0;opacity:{{ editOpacity }}">
+                  <input ref="{{ msgRef }}" aria-label="พิมพ์ข้อความ" aria-disabled="{{ editDisabled }}" placeholder="{{ inputPlaceholder }}" style="flex:1;min-width:0;min-height:52px;border:none;border-radius:999px;background:#ffffff;padding:0 18px;font-family:inherit;font-size:14.5px;outline:none;box-shadow:0 6px 16px rgba(15,23,42,.06)">
+                  <button onClick="{{ sendMsg }}" aria-label="ส่งข้อความ" aria-disabled="{{ editDisabled }}" style="flex:none;width:52px;height:52px;border-radius:50%;background:#1e3a8a;color:#ffffff;border:none;display:flex;align-items:center;justify-content:center;cursor:{{ editCursor }};transition:background .18s ease,transform .12s ease" style-hover="background:#2f4fbe" style-active="transform:scale(.95)"><i class="ph-fill ph-paper-plane-right" aria-hidden="true" style="font-size:21px"></i></button>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isNotices }}">
+              <div data-screen-label="08 Notices" style="animation:v3In .3s ease-out;padding-top:8px">
+                <div style="padding:14px 20px 12px;font-size:18px;font-weight:800">การแจ้งเตือน</div>
+                <div style="display:flex;flex-direction:column;gap:10px;padding:0 18px">
+                  <sc-for list="{{ notices }}" as="n" hint-placeholder-count="4">
+                    <div style="display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:start;background:#ffffff;border-radius:16px;padding:14px;box-shadow:0 6px 16px rgba(15,23,42,.05)">
+                      <span style="width:44px;height:44px;border-radius:13px;background:{{ n.chipBg }};display:flex;align-items:center;justify-content:center"><i class="{{ n.icon }}" aria-hidden="true" style="font-size:22px;color:{{ n.ink }}"></i></span>
+                      <span style="display:flex;flex-direction:column;gap:4px;min-width:0">
+                        <span style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                          <span style="font-size:14.5px;font-weight:700">{{ n.title }}</span>
+                          <span style="font-size:11.5px;color:#94a3b8;white-space:nowrap">{{ n.time }}</span>
+                        </span>
+                        <span style="font-size:13.5px;color:#475569;line-height:1.5">{{ n.detail }}</span>
+                      </span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isDash }}">
+              <div data-screen-label="10 Dashboard" style="animation:v3In .3s ease-out;padding-top:8px">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px 12px">
+                  <span style="font-size:18px;font-weight:800">ภาพรวมการดูแล</span>
+                  <div style="display:flex;gap:6px;background:#e6edfb;border-radius:999px;padding:4px">
+                    <sc-for list="{{ ranges }}" as="r" hint-placeholder-count="3">
+                      <button onClick="{{ r.onPick }}" aria-pressed="{{ r.active }}" style="min-height:36px;padding:0 12px;border:none;border-radius:999px;background:{{ r.bg }};color:{{ r.fg }};font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .18s ease">{{ r.label }}</button>
+                    </sc-for>
+                  </div>
+                </div>
+
+                <div style="margin:0 18px;background:#1e3a8a;border-radius:22px;padding:20px;color:#ffffff;box-shadow:0 16px 32px rgba(30,58,138,.28);display:grid;grid-template-columns:112px 1fr;gap:18px;align-items:center">
+                  <div style="position:relative;width:112px;height:112px">
+                    <svg viewBox="0 0 120 120" width="112" height="112" aria-hidden="true">
+                      <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="11"></circle>
+                      <circle cx="60" cy="60" r="52" fill="none" stroke="#fbbf24" stroke-width="11" stroke-linecap="round" stroke-dasharray="327" stroke-dashoffset="{{ adherenceOffset }}" transform="rotate(-90 60 60)" style="transition:stroke-dashoffset .6s cubic-bezier(.3,.7,.2,1)"></circle>
+                    </svg>
+                    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px">
+                      <span style="font-size:30px;font-weight:800;letter-spacing:-0.02em">{{ adherence }}%</span>
+                      <span style="font-size:11px;color:#bfd3f7">ทานยาตรงเวลา</span>
+                    </div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+                    <span style="font-size:15px;font-weight:700;line-height:1.4">{{ dashHeadline }}</span>
+                    <span style="font-size:13px;color:#bfd3f7;line-height:1.5">{{ dashSub }}</span>
+                  </div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px 18px 0">
+                  <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="3">
+                    <div style="background:#ffffff;border-radius:16px;padding:13px;box-shadow:0 8px 18px rgba(15,23,42,.06);display:flex;flex-direction:column;gap:5px">
+                      <i class="{{ k.icon }}" aria-hidden="true" style="font-size:20px;color:{{ k.ink }}"></i>
+                      <span style="font-size:21px;font-weight:800;letter-spacing:-0.015em">{{ k.value }}</span>
+                      <span style="font-size:11.5px;color:#64748b;line-height:1.3">{{ k.label }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <div style="margin:16px 18px 0;background:#ffffff;border-radius:20px;padding:18px;box-shadow:0 10px 24px rgba(15,23,42,.07)">
+                  <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+                    <span style="font-size:15px;font-weight:700">การทานยารายวัน</span>
+                    <span style="font-size:12.5px;color:#64748b;white-space:nowrap">{{ rangeLabel }}</span>
+                  </div>
+                  <div style="display:flex;align-items:flex-end;gap:8px;height:112px;padding-top:16px">
+                    <sc-for list="{{ chart }}" as="c" hint-placeholder-count="7">
+                      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px">
+                        <span style="font-size:10.5px;font-weight:700;color:{{ c.ink }}">{{ c.pct }}</span>
+                        <div style="width:100%;height:{{ c.h }};border-radius:8px 8px 4px 4px;background:{{ c.fill }};transition:height .4s ease" title="{{ c.title }}"></div>
+                        <span style="font-size:10.5px;color:#94a3b8">{{ c.day }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+
+                <div style="padding:22px 20px 10px;font-size:15.5px;font-weight:700">รายคน</div>
+                <div style="display:flex;flex-direction:column;gap:10px;padding:0 18px">
+                  <sc-for list="{{ dashMembers }}" as="m" hint-placeholder-count="3">
+                    <button onClick="{{ m.onOpen }}" aria-label="{{ m.aria }}" style="width:100%;display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;text-align:left;background:#ffffff;border:none;border-radius:16px;padding:12px 14px;cursor:pointer;box-shadow:0 8px 18px rgba(15,23,42,.06);transition:transform .12s ease" style-active="transform:scale(.99)">
+                      <span style="width:44px;height:44px;border-radius:13px;background:#e8effb;color:#1e3a8a;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800">{{ m.initials }}</span>
+                      <span style="display:flex;flex-direction:column;gap:6px;min-width:0">
+                        <span style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                          <span style="font-size:14.5px;font-weight:700">{{ m.name }}</span>
+                          <span style="font-size:12.5px;font-weight:700;color:{{ m.ink }};white-space:nowrap">{{ m.pct }}%</span>
+                        </span>
+                        <span style="display:block;height:7px;border-radius:4px;background:#eef2f9;overflow:hidden">
+                          <span style="display:block;height:7px;width:{{ m.pct }}%;border-radius:4px;background:{{ m.ink }};transition:width .5s ease"></span>
+                        </span>
+                        <span style="font-size:12px;color:#64748b;line-height:1.35">{{ m.note }}</span>
+                      </span>
+                      <i class="ph-fill ph-caret-right" aria-hidden="true" style="font-size:16px;color:#94a3b8"></i>
+                    </button>
+                  </sc-for>
+                </div>
+
+                <div style="margin:20px 18px 0;background:#ffffff;border-radius:20px;padding:18px;box-shadow:0 10px 24px rgba(15,23,42,.07)">
+                  <div style="font-size:15px;font-weight:700">ค่าใช้จ่ายเดือนนี้</div>
+                  <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-top:10px">
+                    <span style="font-size:30px;font-weight:800;letter-spacing:-0.02em">4,280</span>
+                    <span style="font-size:13px;color:#64748b;white-space:nowrap">บาท · 6 รายการ</span>
+                  </div>
+                  <div style="display:flex;height:12px;border-radius:6px;overflow:hidden;margin-top:14px">
+                    <sc-for list="{{ spend }}" as="sp" hint-placeholder-count="3">
+                      <span style="width:{{ sp.pct }}%;background:{{ sp.fill }}"></span>
+                    </sc-for>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:8px;padding-top:14px">
+                    <sc-for list="{{ spend }}" as="sp" hint-placeholder-count="3">
+                      <span style="display:flex;align-items:center;gap:10px;font-size:13.5px">
+                        <span style="width:9px;height:9px;border-radius:50%;background:{{ sp.fill }};flex:none"></span>
+                        <span style="flex:1;min-width:0">{{ sp.label }}</span>
+                        <span style="color:#64748b;white-space:nowrap">{{ sp.baht }}</span>
+                      </span>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="height:10px"></div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isProfile }}">
+              <div data-screen-label="09 Profile" style="animation:v3In .3s ease-out;padding-top:8px">
+                <div style="margin:16px 18px 0;background:#ffffff;border-radius:20px;padding:18px;box-shadow:0 12px 26px rgba(15,23,42,.08);display:flex;align-items:center;gap:14px">
+                  <span style="display:flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;background:#e8effb;color:#1e3a8a;font-size:21px;font-weight:800;flex:none">สช</span>
+                  <span style="display:flex;flex-direction:column;gap:4px;min-width:0">
+                    <span style="font-size:19px;font-weight:800;letter-spacing:-0.01em">คุณสมชาย</span>
+                    <span style="font-size:13.5px;color:#64748b">Owner · caregiver@gmail.com</span>
+                  </span>
+                </div>
+
+                <div style="padding:22px 20px 10px;font-size:15.5px;font-weight:700">ข้อมูลสุขภาพของฉัน</div>
+                <div style="display:flex;flex-direction:column;gap:10px;padding:0 18px">
+                  <button onClick="{{ myMed.onOpen }}" aria-label="{{ myMed.aria }}" style="width:100%;min-height:72px;display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;text-align:left;background:#ffffff;border:none;border-radius:16px;padding:12px 14px;cursor:pointer;box-shadow:0 8px 18px rgba(15,23,42,.06);transition:transform .12s ease" style-active="transform:scale(.99)">
+                    <span style="width:44px;height:44px;border-radius:13px;background:{{ myMed.chipBg }};display:flex;align-items:center;justify-content:center"><i class="{{ myMed.icon }}" aria-hidden="true" style="font-size:23px;color:{{ myMed.ink }}"></i></span>
+                    <span style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                      <span style="font-size:15px;font-weight:700">{{ myMed.title }}</span>
+                      <span style="font-size:13px;color:#64748b;line-height:1.4">{{ myMed.detail }}</span>
+                    </span>
+                    <span style="flex:none;white-space:nowrap;font-size:12.5px;font-weight:700;color:{{ myMed.ink }}">{{ myMed.statusLabel }}</span>
+                  </button>
+                  <button onClick="{{ goMyAppt }}" aria-label="นัดหมายของฉัน 29 เมษายน" style="width:100%;min-height:72px;display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;text-align:left;background:#ffffff;border:none;border-radius:16px;padding:12px 14px;cursor:pointer;box-shadow:0 8px 18px rgba(15,23,42,.06);transition:transform .12s ease" style-active="transform:scale(.99)">
+                    <span style="width:44px;height:44px;border-radius:13px;background:#eaf1fe;display:flex;align-items:center;justify-content:center"><i class="ph-duotone ph-calendar-heart" aria-hidden="true" style="font-size:23px;color:#1e3a8a"></i></span>
+                    <span style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                      <span style="font-size:15px;font-weight:700">นัดหมายของฉัน</span>
+                      <span style="font-size:13px;color:#64748b;line-height:1.4">ตรวจสุขภาพประจำปี · 29 เม.ย. 07:30</span>
+                    </span>
+                    <i class="ph-fill ph-caret-right" aria-hidden="true" style="font-size:16px;color:#94a3b8"></i>
+                  </button>
+                </div>
+
+                <div style="padding:22px 20px 10px;font-size:15.5px;font-weight:700">บันทึกส่งต่อเวร</div>
+                <div style="display:flex;flex-direction:column;gap:10px;padding:0 18px">
+                  <textarea ref="{{ noteRef }}" rows="3" aria-label="บันทึกสำหรับผู้ดูแลคนถัดไป" aria-disabled="{{ editDisabled }}" placeholder="{{ notePlaceholder }}" style="border:none;border-radius:16px;background:#ffffff;padding:14px;font-family:inherit;font-size:14.5px;line-height:1.55;resize:none;outline:none;opacity:{{ editOpacity }};box-shadow:0 6px 16px rgba(15,23,42,.05)"></textarea>
+                  <button onClick="{{ addNote }}" aria-disabled="{{ editDisabled }}" style="min-height:52px;background:#1e3a8a;color:#ffffff;border:none;border-radius:16px;font-family:inherit;font-size:15.5px;font-weight:600;cursor:{{ editCursor }};opacity:{{ editOpacity }};transition:background .18s ease" style-hover="background:#2f4fbe">บันทึก</button>
+                  <sc-for list="{{ notes }}" as="n" hint-placeholder-count="3">
+                    <div style="background:#ffffff;border-radius:16px;padding:14px;box-shadow:0 6px 16px rgba(15,23,42,.05);display:flex;flex-direction:column;gap:6px">
+                      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                        <span style="font-size:14px;font-weight:700">{{ n.who }}</span>
+                        <span style="font-size:11.5px;color:#94a3b8;white-space:nowrap">{{ n.time }}</span>
+                      </div>
+                      <div style="font-size:14px;color:#475569;line-height:1.55">{{ n.text }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <div style="padding:22px 20px 10px;font-size:15.5px;font-weight:700">เอกสารและสิทธิ์</div>
+                <div style="display:flex;flex-direction:column;gap:10px;padding:0 18px">
+                  <sc-for list="{{ docs }}" as="doc" hint-placeholder-count="4">
+                    <div style="display:grid;grid-template-columns:40px 1fr auto;gap:12px;align-items:center;background:#ffffff;border-radius:16px;padding:12px 14px;box-shadow:0 6px 16px rgba(15,23,42,.05)">
+                      <i class="{{ doc.icon }}" aria-hidden="true" style="font-size:26px;color:#1e3a8a"></i>
+                      <span style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                        <span style="font-size:14.5px;font-weight:700">{{ doc.name }}</span>
+                        <span style="font-size:12.5px;color:#64748b">{{ doc.meta }}</span>
+                      </span>
+                      <span style="flex:none;white-space:nowrap;background:#eef3fd;color:#1e3a8a;font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:999px">{{ doc.kind }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="height:8px"></div>
+              </div>
+            </sc-if>
+
+          </div>
+
+          <div style="position:relative;flex:none;background:#ffffff;border-top:1px solid #e8eef9;padding:10px 8px 26px;display:flex;align-items:flex-end;box-shadow:0 -8px 24px rgba(15,23,42,.06)">
+            <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+              <button onClick="{{ t.onPick }}" aria-label="{{ t.label }}" aria-current="{{ t.current }}" style="flex:1;min-height:56px;background:transparent;border:none;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;cursor:pointer;font-family:inherit;color:{{ t.ink }};transition:color .18s ease">
+                <span style="width:38px;height:32px;border-radius:12px;background:{{ t.chipBg }};display:flex;align-items:center;justify-content:center;transition:background .2s ease"><i class="{{ t.icon }}" aria-hidden="true" style="font-size:22px"></i></span>
+                <span style="font-size:11px;font-weight:600">{{ t.label }}</span>
+              </button>
+            </sc-for>
+            <button onClick="{{ openEmergency }}" aria-label="โทรฉุกเฉิน" style="position:absolute;left:50%;bottom:56px;transform:translateX(-50%);width:60px;height:60px;border-radius:50%;background:#1e3a8a;color:#ffffff;border:4px solid #ffffff;display:flex;align-items:center;justify-content:center;cursor:pointer;animation:v3Ring 2.6s ease-in-out infinite" style-hover="background:#2f4fbe"><i class="ph-fill ph-phone-call" aria-hidden="true" style="font-size:26px"></i></button>
+            <span style="position:absolute;left:50%;bottom:38px;transform:translateX(-50%);font-size:11px;font-weight:700;color:#1e3a8a;white-space:nowrap">Emergency</span>
+          </div>
+
+          <sc-if value="{{ emergency }}">
+            <div role="dialog" aria-modal="true" aria-label="ขอความช่วยเหลือฉุกเฉิน" style="position:absolute;inset:0;background:rgba(15,23,42,.36);display:flex;align-items:flex-end;z-index:90;animation:v3Fade .18s ease-out">
+              <div style="width:100%;background:#ffffff;border-radius:26px 26px 0 0;padding:22px 22px 38px;animation:v3Up .26s cubic-bezier(.2,.8,.2,1)">
+                <div style="display:flex;align-items:center;gap:14px">
+                  <span style="width:52px;height:52px;border-radius:16px;background:#fee2e2;display:flex;align-items:center;justify-content:center;flex:none"><i class="ph-duotone ph-siren" aria-hidden="true" style="font-size:28px;color:#b91c1c"></i></span>
+                  <span style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                    <span style="font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#b91c1c">ฉุกเฉิน</span>
+                    <span style="font-size:20px;font-weight:800;letter-spacing:-0.01em">{{ emergencyTitle }}</span>
+                  </span>
+                </div>
+                <div style="font-size:15px;color:#475569;line-height:1.6;padding-top:14px">{{ emergencyBody }}</div>
+                <div style="display:flex;flex-direction:column;gap:10px;padding-top:18px">
+                  <button onClick="{{ sendEmergency }}" style="min-height:58px;background:#b91c1c;color:#ffffff;border:none;border-radius:16px;font-family:inherit;font-size:17px;font-weight:700;cursor:pointer;transition:background .18s ease,transform .12s ease" style-hover="background:#d02b2b" style-active="transform:scale(.985)">ใช่ ต้องการความช่วยเหลือ</button>
+                  <button onClick="{{ closeEmergency }}" style="min-height:52px;background:#eef3fd;color:#1e3a8a;border:none;border-radius:16px;font-family:inherit;font-size:15.5px;font-weight:600;cursor:pointer" style-hover="background:#dde7fb">ปิด</button>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+        </div>
+      </x-import>
+      <div style="font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#3b5cb8">{{ frameCaption }}</div>
+    </div>
+
+    <sc-if value="{{ showRail }}" hint-placeholder-val="{{ true }}">
+      <div style="width:250px;background:rgba(255,255,255,.62);border-radius:22px;padding:18px;box-shadow:0 14px 34px rgba(30,58,138,.14)">
+        <div style="font-size:11.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#3b5cb8;padding-bottom:12px">Screens</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <sc-for list="{{ rail }}" as="s" hint-placeholder-count="9">
+            <button onClick="{{ s.onPick }}" aria-current="{{ s.current }}" style="width:100%;min-height:46px;display:grid;grid-template-columns:26px 1fr;gap:10px;align-items:center;text-align:left;background:{{ s.bg }};color:{{ s.fg }};border:none;border-radius:12px;padding:8px 10px;font-family:inherit;font-size:14.5px;cursor:pointer;transition:background .18s ease" style-hover="background:#e4ecfc">
+              <span style="font-size:11.5px;font-weight:700;opacity:.7">{{ s.num }}</span>
+              <span>{{ s.label }}</span>
+            </button>
+          </sc-for>
+        </div>
+        <p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#475569">จอซ้ายคือ 01 Login และ 02 Register (สร้างกลุ่มบ้านหลายกลุ่ม) · แถบนี้แสดงหน้าจอของ role ที่เข้าใช้อยู่ ({{ roleLabel }}) — เปลี่ยน role ได้โดยออกจากระบบแล้วเข้าใหม่ · แท็บล่างและปุ่ม Emergency มีทุก role แต่รายการแท็บต่างกันตามสิทธิ์</p>
+      </div>
+    </sc-if>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 1120, &quot;height&quot;: 1120 },
+  &quot;startScreen&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;home&quot;, &quot;family&quot;, &quot;member&quot;, &quot;med&quot;, &quot;calendar&quot;, &quot;messages&quot;, &quot;notices&quot;, &quot;profile&quot;, &quot;dash&quot;], &quot;default&quot;: &quot;home&quot;, &quot;tsType&quot;: &quot;string&quot; },
+  &quot;showRail&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot; }
+}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      screen: this.props.startScreen ?? 'home',
+      member: 'dad',
+      role: this.props.role ?? 'caregiver',
+      loginNote: '', loginBad: false, checkedIn: false,
+      regStep: 'account', regRole: 'caregiver', regNote: '', newKind: 'parents',
+      groupMenuOpen: false, activeGroupId: 'g1', defaultGroupId: 'g1',
+      groups: [
+        { id: 'g1', name: 'บ้านพ่อแม่', kind: 'parents', members: 4 },
+        { id: 'g2', name: 'บ้านแฟน', kind: 'partner', members: 3 }
+      ],
+      day: '25',
+      range: '7', medTarget: 'dad',
+      meds: {
+        me: { drug: 'Metformin 500 mg', at: '13:00', stage: 'idle', shotTime: '', doneTime: '' },
+        dad: { drug: 'Amlodipine 5 mg', at: '12:00', stage: 'idle', shotTime: '', doneTime: '' },
+        mom: { drug: 'Simvastatin 10 mg', at: '20:00', stage: 'done', shotTime: '08:30', doneTime: '08:32' }
+      },
+      reminder: false,
+      pinged: false, emergency: false, emergencySent: false,
+      tasks: [
+        { id: 'checkin', title: 'Check-in', detail: 'แม่สมใจยืนยันแล้ว', status: 'done' },
+        { id: 'appointment', title: 'Appointment', detail: 'นัดตรวจ 14:00 พร้อม checklist', status: 'in-progress' }
+      ],
+      checklist: [
+        { id: 'c1', text: 'บัตรประชาชน · สิทธิ์การรักษา', done: true },
+        { id: 'c2', text: 'รายการยาที่ใช้อยู่', done: false },
+        { id: 'c3', text: 'งดน้ำงดอาหารหลัง 22:00', done: false }
+      ],
+      notes: [
+        { id: 'n1', who: 'พี่เกษม', time: '10:20', text: 'รับผิดชอบจัดเตรียมเอกสารไปโรงพยาบาลพรุ่งนี้ 09:00' },
+        { id: 'n2', who: 'พี่เกษม', time: '08:45', text: 'แม่สมใจทานยาเช้าแล้ว เพิ่ม photo confirmation ในระบบ' }
+      ],
+      messages: [
+        { id: 'm1', who: 'พี่เกษม', time: '10:22', text: 'เตรียมเอกสารเรียบร้อย พรุ่งนี้ผมไปรับพ่อเอง', me: false },
+        { id: 'm2', who: 'แม่สมใจ', time: '08:33', text: 'ยืนยันว่าวันนี้ปกติดี ทานยาแล้วนะ', me: false },
+        { id: 'm3', who: 'คุณสมชาย', time: '07:58', text: 'อรุณสวัสดิ์ครับ ฝากช่วยเตือนพ่อเรื่องยา 12:00 ด้วย', me: true }
+      ]
+    };
+    this.msgRef = React.createRef();
+    this.noteRef = React.createRef();
+    this.emailRef = React.createRef();
+    this.passRef = React.createRef();
+    this.regNameRef = React.createRef();
+    this.regEmailRef = React.createRef();
+    this.regPassRef = React.createRef();
+    this.newGroupRef = React.createRef();
+  }
+
+  kindMeta(kind) {
+    return {
+      parents: { label: 'บ้านพ่อแม่', icon: 'ph-duotone ph-house-line' },
+      partner: { label: 'บ้านแฟน', icon: 'ph-duotone ph-heart' },
+      relatives: { label: 'บ้านญาติ', icon: 'ph-duotone ph-users-four' },
+      other: { label: 'บ้านอื่น', icon: 'ph-duotone ph-buildings' }
+    }[kind] || { label: 'บ้านอื่น', icon: 'ph-duotone ph-buildings' };
+  }
+
+  roleConfig(role) {
+    const cfg = {
+      caregiver: {
+        label: 'Caregiver', home: 'home', email: 'caregiver@gmail.com', scope: 'ทั้งบ้าน', icon: 'ph-duotone ph-user-focus',
+        tabs: [
+          { id: 'home', label: 'หน้าหลัก', icon: 'ph-duotone ph-house', kin: [] },
+          { id: 'family', label: 'ครอบครัว', icon: 'ph-duotone ph-users-three', kin: ['member'] },
+          { id: 'spacer' },
+          { id: 'dash', label: 'แดชบอร์ด', icon: 'ph-duotone ph-chart-donut', kin: [] },
+          { id: 'profile', label: 'โปรไฟล์', icon: 'ph-duotone ph-user-circle', kin: ['notices', 'messages', 'calendar', 'med'] }
+        ],
+        rail: [['01', 'หน้าหลัก', 'home'], ['02', 'ครอบครัว', 'family'], ['03', 'รายละเอียดสมาชิก', 'member'], ['04', 'ยืนยันการทานยา', 'med'], ['05', 'ปฏิทิน · นัดหมาย', 'calendar'], ['06', 'ข้อความ', 'messages'], ['07', 'การแจ้งเตือน', 'notices'], ['08', 'แดชบอร์ด', 'dash'], ['09', 'โปรไฟล์ · เอกสาร', 'profile']],
+        canEdit: true
+      },
+      elder: {
+        label: 'Elder', home: 'elderHome', email: 'elder@gmail.com', scope: 'เฉพาะตัวเอง', icon: 'ph-duotone ph-hand-heart',
+        tabs: [
+          { id: 'elderHome', label: 'หน้าหลัก', icon: 'ph-duotone ph-house', kin: [] },
+          { id: 'med', label: 'ยาของฉัน', icon: 'ph-duotone ph-pill', kin: [] },
+          { id: 'spacer' },
+          { id: 'calendar', label: 'นัดหมาย', icon: 'ph-duotone ph-calendar-dots', kin: [] },
+          { id: 'messages', label: 'ข้อความ', icon: 'ph-duotone ph-chat-teardrop-dots', kin: [] }
+        ],
+        rail: [['E1', 'หน้าหลักผู้สูงอายุ', 'elderHome'], ['E2', 'ยาของฉัน', 'med'], ['E3', 'นัดหมายของฉัน', 'calendar'], ['E4', 'ข้อความครอบครัว', 'messages']],
+        canEdit: true
+      },
+      admin: {
+        label: 'Admin', home: 'dash', email: 'admin@gmail.com', scope: 'ระบบ + สิทธิ์', icon: 'ph-duotone ph-shield-check',
+        tabs: [
+          { id: 'dash', label: 'แดชบอร์ด', icon: 'ph-duotone ph-chart-donut', kin: [] },
+          { id: 'perms', label: 'สิทธิ์', icon: 'ph-duotone ph-users-three', kin: [] },
+          { id: 'spacer' },
+          { id: 'audit', label: 'บันทึกระบบ', icon: 'ph-duotone ph-list-checks', kin: [] },
+          { id: 'profile', label: 'โปรไฟล์', icon: 'ph-duotone ph-user-circle', kin: ['notices'] }
+        ],
+        rail: [['A1', 'แดชบอร์ดระบบ', 'dash'], ['A2', 'สมาชิกและสิทธิ์', 'perms'], ['A3', 'บันทึกการใช้งาน', 'audit'], ['A4', 'การแจ้งเตือน', 'notices'], ['A5', 'โปรไฟล์ · เอกสาร', 'profile']],
+        canEdit: true
+      },
+      viewer: {
+        label: 'Viewer', home: 'home', email: 'viewer@gmail.com', scope: 'ดูได้เท่านั้น', icon: 'ph-duotone ph-eye',
+        tabs: [
+          { id: 'home', label: 'หน้าหลัก', icon: 'ph-duotone ph-house', kin: [] },
+          { id: 'family', label: 'ครอบครัว', icon: 'ph-duotone ph-users-three', kin: ['member'] },
+          { id: 'spacer' },
+          { id: 'calendar', label: 'ปฏิทิน', icon: 'ph-duotone ph-calendar-dots', kin: [] },
+          { id: 'notices', label: 'แจ้งเตือน', icon: 'ph-duotone ph-bell', kin: ['messages', 'profile'] }
+        ],
+        rail: [['V1', 'หน้าหลัก (อ่าน)', 'home'], ['V2', 'ครอบครัว', 'family'], ['V3', 'รายละเอียดสมาชิก', 'member'], ['V4', 'ปฏิทิน', 'calendar'], ['V5', 'การแจ้งเตือน', 'notices']],
+        canEdit: false
+      }
+    };
+    return cfg[role] || cfg.caregiver;
+  }
+
+  signInAs = (role) => {
+    const cfg = this.roleConfig(role);
+    this.setState({
+      role, screen: cfg.home, medTarget: role === 'elder' ? 'mom' : 'dad',
+      loginNote: 'เข้าสู่ระบบเป็น ' + cfg.label + ' แล้ว', loginBad: false, emergency: false
+    });
+  };
+
+  statusMeta(status) {
+    if (status === 'urgent') return { statusLabel: 'ต้องช่วยเหลือ', ink: '#b91c1c', chipBg: '#fee2e2', border: '#fecaca', statusIcon: 'ph-fill ph-warning-circle' };
+    if (status === 'monitor') return { statusLabel: 'ต้องติดตาม', ink: '#b45309', chipBg: '#fef3c7', border: '#fde68a', statusIcon: 'ph-fill ph-clock-countdown' };
+    return { statusLabel: 'ปกติ', ink: '#15803d', chipBg: '#dcfce7', border: '#e8eef9', statusIcon: 'ph-fill ph-check-circle' };
+  }
+
+  medOf(id) { return this.state.meds[id] || null; }
+
+  members() {
+    const meds = this.state.meds;
+    const dadDone = meds.dad.stage === 'done';
+    const meDone = meds.me.stage === 'done';
+    return [
+      { id: 'me', name: 'คุณสมชาย', role: 'Owner · ฉัน', relation: 'ฉัน', status: meDone ? 'normal' : 'monitor', detail: meDone ? 'ยา ' + meds.me.at + ' ยืนยันแล้ว' : 'ยา ' + meds.me.at + ' ของฉัน ยังไม่ยืนยัน' },
+      { id: 'dad', name: 'พ่อประสิทธิ์', role: 'Elder', relation: 'พ่อ', status: dadDone ? 'normal' : 'monitor', detail: dadDone ? 'ยา ' + meds.dad.at + ' ยืนยันแล้ว' : 'ยา ' + meds.dad.at + ' ยังไม่ยืนยัน' },
+      { id: 'mom', name: 'แม่สมใจ', role: 'Elder', relation: 'แม่', status: 'normal', detail: 'Check-in 08:32 · ยาเช้ายืนยันแล้ว' },
+      { id: 'brother', name: 'พี่เกษม', role: 'Caregiver', relation: 'พี่', status: 'normal', detail: 'รับผิดชอบดูแลวันนี้' }
+    ].map((m) => ({ ...m, ...this.statusMeta(m.status), initials: { me: 'สช', dad: 'ปส', mom: 'สม', brother: 'กษ' }[m.id] }));
+  }
+
+  go = (screen) => {
+    const cfg = this.roleConfig(this.state.role);
+    const allowed = cfg.rail.some((r) => r[2] === screen) || screen === 'login' || screen === 'register';
+    if (!allowed) return;
+    this.setState({ screen, emergency: false, groupMenuOpen: false });
+  };
+
+  patchMed = (patch, who) => this.setState((st) => {
+    const id = who || st.medTarget;
+    return { meds: { ...st.meds, [id]: { ...st.meds[id], ...patch } } };
+  });
+
+  openMedFor = (id) => this.setState({ screen: 'med', medTarget: id, emergency: false });
+
+  now() {
+    const d = new Date();
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  renderVals() {
+    const s = this.state;
+    const members = this.members();
+    const mem = members.find((m) => m.id === s.member) || members[0];
+    const attention = members.some((m) => m.status !== 'normal');
+    const navy = '#1e3a8a';
+    const cfg = this.roleConfig(s.role);
+    const canEdit = cfg.canEdit;
+    const gate = (fn) => (canEdit ? fn : () => {});
+    const med = s.meds[s.medTarget];
+    const medWho = members.find((m) => m.id === s.medTarget) || members[0];
+    const allMedsDone = ['me', 'dad', 'mom'].every((id) => s.meds[id].stage === 'done');
+    const pendingMeds = ['me', 'dad', 'mom'].filter((id) => s.meds[id].stage !== 'done');
+    const missed = pendingMeds.length;
+    const adherence = { '7': allMedsDone ? 96 : 90 - missed * 2, '30': 88, '90': 84 }[s.range];
+
+    const apptByDay = {
+      '25': { kind: 'ตรวจสุขภาพ · อายุรกรรม', title: 'ตรวจสุขภาพ · อายุรกรรม', tag: 'พรุ่งนี้', date: 'ศุกร์ 25 เมษายน', time: '08:00', place: 'โรงพยาบาลกรุงเทพ', doctor: 'หมอพงศ์', dept: 'อายุรกรรม', who: 'ผู้พา: พี่เกษม' },
+      '26': { kind: 'รับยาต่อเนื่อง', title: 'รับยาต่อเนื่อง 3 เดือน', tag: 'เสาร์', date: 'เสาร์ 26 เมษายน', time: '12:00', place: 'ห้องยาผู้ป่วยนอก ชั้น 2', doctor: 'เภสัชกรวิภา', dept: 'ห้องยา', who: 'ผู้พา: คุณสมชาย' },
+      '28': { kind: 'นัดหมอหัวใจ', title: 'นัดหมอหัวใจ', tag: 'จันทร์', date: 'จันทร์ 28 เมษายน', time: '15:30', place: 'ศูนย์หัวใจ ชั้น 4', doctor: 'หมอวราภรณ์', dept: 'หัวใจ', who: 'ผู้พา: พี่เกษม' },
+      '29': { kind: 'ตรวจสุขภาพประจำปี · ของฉัน', title: 'ตรวจสุขภาพประจำปี (ของฉัน)', tag: 'ของฉัน', date: 'อังคาร 29 เมษายน', time: '07:30', place: 'ศูนย์ตรวจสุขภาพ ชั้น 3', doctor: 'หมอณัฐ', dept: 'เวชศาสตร์ป้องกัน', who: 'ผู้เข้ารับ: คุณสมชาย (ฉัน)' },
+      '30': { kind: 'กายภาพบำบัด', title: 'กายภาพบำบัดเข่า', tag: 'พุธ', date: 'พุธ 30 เมษายน', time: '10:00', place: 'แผนกกายภาพ ชั้น 1', doctor: 'ครูกิ่ง', dept: 'กายภาพ', who: 'ผู้พา: แม่สมใจ' }
+    };
+
+    const taskIcon = { checkin: 'ph-duotone ph-check-circle', medication: 'ph-duotone ph-pill', appointment: 'ph-duotone ph-hospital' };
+    const statusText = { done: 'เสร็จแล้ว', pending: 'รอยืนยัน', 'in-progress': 'กำลังทำ' };
+    const taskInk = { done: '#15803d', pending: '#b45309', 'in-progress': navy };
+    const taskChip = { done: '#dcfce7', pending: '#fef3c7', 'in-progress': '#eaf1fe' };
+
+    const tabDefs = [
+      { id: 'home', label: 'หน้าหลัก', icon: 'ph-duotone ph-house', kin: [] },
+      { id: 'family', label: 'ครอบครัว', icon: 'ph-duotone ph-users-three', kin: ['member'] },
+      { id: 'spacer', label: '', icon: '', kin: [] },
+      { id: 'dash', label: 'แดชบอร์ด', icon: 'ph-duotone ph-chart-donut', kin: [] },
+      { id: 'profile', label: 'โปรไฟล์', icon: 'ph-duotone ph-user-circle', kin: ['notices', 'messages', 'calendar', 'med'] }
+    ];
+
+    const railDefs = [
+      ['01', 'Welcome', 'welcome'], ['02', 'หน้าหลัก', 'home'], ['03', 'ครอบครัว', 'family'],
+      ['04', 'รายละเอียดสมาชิก', 'member'], ['05', 'ยืนยันการทานยา', 'med'], ['06', 'ปฏิทิน · นัดหมาย', 'calendar'],
+      ['07', 'ข้อความ', 'messages'], ['08', 'การแจ้งเตือน', 'notices'], ['09', 'โปรไฟล์ · เอกสาร', 'profile'],
+      ['10', 'แดชบอร์ด', 'dash']
+    ];
+
+    const screenTitles = {
+      home: ['Parent Care', 'สวัสดี คุณสมชาย · ' + (attention ? missed + ' รายการต้องติดตาม' : 'ทุกอย่างปกติวันนี้')],
+      register: ['สร้างบัญชี', 'ตั้งกลุ่มบ้านของคุณ'],
+      family: ['สมาชิกในบ้าน', '4 คน (รวมฉัน) · ' + members.filter((m) => m.status === 'normal').length + ' ปกติ'],
+      member: [mem.name, mem.role + ' · ' + mem.detail],
+      med: ['ยืนยันการทานยา', med.drug + ' · ' + med.at + ' · ' + medWho.name + (s.medTarget === 'me' ? ' (ฉัน)' : '')],
+      dash: ['แดชบอร์ด', 'ภาพรวมการดูแลของครอบครัว'],
+      calendar: ['ปฏิทินครอบครัว', 'เมษายน 2568'],
+      messages: ['ข้อความครอบครัว', 'แม่สมใจ, พ่อประสิทธิ์, พี่เกษม'],
+      notices: ['การแจ้งเตือน', '4 รายการใหม่'],
+      profile: ['โปรไฟล์', 'คุณสมชาย · Owner']
+    };
+    const elderTitles = {
+      elderHome: ['สวัสดีครับ', 'คุณแม่สมใจ · ' + (s.checkedIn ? 'เช็กอินแล้ววันนี้' : 'ยังไม่ได้เช็กอินวันนี้')],
+      med: ['ยาของฉัน', s.meds.mom.drug + ' · ' + s.meds.mom.at],
+      calendar: ['นัดหมายของฉัน', 'เมษายน 2568'],
+      messages: ['ข้อความครอบครัว', 'คุยกับลูกและผู้ดูแล']
+    };
+    const head = (s.role === 'elder' ? (elderTitles[s.screen] || elderTitles.elderHome) : (screenTitles[s.screen] || screenTitles.home));
+
+    return {
+      emailRef: this.emailRef, passRef: this.passRef,
+      loginNote: s.loginNote, loginNoteInk: s.loginBad ? '#b91c1c' : '#15803d',
+      signIn: () => {
+        const email = (this.emailRef.current && this.emailRef.current.value.trim().toLowerCase()) || '';
+        const pass = (this.passRef.current && this.passRef.current.value.trim()) || '';
+        const found = ['caregiver', 'elder', 'admin', 'viewer'].find((r) => this.roleConfig(r).email === email);
+        if (!found || pass !== '1234') { this.setState({ loginNote: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง (ใช้ 1234)', loginBad: true }); return; }
+        this.signInAs(found);
+      },
+
+      goRegister: () => this.setState({ screen: 'register', regStep: 'account', regNote: '' }),
+      goLogin: () => this.setState({ screen: 'login', loginNote: '', loginBad: false }),
+      regStepAccount: s.regStep === 'account', regStepGroups: s.regStep === 'groups',
+      regStepNum: s.regStep === 'account' ? '1' : '2',
+      regStep2Bar: s.regStep === 'groups' ? '#ffffff' : 'rgba(255,255,255,.3)',
+      regNote: s.regNote,
+      regNameRef: this.regNameRef, regEmailRef: this.regEmailRef, regPassRef: this.regPassRef,
+      regRoles: ['caregiver', 'elder', 'viewer'].map((r) => {
+        const c = this.roleConfig(r);
+        const active = s.regRole === r;
+        return {
+          id: r, label: c.label, icon: c.icon, detail: { caregiver: 'ดูแลและจัดการยา นัดหมายของทุกคน', elder: 'เห็นเฉพาะเรื่องของตัวเอง จอใหญ่ ปุ่มน้อย', viewer: 'ดูข้อมูลได้ แต่แก้ไขไม่ได้' }[r],
+          active, aria: 'เลือกบทบาท ' + c.label,
+          bg: active ? '#eaf1fe' : '#ffffff', border: active ? navy : '#e6ecf7',
+          check: active ? 'ph-fill ph-check-circle' : 'ph-duotone ph-circle',
+          checkInk: active ? navy : '#cbd5e1',
+          onPick: () => this.setState({ regRole: r })
+        };
+      }),
+      regNext: () => {
+        const name = (this.regNameRef.current && this.regNameRef.current.value.trim()) || '';
+        const email = (this.regEmailRef.current && this.regEmailRef.current.value.trim()) || '';
+        const pass = (this.regPassRef.current && this.regPassRef.current.value.trim()) || '';
+        if (!name || !email || pass.length < 4) { this.setState({ regNote: 'กรอกชื่อ อีเมล และรหัสผ่านอย่างน้อย 4 ตัวอักษร' }); return; }
+        this.setState({ regStep: 'groups', regNote: '' });
+      },
+      regBack: () => this.setState({ regStep: 'account' }),
+      finishRegister: () => {
+        if (!s.groups.length) { this.setState({ regNote: 'เพิ่มกลุ่มบ้านอย่างน้อยหนึ่งกลุ่ม' }); return; }
+        const cfgR = this.roleConfig(s.regRole);
+        this.setState({
+          role: s.regRole, screen: cfgR.home, activeGroupId: s.defaultGroupId || s.groups[0].id,
+          medTarget: s.regRole === 'elder' ? 'mom' : 'dad', loginNote: '', regNote: ''
+        });
+      },
+      newGroupRef: this.newGroupRef,
+      groupKinds: ['parents', 'partner', 'relatives', 'other'].map((k) => {
+        const m = this.kindMeta(k);
+        const active = s.newKind === k;
+        return { id: k, label: m.label, icon: m.icon, active, bg: active ? navy : '#eef3fd', fg: active ? '#ffffff' : '#334769', onPick: () => this.setState({ newKind: k }) };
+      }),
+      addGroup: gate(() => {
+        const el = this.newGroupRef.current;
+        const name = (el && el.value.trim()) || '';
+        if (!name) return;
+        el.value = '';
+        const id = 'g' + Date.now();
+        this.setState((st) => ({
+          groups: st.groups.concat([{ id, name, kind: st.newKind, members: 1 }]),
+          defaultGroupId: st.defaultGroupId || id
+        }));
+      }),
+      regGroups: s.groups.map((g) => {
+        const m = this.kindMeta(g.kind);
+        const isDefault = s.defaultGroupId === g.id;
+        return {
+          id: g.id, name: g.name, icon: m.icon, meta: m.label + ' · ' + g.members + ' คน',
+          border: isDefault ? navy : '#e6ecf7', chipBg: '#eaf1fe', isDefault,
+          defLabel: isDefault ? 'กลุ่มเริ่มต้น' : 'ตั้งเป็นกลุ่มเริ่มต้น',
+          defIcon: isDefault ? 'ph-fill ph-star' : 'ph-duotone ph-star',
+          defBg: isDefault ? '#eaf1fe' : '#f4f7fd', defInk: isDefault ? navy : '#64748b',
+          onDefault: () => this.setState({ defaultGroupId: g.id }),
+          onRemove: () => this.setState((st) => {
+            const groups = st.groups.filter((x) => x.id !== g.id);
+            return {
+              groups,
+              defaultGroupId: st.defaultGroupId === g.id ? (groups[0] ? groups[0].id : '') : st.defaultGroupId,
+              activeGroupId: st.activeGroupId === g.id ? (groups[0] ? groups[0].id : '') : st.activeGroupId
+            };
+          })
+        };
+      }),
+      groupMenuOpen: s.groupMenuOpen,
+      toggleGroupMenu: () => this.setState((st) => ({ groupMenuOpen: !st.groupMenuOpen })),
+      activeGroup: (() => {
+        const g = s.groups.find((x) => x.id === s.activeGroupId) || s.groups[0] || { name: 'ยังไม่มีกลุ่ม', kind: 'other' };
+        return { name: g.name, icon: this.kindMeta(g.kind).icon };
+      })(),
+      groupList: s.groups.map((g) => {
+        const m = this.kindMeta(g.kind);
+        const active = s.activeGroupId === g.id;
+        const isDefault = s.defaultGroupId === g.id;
+        return {
+          id: g.id, name: g.name, icon: m.icon,
+          meta: m.label + ' · ' + g.members + ' คน' + (isDefault ? ' · เริ่มต้น' : ''),
+          bg: active ? '#eaf1fe' : '#ffffff', border: active ? navy : '#e6ecf7',
+          mark: active ? 'ph-fill ph-check-circle' : 'ph-fill ph-caret-right',
+          markInk: active ? navy : '#94a3b8', isDefault,
+          defLabel: isDefault ? 'กลุ่มเริ่มต้น' : 'ตั้งเป็นค่าเริ่มต้น',
+          defIcon: isDefault ? 'ph-fill ph-star' : 'ph-duotone ph-star',
+          defBg: isDefault ? '#dbe6fb' : '#f4f7fd', defInk: isDefault ? navy : '#64748b',
+          onSwitch: () => this.setState({ activeGroupId: g.id, groupMenuOpen: false }),
+          onDefault: () => this.setState({ defaultGroupId: g.id })
+        };
+      }),
+      roleLabel: cfg.label, readOnly: !cfg.canEdit, canEdit: cfg.canEdit,
+      isElderHome: s.screen === 'elderHome', isPerms: s.screen === 'perms', isAudit: s.screen === 'audit',
+      elderName: 'คุณแม่สมใจ',
+      elderStatusLine: s.checkedIn ? 'บอกครอบครัวแล้วว่าวันนี้สบายดี' : 'วันนี้เหลือยา ' + s.meds.mom.at + ' อีกอย่างเดียว',
+      checkedIn: s.checkedIn,
+      checkInLabel: s.checkedIn ? 'เช็กอินแล้ววันนี้' : 'ฉันสบายดี',
+      checkInBg: s.checkedIn ? '#15803d' : '#1e3a8a',
+      checkIn: () => this.setState({ checkedIn: true }),
+      elderActions: [
+        { id: 'ea1', label: 'ยาของฉัน', detail: s.meds.mom.drug + ' · ' + s.meds.mom.at, icon: 'ph-duotone ph-pill', ink: '#1e3a8a', chipBg: '#eaf1fe', border: '#dbe6fb', onPick: () => this.openMedFor('mom') },
+        { id: 'ea2', label: 'นัดหมายของฉัน', detail: 'ดูวันตรวจและสถานที่', icon: 'ph-duotone ph-calendar-heart', ink: '#1e3a8a', chipBg: '#eaf1fe', border: '#dbe6fb', onPick: () => this.go('calendar') },
+        { id: 'ea3', label: 'ข้อความครอบครัว', detail: 'คุยกับลูกและผู้ดูแล', icon: 'ph-duotone ph-chat-teardrop-dots', ink: '#1e3a8a', chipBg: '#eaf1fe', border: '#dbe6fb', onPick: () => this.go('messages') },
+        { id: 'ea4', label: 'ต้องการความช่วยเหลือ', detail: 'ส่งคำขอไปยังครอบครัว', icon: 'ph-duotone ph-siren', ink: '#b91c1c', chipBg: '#fee2e2', border: '#fecaca', onPick: () => this.setState({ emergency: true, emergencySent: false }) }
+      ],
+      accessRows: [
+        { id: 'ar1', name: 'คุณสมชาย', initials: 'สช', email: 'caregiver@gmail.com', role: 'Caregiver', chipBg: '#eaf1fe', ink: '#1e3a8a', perms: [{ id: 'p1', label: 'จัดการยา', icon: 'ph-duotone ph-pill', bg: '#dcfce7', ink: '#166534' }, { id: 'p2', label: 'จัดการนัดหมาย', icon: 'ph-duotone ph-calendar-dots', bg: '#dcfce7', ink: '#166534' }, { id: 'p3', label: 'ดูเอกสาร', icon: 'ph-duotone ph-file-text', bg: '#dcfce7', ink: '#166534' }] },
+        { id: 'ar2', name: 'แม่สมใจ', initials: 'สม', email: 'elder@gmail.com', role: 'Elder', chipBg: '#fef3c7', ink: '#b45309', perms: [{ id: 'p4', label: 'ยาของตัวเอง', icon: 'ph-duotone ph-pill', bg: '#dcfce7', ink: '#166534' }, { id: 'p5', label: 'ไม่เห็นข้อมูลคนอื่น', icon: 'ph-duotone ph-eye-slash', bg: '#fee2e2', ink: '#b91c1c' }] },
+        { id: 'ar3', name: 'พี่เกษม', initials: 'กษ', email: 'kasem@gmail.com', role: 'Caregiver', chipBg: '#eaf1fe', ink: '#1e3a8a', perms: [{ id: 'p6', label: 'บันทึกส่งต่อเวร', icon: 'ph-duotone ph-notebook', bg: '#dcfce7', ink: '#166534' }, { id: 'p7', label: 'จัดการยา', icon: 'ph-duotone ph-pill', bg: '#dcfce7', ink: '#166534' }] },
+        { id: 'ar4', name: 'ป้าวรรณ', initials: 'วร', email: 'viewer@gmail.com', role: 'Viewer', chipBg: '#f1f5f9', ink: '#475569', perms: [{ id: 'p8', label: 'ดูได้เท่านั้น', icon: 'ph-duotone ph-eye', bg: '#f1f5f9', ink: '#475569' }] }
+      ],
+      auditRows: [
+        { id: 'au1', title: 'ยืนยันการทานยาพร้อมรูป', detail: 'คุณสมชาย · ' + s.meds.dad.drug, time: '5 นาที', icon: 'ph-duotone ph-camera', chipBg: '#dcfce7', ink: '#166534' },
+        { id: 'au2', title: 'เข้าสู่ระบบ', detail: 'elder@gmail.com · อุปกรณ์ iPhone', time: '08:30', icon: 'ph-duotone ph-sign-in', chipBg: '#eaf1fe', ink: '#1e3a8a' },
+        { id: 'au3', title: 'แก้ไขสิทธิ์สมาชิก', detail: 'ป้าวรรณ เปลี่ยนเป็น Viewer', time: 'เมื่อวาน', icon: 'ph-duotone ph-shield-check', chipBg: '#fef3c7', ink: '#b45309' },
+        { id: 'au4', title: 'เพิ่มเอกสาร', detail: 'ใบรับรองแพทย์ อายุรกรรม', time: '2 วันก่อน', icon: 'ph-duotone ph-file-plus', chipBg: '#eaf1fe', ink: '#1e3a8a' },
+        { id: 'au5', title: 'ส่งคำขอฉุกเฉิน', detail: 'แม่สมใจ · แจ้ง 3 คนในครอบครัว', time: '3 วันก่อน', icon: 'ph-duotone ph-siren', chipBg: '#fee2e2', ink: '#b91c1c' }
+      ],
+      logout: () => this.setState({ loginNote: 'ออกจากระบบแล้ว — เลือกบัญชีที่จอซ้ายเพื่อเข้าใหม่', loginBad: false, screen: 'login', emergency: false }),
+
+      showRail: this.props.showRail ?? true,
+      frameCaption: cfg.label + ' · ' + ((cfg.rail.find((r) => r[2] === s.screen) || [, 'Login'])[1]),
+      headerTitle: head[0], headerSub: head[1],
+      hasAlert: attention,
+
+      isHome: s.screen === 'home', isFamily: s.screen === 'family', isMember: s.screen === 'member',
+      isMed: s.screen === 'med', isCalendar: s.screen === 'calendar', isMessages: s.screen === 'messages',
+      isNotices: s.screen === 'notices', isProfile: s.screen === 'profile', isDash: s.screen === 'dash',
+
+      members: members.map((m) => ({
+        ...m, slotId: 'v3-card-' + m.id, listSlotId: 'v3-list-' + m.id,
+        aria: m.name + ' · ' + m.statusLabel + ' · ' + m.detail,
+        onOpen: () => this.setState({ screen: 'member', member: m.id })
+      })),
+      mem: {
+        ...mem, heroSlot: 'v3-hero-' + mem.id,
+        hasMed: !!s.meds[mem.id],
+        medLabel: s.meds[mem.id] ? (s.meds[mem.id].stage === 'done' ? 'ดูภาพยืนยันการทานยา' : 'ยืนยันการทานยา ' + s.meds[mem.id].at) : '',
+        onMed: () => this.openMedFor(mem.id)
+      },
+      latestVitals: [
+        { id: 'lv1', value: '128/82', label: 'ความดัน', time: '08:40', icon: 'ph-duotone ph-heartbeat' },
+        { id: 'lv2', value: '74', label: 'ชีพจร', time: '08:40', icon: 'ph-duotone ph-pulse' },
+        { id: 'lv3', value: '102', label: 'น้ำตาล', time: '07:10', icon: 'ph-duotone ph-drop' }
+      ],
+
+      medTasks: ['me', 'dad', 'mom'].map((id) => {
+        const p = members.find((m) => m.id === id);
+        const mm = s.meds[id];
+        const done = mm.stage === 'done';
+        return {
+          id: 'mt-' + id, title: (id === 'me' ? 'ยาของฉัน' : 'ยาของ' + p.relation) + ' · ' + mm.at,
+          detail: mm.drug + ' · ' + (done ? 'ยืนยันพร้อมรูปแล้ว ' + mm.doneTime : 'รอถ่ายภาพยืนยัน'),
+          statusLabel: done ? 'ยืนยันแล้ว' : 'รอยืนยัน',
+          ink: done ? '#15803d' : '#b45309', chipBg: done ? '#dcfce7' : '#fef3c7',
+          icon: done ? 'ph-duotone ph-check-circle' : 'ph-duotone ph-pill',
+          initials: p.initials, mine: id === 'me',
+          aria: (id === 'me' ? 'ยาของฉัน' : 'ยาของ' + p.name) + ' ' + mm.at + ' — ' + (done ? 'ยืนยันแล้ว' : 'รอยืนยัน'),
+          onOpen: gate(() => this.openMedFor(id))
+        };
+      }),
+      myMed: (() => {
+        const mm = s.meds.me;
+        const done = mm.stage === 'done';
+        return {
+          title: 'ยาของฉัน · ' + mm.at,
+          detail: mm.drug + ' · ' + (done ? 'ยืนยันพร้อมรูปแล้ว ' + mm.doneTime : 'รอถ่ายภาพยืนยัน'),
+          statusLabel: done ? 'ยืนยันแล้ว' : 'รอยืนยัน',
+          ink: done ? '#15803d' : '#b45309', chipBg: done ? '#dcfce7' : '#fef3c7',
+          icon: done ? 'ph-duotone ph-check-circle' : 'ph-duotone ph-pill',
+          aria: 'ยาของฉัน ' + mm.at + ' — ' + (done ? 'ยืนยันแล้ว' : 'รอยืนยัน'),
+          onOpen: gate(() => this.openMedFor('me'))
+        };
+      })(),
+      goMyAppt: () => this.setState({ screen: 'calendar', day: '29', emergency: false }),
+      taskList: s.tasks.map((t) => ({
+        ...t, done: t.status === 'done',
+        icon: t.status === 'done' ? 'ph-duotone ph-check-circle' : taskIcon[t.id],
+        ink: taskInk[t.status], chipBg: taskChip[t.status], statusLabel: statusText[t.status],
+        aria: t.title + ' — ' + statusText[t.status] + (canEdit ? ' — แตะเพื่อสลับสถานะ' : ' — ดูได้เท่านั้น'),
+        onToggle: gate(() => this.setState((st) => ({ tasks: st.tasks.map((x) => x.id === t.id ? { ...x, status: x.status === 'done' ? 'pending' : 'done' } : x) })))
+      })),
+
+      appt: apptByDay[s.day] || apptByDay['25'],
+      days: [
+        { day: 'ศ', date: '25' }, { day: 'ส', date: '26' }, { day: 'อา', date: '27' },
+        { day: 'จ', date: '28' }, { day: 'อ', date: '29' }, { day: 'พ', date: '30' }
+      ].slice(0).map((d) => {
+        const active = s.day === d.date;
+        const has = !!apptByDay[d.date];
+        return {
+          ...d, id: 'day' + d.date, active, aria: 'วันที่ ' + d.date + (has ? ' · มีนัดหมาย' : ' · ว่าง'),
+          bg: active ? navy : '#ffffff', fg: active ? '#ffffff' : '#0f172a',
+          dot: has ? (active ? '#fbbf24' : navy) : 'transparent',
+          shadow: active ? '0 12px 24px rgba(30,58,138,.32)' : '0 6px 16px rgba(15,23,42,.06)',
+          onPick: () => this.setState({ day: d.date })
+        };
+      }),
+      checklist: s.checklist.map((c) => ({
+        ...c, icon: c.done ? 'ph-fill ph-check-circle' : 'ph-duotone ph-circle',
+        ink: c.done ? '#15803d' : '#94a3b8', textInk: c.done ? '#64748b' : '#0f172a',
+        deco: c.done ? 'line-through' : 'none',
+        onToggle: gate(() => this.setState((st) => ({ checklist: st.checklist.map((x) => x.id === c.id ? { ...x, done: !x.done } : x) })))
+      })),
+      reminderLabel: s.reminder ? 'บันทึกเตือนแล้ว ✓' : 'บันทึกเตือนก่อนวันนัด',
+      saveReminder: gate(() => this.setState({ reminder: true })),
+
+      medIdle: med.stage === 'idle', medCamera: med.stage === 'camera',
+      medReview: med.stage === 'review', medDone: med.stage === 'done',
+      medHasPhoto: med.stage === 'review' || med.stage === 'done',
+      shotTime: med.shotTime || '—', medTime: med.doneTime,
+      medDrug: med.drug, medWho: s.role === 'elder' ? 'ของฉัน' : medWho.name + (s.medTarget === 'me' ? ' (ฉัน)' : ''),
+      medSubline: 'ยา ' + med.at + ' · ' + (s.role === 'elder' ? 'ของฉัน' : medWho.name + (s.medTarget === 'me' ? ' (ฉัน)' : '')),
+      showMedPeople: s.role !== 'elder',
+      medPhotoSlot: 'v3-med-photo-' + s.medTarget,
+      medPeopleVisible: (s.role === 'elder' ? [] : ['me', 'dad', 'mom']).map((id) => {
+        const p = members.find((m) => m.id === id);
+        const mm = s.meds[id];
+        const active = s.medTarget === id;
+        return {
+          id, label: id === 'me' ? 'ฉัน' : p.name, initials: p.initials, time: mm.at,
+          aria: 'เลือกยาของ ' + p.name, active,
+          bg: active ? navy : '#ffffff', fg: active ? '#ffffff' : '#0f172a',
+          sub: active ? '#bfd3f7' : '#64748b',
+          dot: mm.stage === 'done' ? '#4ade80' : '#fbbf24',
+          onPick: () => this.setState({ medTarget: id })
+        };
+      }),
+      medSteps: [
+        { id: 'ms1', label: '1 ถ่ายภาพ', stage: 0 },
+        { id: 'ms2', label: '2 ตรวจภาพ', stage: 1 },
+        { id: 'ms3', label: '3 ยืนยัน', stage: 2 }
+      ].map((st) => {
+        const at = { idle: 0, camera: 0, review: 1, done: 2 }[med.stage];
+        const on = st.stage <= at;
+        return { ...st, bar: on ? navy : '#dbe3f2', ink: on ? navy : '#94a3b8' };
+      }),
+      medHints: [
+        { id: 'h1', icon: 'ph-duotone ph-pill', text: 'ถ่ายให้เห็นเม็ดยาและซองยาในภาพเดียว' },
+        { id: 'h2', icon: 'ph-duotone ph-clock', text: 'ระบบบันทึกเวลาถ่ายภาพให้อัตโนมัติ' },
+        { id: 'h3', icon: 'ph-duotone ph-users-three', text: 'ครอบครัวเห็นภาพและเวลาที่ยืนยันทันที' }
+      ],
+      stampInk: med.stage === 'done' ? '#166534' : '#b45309',
+      stampIcon: med.stage === 'done' ? 'ph-fill ph-check-circle' : 'ph-fill ph-clock-countdown',
+      stampText: med.stage === 'done' ? 'ยืนยันแล้ว ' + med.doneTime : 'รอการยืนยัน',
+      medNote: med.stage === 'done' ? 'บันทึกเวลา ' + med.doneTime + ' · ครอบครัวเห็นแล้ว' : 'ตรวจภาพให้ชัดเจน แล้วกดยืนยันเพื่อบันทึก',
+      openCamera: gate(() => this.patchMed({ stage: 'camera' })),
+      cancelCamera: () => this.patchMed({ stage: med.shotTime ? 'review' : 'idle' }),
+      shoot: gate(() => this.patchMed({ stage: 'review', shotTime: this.now() })),
+      confirmMed: gate(() => this.patchMed({ stage: 'done', doneTime: this.now() })),
+      resetMed: gate(() => this.patchMed({ stage: 'idle', shotTime: '', doneTime: '' })),
+      editDisabled: canEdit ? undefined : 'true',
+      inputPlaceholder: canEdit ? 'พิมพ์ข้อความ' : 'ดูได้เท่านั้น — ส่งข้อความไม่ได้',
+      notePlaceholder: canEdit ? 'เพิ่มบันทึกสำหรับผู้ดูแลคนถัดไป' : 'ดูได้เท่านั้น — บันทึกไม่ได้',
+      editOpacity: canEdit ? 1 : 0.45,
+      editCursor: canEdit ? 'pointer' : 'not-allowed',
+      goDash: () => this.go('dash'),
+      showDashLink: cfg.rail.some((r) => r[2] === 'dash'),
+      medRecorder: s.role === 'elder' ? 'คุณแม่สมใจ (ฉัน)' : 'คุณสมชาย',
+
+      ranges: [{ v: '7', label: '7 วัน' }, { v: '30', label: '30 วัน' }, { v: '90', label: '3 เดือน' }].map((r) => ({
+        id: 'r' + r.v, label: r.label, active: s.range === r.v,
+        bg: s.range === r.v ? navy : 'transparent', fg: s.range === r.v ? '#ffffff' : '#334769',
+        onPick: () => this.setState({ range: r.v })
+      })),
+      rangeLabel: { '7': '7 วันล่าสุด', '30': '30 วันล่าสุด', '90': '3 เดือนล่าสุด' }[s.range],
+      adherence: adherence,
+      adherenceOffset: Math.round(327 - (327 * adherence) / 100),
+      dashHeadline: allMedsDone ? 'ทุกคนทานยาครบวันนี้' : 'เหลือยาที่ยังไม่ยืนยัน ' + missed + ' รายการ',
+      dashSub: 'จาก ' + { '7': '21', '30': '90', '90': '270' }[s.range] + ' ครั้งที่กำหนด · พลาด ' + missed + ' ครั้ง · ตรงเวลาเฉลี่ย 08:12',
+      kpis: [
+        { id: 'k1', icon: 'ph-duotone ph-check-circle', ink: '#15803d', value: String(21 - missed), label: 'ยืนยันพร้อมรูป' },
+        { id: 'k2', icon: 'ph-duotone ph-warning-circle', ink: '#b45309', value: String(missed), label: 'พลาด / เลยเวลา' },
+        { id: 'k3', icon: 'ph-duotone ph-hospital', ink: navy, value: '3', label: 'นัดหมายเดือนนี้' }
+      ],
+      chart: [
+        { day: 'จ', pct: 100 }, { day: 'อ', pct: 100 }, { day: 'พ', pct: 67 },
+        { day: 'พฤ', pct: 100 }, { day: 'ศ', pct: 100 }, { day: 'ส', pct: 67 },
+        { day: 'อา', pct: allMedsDone ? 100 : 67 }
+      ].map((c, i) => ({
+        id: 'c' + i, day: c.day, pct: c.pct + '%', h: Math.max(14, Math.round((c.pct / 100) * 78)) + 'px',
+        fill: c.pct === 100 ? navy : '#fbbf24', ink: c.pct === 100 ? navy : '#b45309',
+        title: c.day + ' · ' + c.pct + '%'
+      })),
+      dashMembers: members.map((m) => {
+        const mine = s.meds[m.id];
+        const done = mine ? mine.stage === 'done' : true;
+        const base = { me: 88, dad: 76, mom: 100, brother: 96 }[m.id];
+        const pct = mine && done ? Math.min(100, base + 12) : base;
+        return {
+          id: m.id, name: m.id === 'me' ? 'คุณสมชาย (ฉัน)' : m.name, initials: m.initials, pct,
+          ink: pct >= 95 ? '#15803d' : pct >= 85 ? navy : '#b45309',
+          note: mine ? (done ? 'ยืนยันครบวันนี้ · ' + mine.drug : 'รอยืนยัน ' + mine.at + ' · ' + mine.drug) : 'ผู้ดูแล · บันทึกให้ 12 ครั้ง',
+          aria: m.name + ' ทานยาตรงเวลา ' + pct + ' เปอร์เซ็นต์',
+          onOpen: () => (mine ? this.openMedFor(m.id) : this.setState({ screen: 'member', member: m.id }))
+        };
+      }),
+      spend: [
+        { id: 'sp1', label: 'ค่ายา', baht: '620', pct: 15, fill: navy },
+        { id: 'sp2', label: 'ค่าตรวจอายุรกรรม', baht: '1,900', pct: 44, fill: '#5b7fd4' },
+        { id: 'sp3', label: 'ค่าเดินทางโรงพยาบาล', baht: '1,760', pct: 41, fill: '#fbbf24' }
+      ],
+
+      messages: s.messages.map((m) => ({
+        ...m, align: m.me ? 'flex-end' : 'flex-start', bg: m.me ? navy : '#ffffff',
+        nameInk: m.me ? '#bfd3f7' : navy, timeInk: m.me ? '#bfd3f7' : '#94a3b8', textInk: m.me ? '#ffffff' : '#0f172a'
+      })),
+      msgRef: this.msgRef,
+      sendMsg: gate(() => {
+        const el = this.msgRef.current;
+        const text = el && el.value.trim();
+        if (!text) return;
+        el.value = '';
+        this.setState((st) => ({ messages: st.messages.concat([{ id: 'm' + Date.now(), who: 'คุณสมชาย', time: this.now(), text, me: true }]) }));
+      }),
+
+      notices: [
+        { id: 'no1', title: 'ยา 12:00 ยังไม่ยืนยัน', detail: 'พ่อประสิทธิ์ · Amlodipine 5 mg', time: '5 นาที', icon: 'ph-duotone ph-pill', ink: '#b45309', chipBg: '#fef3c7' },
+        { id: 'no2', title: 'Check-in สำเร็จ', detail: 'แม่สมใจยืนยันว่าปกติดี', time: '08:32', icon: 'ph-duotone ph-check-circle', ink: '#15803d', chipBg: '#dcfce7' },
+        { id: 'no3', title: 'นัดตรวจพรุ่งนี้ 08:00', detail: 'โรงพยาบาลกรุงเทพ · หมอพงศ์', time: '10:20', icon: 'ph-duotone ph-calendar-dots', ink: navy, chipBg: '#eaf1fe' },
+        { id: 'no4', title: 'พี่เกษมรับผิดชอบพาไป', detail: 'มอบหมายงานในครอบครัวแล้ว', time: 'เมื่อวาน', icon: 'ph-duotone ph-users-three', ink: navy, chipBg: '#eaf1fe' }
+      ],
+
+      notes: s.notes, noteRef: this.noteRef,
+      addNote: gate(() => {
+        const el = this.noteRef.current;
+        const text = el && el.value.trim();
+        if (!text) return;
+        el.value = '';
+        this.setState((st) => ({ notes: [{ id: 'n' + Date.now(), who: 'คุณสมชาย', time: this.now(), text }].concat(st.notes) }));
+      }),
+
+      docs: [
+        { id: 'd1', name: 'บัตรประชาชน — แม่สมใจ', meta: 'อัปเดต 2 มิ.ย. 2568', kind: 'ID', icon: 'ph-duotone ph-identification-card' },
+        { id: 'd2', name: 'สิทธิ์บัตรทอง — พ่อประสิทธิ์', meta: 'ใช้ได้ถึง 31 ธ.ค. 2568', kind: 'สิทธิ์', icon: 'ph-duotone ph-seal-check' },
+        { id: 'd3', name: 'ประกันสุขภาพกลุ่ม', meta: 'กรมธรรม์ 4482-119', kind: 'ประกัน', icon: 'ph-duotone ph-shield-check' },
+        { id: 'd4', name: 'ใบรับรองแพทย์', meta: 'ออก 4 ส.ค. 2568 · หมอพงศ์', kind: 'PDF', icon: 'ph-duotone ph-file-text' }
+      ],
+
+      pingLabel: s.pinged ? 'ส่งข้อความเตือนแล้ว' : 'ส่งข้อความเตือน',
+      ping: gate(() => this.setState({ pinged: true })),
+
+      tabs: cfg.tabs.map((t) => {
+        if (t.id === 'spacer') return { ...t, label: '', icon: '', current: undefined, ink: 'transparent', chipBg: 'transparent', onPick: () => {} };
+        const active = s.screen === t.id || t.kin.indexOf(s.screen) >= 0;
+        return { ...t, current: active ? 'page' : undefined, ink: active ? navy : '#94a3b8', chipBg: active ? '#eaf1fe' : 'transparent', onPick: () => this.go(t.id) };
+      }),
+
+      rail: cfg.rail.map(([num, label, id]) => ({
+        id, num, label, current: s.screen === id ? 'true' : undefined,
+        bg: s.screen === id ? '#dbe6fb' : 'transparent',
+        fg: s.screen === id ? navy : '#334769',
+        onPick: () => this.go(id)
+      })),
+
+      tabsUnused: tabDefs.map((t) => {
+        if (t.id === 'spacer') return { ...t, id: 'spacer', current: undefined, ink: 'transparent', chipBg: 'transparent', onPick: () => {} };
+        const active = s.screen === t.id || t.kin.indexOf(s.screen) >= 0;
+        return { ...t, current: active ? 'page' : undefined, ink: active ? navy : '#94a3b8', chipBg: active ? '#eaf1fe' : 'transparent', onPick: () => this.go(t.id) };
+      }),
+
+      railUnused: railDefs.map(([num, label, id]) => ({
+        id, num, label, current: s.screen === id ? 'true' : undefined,
+        bg: s.screen === id ? '#dbe6fb' : 'transparent',
+        fg: s.screen === id ? navy : '#334769',
+        onPick: () => this.go(id === 'welcome' ? 'home' : id)
+      })),
+
+      emergency: s.emergency,
+      emergencyTitle: s.emergencySent ? 'ส่งคำขอแล้ว' : 'ต้องการความช่วยเหลือ',
+      emergencyBody: s.emergencySent ? 'ครอบครัวทั้ง 3 คนได้รับแจ้งเตือนพร้อมตำแหน่งของคุณแล้ว' : 'ระบบจะแจ้งครอบครัวทุกคนพร้อมตำแหน่งของคุณทันที',
+      openEmergency: () => this.setState({ emergency: true, emergencySent: false }),
+      sendEmergency: () => this.setState({ emergencySent: true }),
+      closeEmergency: () => this.setState({ emergency: false }),
+
+      goHome: () => this.go('home'), goFamily: () => this.go('family'), goCalendar: () => this.go('calendar'),
+      goMed: () => this.go('med'), goMessages: () => this.go('messages'), goNotices: () => this.go('notices')
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -25,12 +25,13 @@ import { Screen } from '@/components/ui/screen';
 import { SearchPill } from '@/components/ui/search-pill';
 import { SectionHeader } from '@/components/ui/section-header';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { StatusPriority, TaskStatusMeta } from '@/constants/status';
+import { DisplayStatusPriority, TaskStatusMeta } from '@/constants/status';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useFamilyContext, type FamilyTask, type Medication } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
 import { daysFromToday, isToday } from '@/utils/date';
+import { isAttention, memberDisplayStatus } from '@/utils/member-status';
 
 const taskIcons: Record<FamilyTask['relatedType'], PhosphorIcon> = {
   checkin: CheckCircleIcon,
@@ -40,10 +41,6 @@ const taskIcons: Record<FamilyTask['relatedType'], PhosphorIcon> = {
   custom: CheckIcon,
 };
 
-// Shared by every Viewer-gated Pressable on this screen (medicine/task rows)
-// — same dim-when-read-only, no-press-feedback-when-disabled treatment each
-// time, instead of repeating `!canEdit && styles.readOnly, pressed &&
-// canEdit && styles.pressed` at each call site.
 const gatedPressableStyle = (
   canEdit: boolean,
   pressed: boolean,
@@ -172,9 +169,6 @@ export default function CaregiverDashboardScreen() {
     () => notifications.filter((item) => item.type === 'MESSAGE' && !item.isRead).length,
     [notifications]
   );
-  // Everything else in the inbox (medicine/appointment reminders, emergency,
-  // etc.) — MESSAGE is excluded here since it already has its own badge on
-  // the chat icon, and counting it in both would double it.
   const unreadNoticeCount = useMemo(
     () => notifications.filter((item) => item.type !== 'MESSAGE' && !item.isRead).length,
     [notifications]
@@ -189,14 +183,15 @@ export default function CaregiverDashboardScreen() {
   const sortedMembers = useMemo(
     () =>
       [...familyMembers].sort(
-        (a, b) => StatusPriority[a.status] - StatusPriority[b.status] || a.name.localeCompare(b.name)
+        (a, b) =>
+          DisplayStatusPriority[memberDisplayStatus(a, medications)] -
+            DisplayStatusPriority[memberDisplayStatus(b, medications)] || a.name.localeCompare(b.name)
       ),
-    [familyMembers]
+    [familyMembers, medications]
   );
 
-  const attentionMembers = sortedMembers.filter((member) => member.status !== 'normal');
+  const attentionMembers = sortedMembers.filter((member) => isAttention(member, medications));
 
-  // Search only narrows the member strip below.
   const visibleMembers = useMemo(() => {
     const query = search.trim().toLowerCase();
     if (!query) return sortedMembers;
@@ -273,9 +268,6 @@ export default function CaregiverDashboardScreen() {
       }>
       <ReadOnlyBanner />
 
-      {/* Booking strip — per the reference design's compact "จองนัดหมาย" banner.
-       *  The left tile is decorative in the reference design; made tappable
-       *  here as a shortcut into the calendar now that `/calendar` exists. */}
       <View style={[styles.bookingStrip, { backgroundColor: theme.primarySoft }]}>
         <Pressable
           onPress={() => router.push('/calendar')}
@@ -284,8 +276,6 @@ export default function CaregiverDashboardScreen() {
           style={({ pressed }) => [styles.bookingTile, { backgroundColor: theme.sky }, pressed && styles.pressed]}>
           <CalendarPlusIcon weight="duotone" size={30} color={theme.primaryText} />
         </Pressable>
-        {/* Targets primaryElderId as a starting suggestion — the form itself
-         *  offers a "สำหรับใคร" picker to change who it's for. Hidden for Viewer. */}
         {canManageFor(primaryElderId) ? (
           <AppButton
             label="จองนัดหมาย"
@@ -362,11 +352,6 @@ export default function CaregiverDashboardScreen() {
         ))}
       </View>
 
-      {/* Owner-only tools — role management and the household's real
-       *  activity log, both gated again inside their own screens. Invites,
-       *  add-member, member stat tiles and the attention list now live on
-       *  the "ครอบครัว" tab instead (see family.tsx) — moved, not deleted,
-       *  to keep Home's top-of-scroll matching the reference design. */}
       {currentRole === 'Owner' ? (
         <View style={styles.quickRow}>
           <AppButton
@@ -430,8 +415,5 @@ const styles = StyleSheet.create({
   },
 
   pressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
-  // Viewer role — matches the reference design's gated-control treatment
-  // (opacity .45; `disabled` + `accessibilityState` cover the "not-allowed"
-  // part, per the handoff's own RN translation note).
   readOnly: { opacity: 0.45 },
 });

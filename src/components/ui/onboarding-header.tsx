@@ -10,14 +10,9 @@ import { useTheme } from '@/hooks/use-theme';
 type OnboardingHeaderProps = {
   title: string;
   onBack?: () => void;
-  /** Shows "ขั้นที่ N จาก 2" + a 2-segment progress bar. Omit when this
-   *  screen is reached outside the register→household onboarding flow
-   *  (e.g. household-setup opened later from "มีรหัสผูกบัญชี?"). */
   step?: 1 | 2;
 };
 
-/** Shared navy masthead for the register → household-setup onboarding
- *  flow, per the reference design's 2-step "สร้างบัญชี" header. */
 export function OnboardingHeader({ title, onBack, step }: OnboardingHeaderProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();

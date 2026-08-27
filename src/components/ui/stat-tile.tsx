@@ -12,12 +12,9 @@ type StatTileProps = {
   value: string | number;
   label: string;
   tone?: BadgeTone;
-  /** Icon above the value — the reference design's dashboard KPI tiles.
-   *  Omit for the plain value+label tile used elsewhere (Family's stat row). */
   phosphorIcon?: PhosphorIcon;
 };
 
-/** Compact metric used in the dashboard summary row. */
 export function StatTile({ value, label, tone = 'neutral', phosphorIcon: Icon }: StatTileProps) {
   const theme = useTheme();
 

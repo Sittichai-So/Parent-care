@@ -163,15 +163,6 @@ function SearchAccountCard({
   );
 }
 
-/**
- * Three ways to grow a household, picked based on who's joining:
- * - invite-code: the existing flow — someone who'll self-register.
- * - managed: a profile with no linked account, for relatives who can't
- *   self-register (no phone, not tech-comfortable). Added directly.
- * - search: someone who already has an account elsewhere in the system —
- *   found by exact email/userCode match, then sent a pending invite they
- *   must accept (never added without their consent).
- */
 export default function AddMemberScreen() {
   const router = useRouter();
   const { currentHousehold, addManagedMember, lookupUser, inviteExistingUser } = useFamilyContext();
@@ -197,9 +188,7 @@ export default function AddMemberScreen() {
       await Share.share({
         message: `เข้าร่วมกลุ่มครอบครัว "${currentHousehold.name}" ในแอป Parent Care ด้วยรหัสเชิญ: ${currentHousehold.inviteCode}`,
       });
-    } catch {
-      // User dismissed the share sheet — nothing to do.
-    }
+    } catch {}
   };
 
   const handleAddManaged = async () => {

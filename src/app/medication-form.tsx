@@ -18,10 +18,6 @@ import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
 import { canScheduleLocalNotifications } from '@/services/notifications';
 
-/** Add or edit a medication. Editing is detected by an `id` param; creating a
- *  new one targets `memberId` (an explicit param, or the caller's own record
- *  for Elder, or the family's Elder for Owner/Caregiver — changeable via the
- *  "สำหรับใคร" picker below when the caller can manage more than one member). */
 export default function MedicationFormScreen() {
   const router = useRouter();
   const theme = useTheme();
@@ -39,8 +35,6 @@ export default function MedicationFormScreen() {
 
   const editing = useMemo(() => medications.find((med) => med.id === params.id), [medications, params.id]);
 
-  // Elder has nothing to pick (always self); for Owner/Caregiver this is
-  // just the starting suggestion — the picker below can change it.
   const [selectedMemberId, setSelectedMemberId] = useState<string>(() => resolveDefaultMemberId(params.memberId));
   const memberId = editing?.memberId ?? selectedMemberId;
   const member = familyMembers.find((m) => m.id === memberId);
@@ -112,9 +106,6 @@ export default function MedicationFormScreen() {
     ]);
   };
 
-  // Mirrors the backend's per-member write permission — gated here (not
-  // just the "+" button in medications.tsx) so a deep link can't reach a
-  // form that's guaranteed to fail on save.
   if (!canManageFor(memberId)) {
     return (
       <Screen center gap={Spacing.three}>

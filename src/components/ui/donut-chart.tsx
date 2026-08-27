@@ -13,14 +13,9 @@ type DonutChartProps = {
   data: DonutSegment[];
   size?: number;
   strokeWidth?: number;
-  /** Small caption under the centre total, e.g. "คน" or "งาน". */
   centerLabel?: string;
 };
 
-/** Ring chart for a small set of categories (member status, task status, …),
- *  with the total in the centre and a legend of value-per-category. Pure
- *  `react-native-svg` — the only chart primitive here that genuinely needs
- *  an arc rather than a rectangle. */
 export function DonutChart({ data, size = 128, strokeWidth = 16, centerLabel }: DonutChartProps) {
   const theme = useTheme();
 

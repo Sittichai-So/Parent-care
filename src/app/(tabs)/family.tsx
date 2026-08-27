@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { CaretRightIcon, EnvelopeOpenIcon, WarningCircleIcon } from 'phosphor-react-native';
+import { CaretRightIcon, EnvelopeOpenIcon, HandHeartIcon, WarningCircleIcon } from 'phosphor-react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Avatar } from '@/components/ui/avatar';
@@ -14,21 +14,20 @@ import { SearchPill } from '@/components/ui/search-pill';
 import { SectionHeader } from '@/components/ui/section-header';
 import { StatTile } from '@/components/ui/stat-tile';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { MemberStatusMeta, StatusPriority } from '@/constants/status';
+import { MemberDisplayStatusMeta, DisplayStatusPriority } from '@/constants/status';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
-import { useFamilyContext, type PendingInvite } from '@/context/family-context';
+import { useFamilyContext, type FamilyMember, type Medication, type PendingInvite } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
+import { isAttention, isCheckedInToday, memberDisplayStatus, statusBucket } from '@/utils/member-status';
 
-const STATUS_TONE: Record<'normal' | 'monitor' | 'urgent', CardTone> = {
-  normal: 'surface',
-  monitor: 'warning',
-  urgent: 'danger',
+const cardTone = (member: FamilyMember, medications: Medication[]): CardTone => {
+  const status = memberDisplayStatus(member, medications);
+  if (status === 'urgent') return 'danger';
+  if (status === 'monitor') return 'warning';
+  return 'surface';
 };
 
-// Shared by every Viewer-gated Pressable on this screen (the invite
-// accept/decline buttons, "+ เพิ่มสมาชิกเข้ากลุ่ม") — same dim-when-read-only,
-// no-press-feedback-when-disabled treatment each time.
 const gatedPressableStyle = (
   canEdit: boolean,
   pressed: boolean,
@@ -77,12 +76,87 @@ function PendingInviteRow({ invite, canEdit, onAccept, onDecline }: PendingInvit
   );
 }
 
+function MemberCard({ member, onOpen }: { member: FamilyMember; onOpen: () => void }) {
+  const theme = useTheme();
+  const { medications, canManageFor, checkIn } = useFamilyContext();
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
+
+  const status = memberDisplayStatus(member, medications);
+  const meta = MemberDisplayStatusMeta[status];
+  const attention = statusBucket(status) === 'attention';
+  const showCheckIn =
+    member.membershipState === 'active' && canManageFor(member.id) && !isCheckedInToday(member);
+
+  const handleCheckIn = () => {
+    setIsCheckingIn(true);
+    checkIn(member.id)
+      .catch((err) =>
+        Alert.alert('เช็กอินไม่สำเร็จ', err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่')
+      )
+      .finally(() => setIsCheckingIn(false));
+  };
+
+  return (
+    <Pressable
+      onPress={onOpen}
+      accessibilityRole="button"
+      accessibilityLabel={`${member.name} ${member.relation} สถานะ ${meta.label}`}
+      accessibilityHint="เปิดรายละเอียดสมาชิก"
+      style={({ pressed }) => pressed && styles.pressed}>
+      <Card accented={attention} tone={cardTone(member, medications)} gap={Spacing.three} style={styles.memberCard}>
+        <Avatar name={member.name} size={64} shape="rounded" tone={meta.tone} />
+
+        <View style={styles.memberBody}>
+          <View style={styles.memberHead}>
+            <ThemedText type="smallBold" numberOfLines={1} style={styles.memberName}>
+              {member.name}
+            </ThemedText>
+            <ThemedText type="caption" themeColor="textMuted">
+              {member.relation} · {member.role}
+            </ThemedText>
+          </View>
+          <View style={styles.memberBadges}>
+            <StatusBadge label={meta.label} tone={meta.tone} phosphorIcon={meta.icon} />
+            {!member.hasAccount ? <StatusBadge label="ไม่มีบัญชี" tone="neutral" /> : null}
+            {member.membershipState === 'pending' ? <StatusBadge label="รอการยืนยัน" tone="warning" /> : null}
+          </View>
+          {member.detail ? (
+            <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
+              {member.detail}
+            </ThemedText>
+          ) : null}
+          {showCheckIn ? (
+            <Pressable
+              onPress={handleCheckIn}
+              disabled={isCheckingIn}
+              accessibilityRole="button"
+              accessibilityLabel={`เช็กอินว่า ${member.name} สบายดีวันนี้`}
+              style={({ pressed }) => [
+                styles.cardCheckIn,
+                { backgroundColor: theme.primarySoft },
+                pressed && styles.pressed,
+              ]}>
+              <HandHeartIcon weight="fill" size={15} color={theme.primaryText} />
+              <ThemedText type="caption" style={{ color: theme.primaryText, fontWeight: '700' }}>
+                {isCheckingIn ? 'กำลังเช็กอิน…' : 'เช็กอินว่าสบายดี'}
+              </ThemedText>
+            </Pressable>
+          ) : null}
+        </View>
+
+        <CaretRightIcon weight="bold" size={20} color={theme.textMuted} />
+      </Card>
+    </Pressable>
+  );
+}
+
 export default function FamilyScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { logout } = useAuth();
   const {
     familyMembers,
+    medications,
     currentHousehold,
     pendingInvites,
     notifications,
@@ -97,15 +171,20 @@ export default function FamilyScreen() {
   const sortedMembers = useMemo(
     () =>
       [...familyMembers].sort(
-        (a, b) => StatusPriority[a.status] - StatusPriority[b.status] || a.name.localeCompare(b.name)
+        (a, b) =>
+          DisplayStatusPriority[memberDisplayStatus(a, medications)] -
+            DisplayStatusPriority[memberDisplayStatus(b, medications)] || a.name.localeCompare(b.name)
       ),
-    [familyMembers]
+    [familyMembers, medications]
   );
 
-  const normalCount = familyMembers.filter((member) => member.status === 'normal').length;
-  const attentionMembers = sortedMembers.filter((member) => member.status !== 'normal');
-  // Matches (tabs)/index.tsx's bell badge exactly — MESSAGE is excluded
-  // since that has its own badge on the chat icon elsewhere.
+  const goodCount = familyMembers.filter(
+    (member) => statusBucket(memberDisplayStatus(member, medications)) === 'good'
+  ).length;
+  const pendingCount = familyMembers.filter(
+    (member) => statusBucket(memberDisplayStatus(member, medications)) === 'pending'
+  ).length;
+  const attentionMembers = sortedMembers.filter((member) => isAttention(member, medications));
   const unreadNoticeCount = useMemo(
     () => notifications.filter((item) => item.type !== 'MESSAGE' && !item.isRead).length,
     [notifications]
@@ -162,9 +241,9 @@ export default function FamilyScreen() {
       <ReadOnlyBanner />
 
       <View style={styles.statRow}>
-        <StatTile value={normalCount} label="ปกติดี" tone="success" />
-        <StatTile value={attentionMembers.length} label="ต้องติดตาม" tone="warning" />
-        <StatTile value={familyMembers.length} label="ทั้งหมด" tone="primary" />
+        <StatTile value={goodCount} label="ปกติดี" tone="success" />
+        <StatTile value={pendingCount} label="รอดำเนินการ" tone="neutral" />
+        <StatTile value={attentionMembers.length} label="ต้องดูแล" tone="warning" />
       </View>
 
       {pendingInvites.length > 0 ? (
@@ -230,50 +309,16 @@ export default function FamilyScreen() {
             </ThemedText>
           </Card>
         ) : null}
-        {visibleMembers.map((member) => {
-          const status = MemberStatusMeta[member.status];
-          return (
-            <Pressable
-              key={member.id}
-              onPress={() => {
-                setSelectedMemberId(member.id);
-                router.push('/family-member');
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={`${member.name} ${member.relation} สถานะ ${status.label}`}
-              accessibilityHint="เปิดรายละเอียดสมาชิก"
-              style={({ pressed }) => pressed && styles.pressed}>
-              <Card
-                accented={member.status !== 'normal'}
-                tone={STATUS_TONE[member.status]}
-                gap={Spacing.three}
-                style={styles.memberCard}>
-                <Avatar name={member.name} size={64} shape="rounded" tone={status.tone} />
-
-                <View style={styles.memberBody}>
-                  <View style={styles.memberHead}>
-                    <ThemedText type="smallBold" numberOfLines={1} style={styles.memberName}>
-                      {member.name}
-                    </ThemedText>
-                    <ThemedText type="caption" themeColor="textMuted">
-                      {member.relation} · {member.role}
-                    </ThemedText>
-                  </View>
-                  <View style={styles.memberBadges}>
-                    <StatusBadge label={status.label} tone={status.tone} phosphorIcon={status.icon} />
-                    {!member.hasAccount ? <StatusBadge label="ไม่มีบัญชี" tone="neutral" /> : null}
-                    {member.membershipState === 'pending' ? <StatusBadge label="รอการยืนยัน" tone="warning" /> : null}
-                  </View>
-                  <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-                    {member.detail}
-                  </ThemedText>
-                </View>
-
-                <CaretRightIcon weight="bold" size={20} color={theme.textMuted} />
-              </Card>
-            </Pressable>
-          );
-        })}
+        {visibleMembers.map((member) => (
+          <MemberCard
+            key={member.id}
+            member={member}
+            onOpen={() => {
+              setSelectedMemberId(member.id);
+              router.push('/family-member');
+            }}
+          />
+        ))}
       </View>
 
       <Pressable
@@ -312,6 +357,16 @@ const styles = StyleSheet.create({
   memberHead: { gap: 1 },
   memberName: { fontSize: 16, lineHeight: 22 },
   memberBadges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.one },
+  cardCheckIn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: Spacing.one,
+    minHeight: 34,
+    borderRadius: 999,
+    paddingHorizontal: Spacing.three,
+    marginTop: Spacing.half,
+  },
   claimLink: { textAlign: 'center', paddingVertical: Spacing.one },
   pressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
   readOnly: { opacity: 0.45 },

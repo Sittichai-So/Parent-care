@@ -11,24 +11,15 @@ import { useTheme } from '@/hooks/use-theme';
 type MedicalHeaderProps = {
   title: string;
   subtitle: string;
-  /** Badge count on the notification bell — omit or 0 to hide the badge. */
   notificationCount?: number;
   onNotificationPress: () => void;
   onLogoutPress: () => void;
-  /** Omit to hide the button — not every screen that uses this header has somewhere for it to go. */
   onMessagesPress?: () => void;
-  /** Badge count on the messages icon (unread chat notifications) — omit or 0 to hide. */
   messageCount?: number;
-  /** Slot above the title — the household switcher pill, when the caller has one. */
   topSlot?: ReactNode;
-  /** Slot for a `SearchPill`, rendered below the subtitle. */
   children?: ReactNode;
 };
 
-/** The dashboard's top block — a solid navy panel per the "Parent Care v3"
- *  reference design, full-bleed via `Screen`'s `header` slot and painted
- *  behind the status bar (this component pads itself using the top safe-area
- *  inset rather than relying on `SafeAreaView`). */
 export function MedicalHeader({
   title,
   subtitle,
@@ -138,8 +129,5 @@ const styles = StyleSheet.create({
   },
   badgeLabel: { fontSize: 9, lineHeight: 11, fontWeight: '800' },
   pressed: { opacity: 0.8 },
-  // Content width elsewhere in the app is capped at `MaxContentWidth` and
-  // centred; the header is full-bleed, so its own content gets the same cap
-  // independently rather than inheriting it from `Screen`.
   childrenSlot: { width: '100%', maxWidth: 800, alignSelf: 'center' },
 });

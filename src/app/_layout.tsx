@@ -9,9 +9,6 @@ import { Colors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/context/auth-context';
 import { FamilyProvider, useFamilyContext } from '@/context/family-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-// Deliberately not `import * as Notifications from 'expo-notifications'` here —
-// see the header comment in services/notifications.ts for why that crashes on
-// Expo Go/Android. addReminderResponseListener wraps it safely.
 import { addReminderResponseListener } from '@/services/notifications';
 
 SplashScreen.preventAutoHideAsync();
@@ -24,15 +21,9 @@ function RootLayoutNav() {
   const isDark = scheme === 'dark';
   const palette = Colors[isDark ? 'dark' : 'light'];
 
-  // isLoadingHouseholds only matters once we know there's a session to load
-  // households for — an unauthenticated user shouldn't wait on it.
   const isLoading = isRestoring || (isAuthenticated && isLoadingHouseholds);
   const hasHousehold = households.length > 0;
 
-  /**
-   * Navigation paints the area behind every screen. Deriving its theme from the
-   * app palette avoids a white flash between screens in dark mode.
-   */
   const navigationTheme = useMemo(() => {
     const base = isDark ? DarkTheme : DefaultTheme;
     return {
@@ -54,8 +45,6 @@ function RootLayoutNav() {
     }
   }, [isLoading]);
 
-  // Tapping a medication/appointment reminder opens the relevant screen directly,
-  // instead of just bringing the app to the foreground on its last screen.
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -89,7 +78,6 @@ function RootLayoutNav() {
         }}>
         <Stack.Protected guard={isAuthenticated && hasHousehold}>
           <Stack.Screen name="(tabs)" />
-          {/* Task flows open as sheets — they are decisions, not destinations. */}
           <Stack.Screen name="medication-confirm" options={{ presentation: 'modal' }} />
           <Stack.Screen name="medication-form" options={{ presentation: 'modal' }} />
           <Stack.Screen name="appointment-form" options={{ presentation: 'modal' }} />
@@ -104,37 +92,17 @@ function RootLayoutNav() {
           />
           <Stack.Screen name="family-member" />
           <Stack.Screen name="add-member" options={{ presentation: 'modal' }} />
-          {/* Owner-only; both screens self-gate on `currentRole` too, so a
-           *  stale deep link from a demoted Owner still shows a clean
-           *  "not allowed" card rather than real data. */}
           <Stack.Screen name="household-access" />
           <Stack.Screen name="audit-log" />
           <Stack.Screen name="messages" />
           <Stack.Screen name="notices" />
         </Stack.Protected>
 
-        {/* household-setup also covers "ผูกบัญชี" (claim), which an account
-            that already has a household may still need — e.g. linking to a
-            managed profile a relative pre-added in a *different* household.
-            So it's reachable regardless of hasHousehold, not nested in the
-            !hasHousehold-only block below.
-            Also reachable mid-signup while still unauthenticated: register.tsx
-            no longer calls the API on "ต่อไป" — it stashes the fields as
-            pendingRegistration and pushes here, and only the household action
-            the user completes on this screen actually calls register() (see
-            household-setup.tsx#ensureRegistered). Without this OR clause,
-            Stack.Protected would make this route unreachable at exactly the
-            moment register.tsx tries to push it. */}
         <Stack.Protected guard={isAuthenticated || pendingRegistration !== null}>
           <Stack.Screen name="household-setup" options={{ animation: 'fade' }} />
         </Stack.Protected>
 
         <Stack.Protected guard={!isAuthenticated}>
-          {/* First declared screen in this group is expo-router's initial
-           *  route whenever the app lands here unauthenticated — "welcome"
-           *  itself decides (via AsyncStorage) whether to actually show the
-           *  splash or bounce straight to "login", so every subsequent visit
-           *  (e.g. after logout) skips it in a single frame. */}
           <Stack.Screen name="welcome" options={{ animation: 'fade' }} />
           <Stack.Screen name="login" options={{ animation: 'fade' }} />
           <Stack.Screen name="register" />

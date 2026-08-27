@@ -23,15 +23,9 @@ export default function VitalsFormScreen() {
   const params = useLocalSearchParams<{ memberId?: string }>();
   const { familyMembers, resolveDefaultMemberId, canManageFor, addVitalLog } = useFamilyContext();
 
-  // Every call site passes memberId explicitly today, but falls back the
-  // same way medication-form.tsx/appointment-form.tsx do in case a future
-  // entry point ever opens this with none.
   const memberId = resolveDefaultMemberId(params.memberId);
   const member = familyMembers.find((m) => m.id === memberId);
 
-  // Mirrors the backend's per-member write permission — gated here (not
-  // just the "+ บันทึกใหม่" button that links here) so a deep link can't
-  // reach a form that's guaranteed to fail on save. See medication-form.tsx.
   const canManageThis = canManageFor(memberId);
 
   const [systolic, setSystolic] = useState('');

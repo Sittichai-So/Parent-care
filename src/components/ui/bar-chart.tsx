@@ -10,19 +10,12 @@ export type BarDatum = { label: string; value: number; tone?: BadgeTone };
 
 type BarChartProps = {
   data: BarDatum[];
-  /** `horizontal` — one row per label, good for names/categories with a
-   *  value or percentage. `vertical` — a column per label, good for a short
-   *  day-by-day trend. */
   orientation?: 'horizontal' | 'vertical';
-  /** Bars are scaled against this instead of the data's own max — pass 100
-   *  when `data` holds percentages so a lone 60% bar doesn't fill the track. */
   scaleMax?: number;
   valueSuffix?: string;
   verticalHeight?: number;
 };
 
-/** Plain `View`-based bar chart — percentage widths/heights, no SVG needed.
- *  Used for adherence-per-member and short activity trends in the report tab. */
 export function BarChart({ data, orientation = 'horizontal', scaleMax, valueSuffix = '', verticalHeight = 120 }: BarChartProps) {
   const theme = useTheme();
 

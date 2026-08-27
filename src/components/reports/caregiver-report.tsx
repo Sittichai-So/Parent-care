@@ -31,11 +31,6 @@ const rangeOptions = [
 ] as const;
 const rangeDays: Record<(typeof rangeOptions)[number]['value'], number> = { '7': 7, '30': 30, '90': 90 };
 
-/** Report for the Caregiver role — narrower than `OwnerReport`: it opens on
- *  *this* caregiver's own assigned tasks (falling back to the household's
- *  open tasks if nothing is assigned to them by name), then the same
- *  medication-adherence and attention-list context Owner sees, since a
- *  caregiver still needs the full household picture to act on it. */
 export function CaregiverReport() {
   const router = useRouter();
   const theme = useTheme();

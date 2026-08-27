@@ -9,18 +9,10 @@ import type { BadgeTone } from './status-badge';
 type AvatarProps = {
   name: string;
   size?: number;
-  /** Ring colour — mirrors the member's status so the list scans at a glance. */
   tone?: BadgeTone;
-  /** `circle` (default) — the Profile identity avatar's look. `rounded` —
-   *  a rounded-square initials tile, per the reference design's list-row
-   *  avatars (Family, Member detail, Members & access). */
   shape?: 'circle' | 'rounded';
 };
 
-/** Thai names have no space-separated surname, so fall back to the first glyphs.
- *  Exported for callers that need the same initials logic but can't use
- *  `Avatar` itself — e.g. a non-square tile shape `Avatar`'s single `size`
- *  can't express (see `MemberAvatarStrip`). */
 export function getInitials(name: string) {
   const words = name.trim().split(/\s+/).filter(Boolean);
   if (words.length > 1) {

@@ -13,8 +13,6 @@ type CheckRowProps = {
   onToggle: () => void;
 };
 
-/** A tappable row with a checkbox — used for booleans like "reminder on" or
- *  "currently taking this medication" where a switch would be too small a target. */
 export function CheckRow({ label, description, checked, onToggle }: CheckRowProps) {
   const theme = useTheme();
 

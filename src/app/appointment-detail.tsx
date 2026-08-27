@@ -56,10 +56,6 @@ export default function AppointmentDetailScreen() {
     setChecked((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
 
   if (!appointment) {
-    // Same reasoning as medication-confirm.tsx: a deep link from a
-    // notification may have just switched the active household, so
-    // `appointments` hasn't caught up from the server yet — that's not the
-    // same as the appointment actually being gone.
     if (params.id && isLoadingData) {
       return (
         <Screen center gap={Spacing.three}>
@@ -85,8 +81,6 @@ export default function AppointmentDetailScreen() {
   return (
     <Screen
       gap={Spacing.three}
-      // Both actions hit updateAppointment — Owner/Caregiver may act on
-      // anyone's appointment, Elder only their own.
       footer={
         canManageFor(appointment.memberId) ? (
           <>

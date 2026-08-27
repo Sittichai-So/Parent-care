@@ -14,12 +14,9 @@ type AppointmentSpotlightCardProps = {
   appointment: Appointment;
   memberName: string;
   onPress: () => void;
-  /** Footer "ส่งข้อความ" chip — omit to hide it. */
   onMessagePress?: () => void;
 };
 
-/** The large "next appointment" card from the reference Home screen — a status
- *  label + amber relative-day badge up top, then date/time/place detail rows. */
 export function AppointmentSpotlightCard({
   appointment,
   memberName,

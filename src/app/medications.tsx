@@ -29,7 +29,6 @@ function MedicationCard({ med, canEdit, onPress, onConfirmPress }: MedicationCar
 
   return (
     <Pressable
-      // Owner/Caregiver can edit anyone's, Elder only their own.
       onPress={canEdit ? onPress : undefined}
       disabled={!canEdit}
       accessibilityRole="button"
@@ -82,8 +81,6 @@ function MedicationCard({ med, canEdit, onPress, onConfirmPress }: MedicationCar
   );
 }
 
-/** Lists one member's medications, or every member's grouped by name when no
- *  `memberId` is given — the caregiver overview entry point. */
 export default function MedicationsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ memberId?: string }>();
@@ -91,8 +88,6 @@ export default function MedicationsScreen() {
 
   const memberId = params.memberId;
   const isOverview = !memberId;
-  // Where a new medicine from the "+" button would go: the scoped member if
-  // there is one, else self for Elder or the family's Elder otherwise.
   const addTargetMemberId = resolveDefaultMemberId(memberId);
 
   const grouped = useMemo(() => {
@@ -114,8 +109,6 @@ export default function MedicationsScreen() {
   return (
     <Screen
       gap={Spacing.three}
-      // Owner/Caregiver can add for anyone, Elder only for themself; hidden
-      // (not disabled) since Viewer can still browse the list.
       footer={
         canManageFor(addTargetMemberId) ? (
           <AppButton

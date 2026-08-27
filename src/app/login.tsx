@@ -12,6 +12,7 @@ import { AppButton } from '@/components/ui/app-button';
 import { TextField } from '@/components/ui/text-field';
 import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
+import { useFormError } from '@/hooks/use-form-error';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function LoginScreen() {
@@ -21,7 +22,7 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const { error, setError, onFieldChange } = useFormError();
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
@@ -45,9 +46,7 @@ export default function LoginScreen() {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.backgroundElement }]} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          {/* Hero — light-blue backdrop with a rounded picture frame, cut off by
-           *  a wave into the white body below. Per the reference design; the
-           *  wave is the one place in the app that isn't a straight edge. */}
+          {/* The wave is the one place in the app that isn't a straight edge — intentional, per the reference design. */}
           <View style={[styles.hero, { backgroundColor: theme.sky }]}>
             <View style={[styles.heroFrame, { backgroundColor: theme.heroArt }]}>
               <Image
@@ -77,10 +76,7 @@ export default function LoginScreen() {
               <TextField
                 label="อีเมล"
                 value={email}
-                onChangeText={(value) => {
-                  setEmail(value);
-                  if (error) setError(null);
-                }}
+                onChangeText={onFieldChange(setEmail)}
                 placeholder="you@example.com"
                 keyboardType="email-address"
                 variant="soft"
@@ -90,10 +86,7 @@ export default function LoginScreen() {
               <TextField
                 label="รหัสผ่าน"
                 value={password}
-                onChangeText={(value) => {
-                  setPassword(value);
-                  if (error) setError(null);
-                }}
+                onChangeText={onFieldChange(setPassword)}
                 placeholder="รหัสผ่าน"
                 secureTextEntry
                 variant="soft"

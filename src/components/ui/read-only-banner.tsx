@@ -8,10 +8,6 @@ import { Spacing } from '@/constants/theme';
 import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Viewer-role banner, per the reference design's read-only rule — self-gated
- *  on `canEdit` like `NotificationBanner` is on permission state, so every
- *  screen just drops this in with no prop wiring. Renders nothing for any
- *  role that can actually edit. */
 export function ReadOnlyBanner() {
   const theme = useTheme();
   const { canEdit } = useFamilyContext();

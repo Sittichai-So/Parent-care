@@ -1,8 +1,5 @@
 import { apiDelete, apiGet, apiPost, apiPut } from './api-client';
 
-/** `kind` is stored server-side as the Thai label the design's pill renders
- *  verbatim (`ID` · `สิทธิ์` · `ประกัน` · `PDF`) — not a slug — so it's typed
- *  as `string` and printed straight through, same as `meta`. */
 export type ApiDocument = {
   _id: string;
   householdId: string;

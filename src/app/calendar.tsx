@@ -16,19 +16,12 @@ import { Spacing } from '@/constants/theme';
 import { useFamilyContext } from '@/context/family-context';
 import { todayKey } from '@/utils/date';
 
-/** Local-only prep checklist, per the reference design — the same
- *  "optimistic local toggle" nature as the mock's own checklist rows (README:
- *  "Task rows and checklist rows are toggles (optimistic local state)"), not
- *  backed by a per-appointment checklist field that doesn't exist yet. */
 const initialChecklist = [
   { id: 'c1', text: 'บัตรประชาชน · สิทธิ์การรักษา', done: true },
   { id: 'c2', text: 'รายการยาที่ใช้อยู่', done: false },
   { id: 'c3', text: 'งดน้ำงดอาหารหลัง 22:00', done: false },
 ];
 
-/** "ปฏิทินครอบครัว" — browse appointments by day, per the reference design's
- *  screen 07. New route: nothing in the repo covered this "date-strip +
- *  day's appointment + prep checklist" browse pattern before. */
 export default function CalendarScreen() {
   const router = useRouter();
   const { appointments, familyMembers, canEdit, updateAppointment } = useFamilyContext();

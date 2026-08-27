@@ -1,13 +1,3 @@
-/**
- * Thin fetch wrapper around the parent-care-backend API. Unwraps the
- * backend's `{success,message,data}` envelope and normalizes failures into
- * a typed ApiError, so callers just get back `data` or a thrown error with
- * a human-readable `message`.
- *
- * No axios/react-query here on purpose — this stays a hand-rolled wrapper
- * in the same minimal-dependency style as services/notifications.ts.
- */
-
 const BASE_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8024/api').replace(/\/$/, '');
 
 export class ApiError extends Error {
@@ -24,7 +14,6 @@ export class ApiError extends Error {
 
 let authToken: string | null = null;
 
-/** Called by auth-context after login/register/session-restore/logout. */
 export function setAuthToken(token: string | null) {
   authToken = token;
 }
@@ -71,10 +60,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   let payload: Envelope<T> | null = null;
   try {
     payload = (await response.json()) as Envelope<T>;
-  } catch {
-    // Non-JSON response (e.g. a proxy error page) — falls through to the
-    // status-based error below.
-  }
+  } catch {}
 
   if (!response.ok || !payload || payload.success === false) {
     throw new ApiError(payload?.message ?? `Request failed (${response.status})`, response.status, payload?.errors ?? []);
@@ -89,15 +75,8 @@ export const apiPut = <T>(path: string, body?: unknown) => request<T>(path, { me
 export const apiPatch = <T>(path: string, body?: unknown) => request<T>(path, { method: 'PATCH', body });
 export const apiDelete = <T>(path: string) => request<T>(path, { method: 'DELETE' });
 
-/** Multipart upload — separate from `request()` because a file body can't be
- *  JSON.stringify'd, and `fetch` must set its own `Content-Type` (with the
- *  multipart boundary) rather than the `application/json` `request()` always
- *  sends when a body is present. */
 export async function apiUpload<T>(path: string, file: { uri: string; name: string; type: string }): Promise<T> {
   const form = new FormData();
-  // React Native's FormData accepts this `{uri,name,type}` shape in place of
-  // a real Blob/File — not expressible in the DOM FormData types TypeScript
-  // has loaded here, hence the cast.
   form.append('file', { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
 
   const headers: Record<string, string> = { Accept: 'application/json' };
@@ -113,9 +92,7 @@ export async function apiUpload<T>(path: string, file: { uri: string; name: stri
   let payload: Envelope<T> | null = null;
   try {
     payload = (await response.json()) as Envelope<T>;
-  } catch {
-    // Non-JSON response — falls through to the status-based error below.
-  }
+  } catch {}
 
   if (!response.ok || !payload || payload.success === false) {
     throw new ApiError(payload?.message ?? `Request failed (${response.status})`, response.status, payload?.errors ?? []);

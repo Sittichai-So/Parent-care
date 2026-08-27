@@ -11,11 +11,7 @@ export type BadgeTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger'
 type StatusBadgeProps = {
   label: string;
   tone?: BadgeTone;
-  /** Coloured dot instead of an emoji — reads better at small sizes. Ignored
-   *  when `phosphorIcon` is given. */
   dot?: boolean;
-  /** A real status glyph (e.g. `CheckCircleIcon`) instead of the plain dot —
-   *  per the reference design's member/task status pills. */
   phosphorIcon?: PhosphorIcon;
   style?: StyleProp<ViewStyle>;
 };

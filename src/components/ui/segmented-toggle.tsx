@@ -12,8 +12,6 @@ type SegmentedToggleProps<T extends string> = {
   onChange: (value: T) => void;
 };
 
-/** A 2-4 way pill switch for picking between mutually-exclusive modes
- *  (e.g. "create a household" vs. "join one" vs. "claim a profile"). */
 export function SegmentedToggle<T extends string>({ options, value, onChange }: SegmentedToggleProps<T>) {
   const theme = useTheme();
 
@@ -42,8 +40,6 @@ export function SegmentedToggle<T extends string>({ options, value, onChange }: 
 }
 
 const styles = StyleSheet.create({
-  // Pill track + pill option, per the reference design's segmented range
-  // control (radius 999, no border — a soft navy-tinted fill instead).
   toggle: {
     flexDirection: 'row',
     borderRadius: Radius.full,

@@ -10,21 +10,11 @@ export type ChipOption = { value: string; label: string };
 
 type ChipSelectProps = {
   options: readonly ChipOption[];
-  /** Currently selected values. Pass a single-item array to model a single-select. */
   selected: readonly string[];
   onToggle: (value: string) => void;
-  /** 'large' gives every chip a big, evenly-sized (2-per-row) tap target with a
-   *  checkmark on the selected one — for a screen's primary choice, like a time
-   *  slot, where mis-taps are costly. Default is the compact pill used for
-   *  secondary picks (roles, linked-item tags). */
   size?: 'default' | 'large';
 };
 
-/**
- * A wrapping row of selectable chips. Whether this behaves as single- or
- * multi-select is entirely up to the caller's `onToggle` implementation —
- * replace the array for single-select, splice for multi-select.
- */
 export function ChipSelect({ options, selected, onToggle, size = 'default' }: ChipSelectProps) {
   const theme = useTheme();
   const large = size === 'large';
@@ -76,8 +66,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // Two per row (not a fixed count) so the tap target stays big regardless of
-  // screen width — the goal is fewer accidental neighbor-taps, not a tidy grid.
   chipLarge: {
     minHeight: HitSize.large,
     flexBasis: '47%',

@@ -18,6 +18,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Elevation, Radius, Spacing } from '@/constants/theme';
 import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
+import { isAttention } from '@/utils/member-status';
 
 type TabButtonProps = {
   name: string;
@@ -40,8 +41,6 @@ function TabButton({ name, icon: Icon, label, badge }: TabButtonProps) {
       accessibilityState={{ selected: focused }}
       style={styles.tabItem}>
       <View style={styles.iconWrap}>
-        {/* Rounded chip behind the icon, filled when active — per the
-         *  reference design, replacing the old underline-dot indicator. */}
         <View style={[styles.iconChip, focused && { backgroundColor: theme.primarySoft }]}>
           <Icon weight={focused ? 'fill' : 'regular'} size={22} color={color} />
         </View>
@@ -58,9 +57,6 @@ function TabButton({ name, icon: Icon, label, badge }: TabButtonProps) {
   );
 }
 
-/** The centre SOS button — navy, phone-call glyph, a slow breathing shadow
- *  pulse to draw the eye (this is the one control on the tab bar that
- *  should never be missed), per the reference design's `Emergency` FAB. */
 function EmergencyButton() {
   const theme = useTheme();
   const router = useRouter();
@@ -99,10 +95,9 @@ function EmergencyButton() {
 export default function TabsLayout() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const { familyMembers, currentRole } = useFamilyContext();
+  const { familyMembers, medications, currentRole } = useFamilyContext();
 
-  /** Surfaced on the tab bar so attention items are visible from any screen. */
-  const attentionCount = familyMembers.filter((member) => member.status !== 'normal').length;
+  const attentionCount = familyMembers.filter((member) => isAttention(member, medications)).length;
 
   const showCaregiverTab = currentRole !== 'Elder';
   const showElderTab = currentRole !== 'Caregiver';
@@ -139,8 +134,6 @@ export default function TabsLayout() {
             </TabTrigger>
           ) : null}
 
-          {/* Every role gets a report — its content differs per role (see
-           *  (tabs)/report.tsx), but the tab itself is never hidden. */}
           <TabTrigger name="report" href="/report" asChild>
             <TabButton name="report" icon={ChartDonutIcon} label="แดชบอร์ด" />
           </TabTrigger>
@@ -160,9 +153,6 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  // Floating pill nav, per the reference design — margin on every side (instead
-  // of the old full-bleed, top-border-only bar) plus an all-around shadow tinted
-  // with the brand navy rather than the flat top hairline this used to have.
   bar: {
     flexDirection: 'row',
     marginHorizontal: Spacing.three,
@@ -200,8 +190,6 @@ const styles = StyleSheet.create({
   },
   badgeLabel: { fontSize: 10, lineHeight: 12, fontWeight: '800' },
 
-  // Overlaps the bar's top edge, centred — matches the reference design's
-  // always-visible SOS button rather than tucking it in as just another tab.
   fabSlot: {
     position: 'absolute',
     top: -34,

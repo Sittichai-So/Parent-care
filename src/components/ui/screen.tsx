@@ -15,30 +15,16 @@ import { useTheme } from '@/hooks/use-theme';
 
 type ScreenProps = {
   children: ReactNode;
-  /** Wrap the content in a ScrollView. Turn off for screens that must not scroll. */
   scroll?: boolean;
-  /** Vertically centre short content (confirmation / decision screens). */
   center?: boolean;
-  /** Lift content above the keyboard — use on any screen with a TextInput. */
   keyboardAvoiding?: boolean;
-  /** Vertical rhythm between direct children. */
   gap?: number;
-  /** Pinned to the bottom of the screen, outside the scroll area. */
   footer?: ReactNode;
-  /** Full-bleed slot above the scroll area (e.g. `MedicalHeader`'s solid navy
-   *  panel) — unlike `children`, it ignores `contentWidth`'s gutters and spans
-   *  the full device width. When set, the screen's own top safe-area inset is
-   *  ceded to the header (it must pad itself via `useSafeAreaInsets`), so its
-   *  background can paint behind the status bar. */
   header?: ReactNode;
   edges?: readonly Edge[];
   contentContainerStyle?: StyleProp<ViewStyle>;
 };
 
-/**
- * The single layout shell for every screen: themed background, safe-area insets,
- * a readable max width on tablets/web, and consistent gutters.
- */
 export function Screen({
   children,
   scroll = true,

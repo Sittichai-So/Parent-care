@@ -1,6 +1,3 @@
-/** Preset options for the medication/appointment forms — chips instead of free-text
- *  time entry so the elder-facing forms never require typing a time by hand. */
-
 export const MEDICATION_TIME_OPTIONS = [
   { value: '07:00', label: 'เช้า 07:00' },
   { value: '08:00', label: 'เช้า 08:00' },

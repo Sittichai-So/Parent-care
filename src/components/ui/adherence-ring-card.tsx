@@ -6,7 +6,6 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type AdherenceRingCardProps = {
-  /** 0–100. */
   pct: number;
   headline: string;
   sub: string;
@@ -17,11 +16,6 @@ const STROKE = 11;
 const RING_RADIUS = (SIZE - STROKE) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
-/** The dashboard's navy hero card — a single continuous progress ring, per
- *  the reference design's "Adherence card". Built as its own component
- *  rather than reusing `DonutChart`: that one draws a multi-category
- *  breakdown with a legend, a genuinely different contract from one
- *  progress arc + track on a navy background with its own centre styling. */
 export function AdherenceRingCard({ pct, headline, sub }: AdherenceRingCardProps) {
   const theme = useTheme();
   const clamped = Math.max(0, Math.min(100, Math.round(pct)));

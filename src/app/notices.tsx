@@ -27,10 +27,6 @@ import type { NotificationType } from '@/services/notifications-inbox-api';
 import { daysFromToday, relativeDayLabel } from '@/utils/date';
 import { chipToneColors } from '@/utils/tone-colors';
 
-/** Icon + tone per server notification type — the medicine/appointment
- *  due-time reminders and chat pings that come from the account's real
- *  notification inbox (`family-context.tsx#notifications`), alongside the
- *  client-derived categories below. */
 const SERVER_NOTICE_META: Record<NotificationType, { icon: PhosphorIcon; tone: BadgeTone }> = {
   MEDICINE: { icon: PillIcon, tone: 'warning' },
   APPOINTMENT: { icon: CalendarPlusIcon, tone: 'primary' },
@@ -45,20 +41,12 @@ type Notice = {
   id: string;
   title: string;
   detail: string;
-  /** When this fires naturally from real data (e.g. an upcoming appointment's
-   *  own date) — omitted rather than faked for notice kinds with no genuine
-   *  "when" in the data model (member status, pending invites). */
   time?: string;
   icon: PhosphorIcon;
   tone: BadgeTone;
   onPress?: () => void;
 };
 
-/** Assembled from two sources: the account's real server-side notification
- *  inbox (medicine/appointment due-time reminders, chat pings, emergency —
- *  see `family-context.tsx#notifications`) plus signals derived client-side
- *  from data already in context (member attention status, pending invites,
- *  appointments within the next 2 days) that have no equivalent inbox row. */
 export default function NoticesScreen() {
   const router = useRouter();
   const theme = useTheme();
@@ -70,10 +58,6 @@ export default function NoticesScreen() {
       const meta = SERVER_NOTICE_META[item.type];
       const openTarget = () => {
         if (!item.isRead) markNotificationRead(item._id).catch(() => {});
-        // `notifications` is already scoped to the currently selected
-        // household (see family-context.tsx#householdNotifications), so
-        // every id below is guaranteed to belong to it — no household
-        // switch needed to find the record.
         if (item.type === 'MEDICINE' && item.data.medicineId) {
           router.push({ pathname: '/medication-confirm', params: { id: item.data.medicineId } });
         } else if (item.type === 'APPOINTMENT' && item.data.appointmentId) {

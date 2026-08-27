@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 
@@ -27,19 +27,16 @@ import { useAuth } from '@/context/auth-context';
 import { useFamilyContext } from '@/context/family-context';
 import { useTheme } from '@/hooks/use-theme';
 import { daysFromToday, isToday } from '@/utils/date';
+import { checkInTime, isCheckedInToday } from '@/utils/member-status';
 
 type ElderAction = {
   label: string;
   detail: string;
   icon: PhosphorIcon;
   route: Href;
-  /** `danger` — the reference design's distinct red "ต้องการความช่วยเหลือ"
-   *  tile/border; every other action card is `primary`. */
   tone?: 'primary' | 'danger';
 };
 
-/** One row in "ตารางวันนี้" — tappable, so it doubles as the shortcut into
- *  the photo-confirm flow (medication) or the visit details (appointment). */
 type ScheduleItem = {
   key: string;
   time: string;
@@ -123,10 +120,9 @@ export default function ElderHomeScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { user, logout } = useAuth();
-  const { medications, appointments, selfMemberId, currentRole, canEdit, checkIn } = useFamilyContext();
+  const { medications, appointments, familyMembers, selfMemberId, currentMembershipId, currentRole, canEdit, checkIn } =
+    useFamilyContext();
 
-  // Mirrors the guard in (tabs)/index.tsx — a pure-Caregiver role has no
-  // "explore" trigger in the tab bar, so bounce them back to their own screen.
   useEffect(() => {
     if (currentRole === 'Caregiver') {
       router.replace('/');
@@ -145,10 +141,6 @@ export default function ElderHomeScreen() {
     [appointments, selfMemberId]
   );
 
-  /** Each active medication's daily schedule flattened into a single list, plus
-   *  the next appointment if there is one — this is deliberately whole-day
-   *  granularity (done if taken at all today), not per-slot, to match what the
-   *  data model actually tracks. */
   const todaySchedule = useMemo<ScheduleItem[]>(() => {
     const medItems: ScheduleItem[] = myMedications.flatMap((med) =>
       med.schedule.map((time) => ({
@@ -178,10 +170,9 @@ export default function ElderHomeScreen() {
 
   const pendingCount = todaySchedule.filter((item) => !item.done).length;
 
-  // Purely a this-session UI flag ("did I already tap the button"), not a
-  // persisted server field — the same scope the reference design's own mock
-  // check-in state has. `checkIn()` itself still calls the real API below.
-  const [checkedIn, setCheckedIn] = useState(false);
+  const selfMember = familyMembers.find((member) => member.id === currentMembershipId);
+  const checkedIn = selfMember ? isCheckedInToday(selfMember) : false;
+  const checkedInAt = selfMember ? checkInTime(selfMember) : null;
 
   const elderActions: ElderAction[] = [
     {
@@ -202,17 +193,13 @@ export default function ElderHomeScreen() {
 
   const handleCheckIn = () => {
     checkIn()
-      .then(() => {
-        setCheckedIn(true);
-        Alert.alert('ส่งแล้ว', 'บอกครอบครัวแล้วว่าคุณสบายดีวันนี้');
-      })
+      .then(() => Alert.alert('ส่งแล้ว', 'บอกครอบครัวแล้วว่าคุณสบายดีวันนี้'))
       .catch((err) => {
         const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
         Alert.alert('ส่งไม่สำเร็จ', message);
       });
   };
 
-  // Mirrors the caregiver dashboard's confirm-then-logout flow.
   const confirmLogout = () => {
     Alert.alert('ออกจากระบบ', 'ต้องการออกจากระบบใช่หรือไม่?', [
       { text: 'ยกเลิก', style: 'cancel' },
@@ -250,9 +237,6 @@ export default function ElderHomeScreen() {
       <NotificationBanner />
       <ReadOnlyBanner />
 
-      {/* Hero — greeting, today's status and the single most important
-       *  action (check-in) folded into one card, per the reference design's
-       *  "Elder home" screen, instead of a separate status banner. */}
       <Card elevation="floating" padding={Spacing.five} gap={Spacing.three} style={styles.heroCard}>
         <ThemedText type="display" style={styles.heroGreeting} accessibilityRole="header">
           สวัสดีค่ะ {user?.name ?? 'คุณแม่'}
@@ -277,7 +261,7 @@ export default function ElderHomeScreen() {
             <HandHeartIcon weight="fill" size={26} color={theme.onPrimary} />
           )}
           <ThemedText style={[styles.heroButtonLabel, { color: theme.onPrimary }]}>
-            {checkedIn ? 'เช็กอินแล้ววันนี้' : 'ฉันสบายดี'}
+            {checkedIn ? `เช็กอินแล้ววันนี้${checkedInAt ? ` · ${checkedInAt}` : ''}` : 'ฉันสบายดี'}
           </ThemedText>
         </Pressable>
       </Card>

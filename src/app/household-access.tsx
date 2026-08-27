@@ -17,11 +17,6 @@ import { useFamilyContext, type FamilyMember, type MemberRole } from '@/context/
 import type { HouseholdRole } from '@/services/households-api';
 import { useTheme } from '@/hooks/use-theme';
 
-/** What each role can actually do in this app — real capability gates
- *  verified elsewhere in the codebase (Viewer's `canEdit`-gated screens,
- *  Elder's tab list excluding the rest of the household, Owner-only routes
- *  like this one), not a fabricated per-user permission list. A chip here
- *  only exists if it names something genuinely enforced somewhere else. */
 const ROLE_PERMISSIONS: Record<MemberRole, { label: string; granted: boolean }[]> = {
   Owner: [
     { label: 'จัดการสิทธิ์สมาชิก', granted: true },
@@ -81,11 +76,6 @@ function MemberAccessRow({ member, isMe, isSaving, onPress }: MemberAccessRowPro
             <ThemedText type="smallBold" numberOfLines={1}>
               {member.name}
             </ThemedText>
-            {/* Only the signed-in member's own email is available here —
-             *  other members' emails aren't exposed by the household member
-             *  list (privacy-reasonable, and managed members with no account
-             *  have none at all), so this falls back to relation rather than
-             *  fabricating an address. */}
             <ThemedText type="caption" themeColor="textMuted" numberOfLines={1}>
               {isMe ? (user?.email ?? member.relation) : member.relation}
             </ThemedText>

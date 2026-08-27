@@ -11,11 +11,6 @@ type ReportHeaderProps = {
   subtitle: string;
 };
 
-/** Shared masthead for every role's report tab — a full-bleed solid navy
- *  panel (via `Screen`'s `header` slot), matching every other top-level tab
- *  screen's header. Title + who/what it covers + today's date, so each
- *  screen reads as a dated report rather than a live dashboard (even though,
- *  like the rest of the app, it's live data). */
 export function ReportHeader({ title, subtitle }: ReportHeaderProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();

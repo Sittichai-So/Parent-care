@@ -10,21 +10,19 @@ import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
 import { StatTile } from '@/components/ui/stat-tile';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { MemberStatusMeta } from '@/constants/status';
+import { MemberDisplayStatusMeta } from '@/constants/status';
 import { Spacing } from '@/constants/theme';
 import { useFamilyContext } from '@/context/family-context';
 import { daysFromToday, relativeDayLabel } from '@/utils/date';
+import { memberDisplayStatus } from '@/utils/member-status';
 import { bucketEventsByDay, statusBreakdown } from '@/utils/reports';
 
 import { ReportHeader } from './report-header';
 
-/** Read-only snapshot for the Viewer role — no task tracking, no
- *  medication-adherence breakdown, no "act on this" framing, since a
- *  Viewer can't manage the household anyway. Just the family's current
- *  status, a 7-day activity pulse, and what's on the calendar. */
 export function ViewerReport() {
   const router = useRouter();
-  const { currentHousehold, familyMembers, appointments, timeline, setSelectedMemberId } = useFamilyContext();
+  const { currentHousehold, familyMembers, medications, appointments, timeline, setSelectedMemberId } =
+    useFamilyContext();
 
   const statusCounts = useMemo(() => statusBreakdown(familyMembers), [familyMembers]);
   const activityByDay = useMemo(() => bucketEventsByDay(timeline, 7), [timeline]);
@@ -80,7 +78,7 @@ export function ViewerReport() {
       <SectionHeader title="สมาชิกในบ้านทั้งหมด" count={familyMembers.length} />
       <View style={styles.list}>
         {familyMembers.map((member) => {
-          const status = MemberStatusMeta[member.status];
+          const status = MemberDisplayStatusMeta[memberDisplayStatus(member, medications)];
           return (
             <Pressable
               key={member.id}

@@ -19,11 +19,6 @@ const VIEW_WIDTH = 300;
 const PAD_X = 6;
 const PAD_Y = 14;
 
-/** Small multi-series line chart for a trend over time (blood pressure,
- *  sugar, weight, …) — the one report chart that genuinely needs `Path`
- *  arcs/segments rather than a rectangle, so it's the sole SVG-line
- *  component; `BarChart`/`DonutChart` cover the rest. Renders on a fixed
- *  `viewBox` and scales to the card's width via `width="100%"`. */
 export function TrendLineChart({ series, height = 140, unit, emptyMessage = 'ยังไม่มีข้อมูลเพียงพอสำหรับกราฟ' }: TrendLineChartProps) {
   const theme = useTheme();
 

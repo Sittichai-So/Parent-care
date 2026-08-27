@@ -40,16 +40,8 @@ const rangeOptions = [
 ] as const;
 const rangeDays: Record<(typeof rangeOptions)[number]['value'], number> = { '7': 7, '30': 30, '90': 90 };
 
-/** Colour per category slot, by position in `summary.categories` — there are
- *  at most 4 categories (medicine/treatment/transport/other), so this only
- *  needs 4 entries. Assigned from the theme, not hardcoded, so dark mode
- *  still works. */
 const SPEND_COLORS = ['primary', 'teal', 'warning', 'lavender'] as const;
 
-/** Household-wide report for the Owner role — the one member who's meant to
- *  see everything: every member's status, task throughput, medication
- *  adherence across the family, and what's coming up next. Distinct from
- *  `CaregiverReport`, which narrows to "my" assigned work. */
 export function OwnerReport() {
   const router = useRouter();
   const theme = useTheme();
@@ -70,8 +62,6 @@ export function OwnerReport() {
   const [isLoadingExpenses, setIsLoadingExpenses] = useState(true);
   const [expensesError, setExpensesError] = useState<string | null>(null);
 
-  // Same react-hooks/set-state-in-effect situation as family-context.tsx
-  // (see its comment there) — batched by React 19 into one render regardless.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!currentHouseholdId) {

@@ -6,17 +6,11 @@ import { useTheme } from '@/hooks/use-theme';
 import { formatDateKey } from '@/utils/date';
 
 type AppointmentDateBlockProps = {
-  /** yyyy-mm-dd date key. */
   date: string;
-  /** `compact` for list rows, `large` for a screen's hero card. */
   size?: 'compact' | 'large';
-  /** `muted` reads as de-emphasized — used for past appointments. */
   tone?: 'primary' | 'muted';
 };
 
-/** The "day tile" showing a date's month + day number (+ weekday at `large`
- *  size) — the one visual language for "this is a date" shared by the
- *  appointments list and the appointment detail hero. */
 export function AppointmentDateBlock({ date, size = 'compact', tone = 'primary' }: AppointmentDateBlockProps) {
   const theme = useTheme();
   const large = size === 'large';

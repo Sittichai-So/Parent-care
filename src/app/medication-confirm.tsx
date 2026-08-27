@@ -61,18 +61,11 @@ export default function MedicationConfirmScreen() {
     isLoadingData,
   } = useFamilyContext();
 
-  // Real camera capture — `photoUri` is the local file the OS camera handed
-  // back (via expo-image-picker's native camera UI), `shotAt` the real
-  // moment it was taken. `takenToday`, derived below from real data, is
-  // what actually drives the "done" stage.
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [shotAt, setShotAt] = useState<Date | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
-  // Opening this screen without an explicit medicine id (e.g. a stale deep
-  // link) falls back to the caller's *own* medicine via `selfMemberId`, not
-  // the household's primary elder (who may be someone else entirely).
   const medication = useMemo(() => {
     if (params.id) return medications.find((med) => med.id === params.id);
     return medications.find((med) => med.memberId === selfMemberId && med.active);
@@ -88,12 +81,6 @@ export default function MedicationConfirmScreen() {
   const stage: 'idle' | 'review' | 'done' = takenToday ? 'done' : photoUri ? 'review' : 'idle';
   const currentStepIndex = stage === 'done' ? 2 : stage === 'review' ? 1 : 0;
 
-  // Viewing stays open to everyone in the household (Viewer included) — only
-  // the write actions below (photo capture, retake, confirm) are gated
-  // per-record, same as medication-form.tsx: Owner/Caregiver may confirm
-  // anyone's dose, Elder only their own. Checked against `canEdit` alone
-  // used to let e.g. an Elder start (and photograph!) another member's
-  // confirm flow only to have the backend reject it at the very last step.
   const canManageThis = medication ? canManageFor(medication.memberId) : false;
 
   const takePhoto = async () => {
@@ -128,9 +115,6 @@ export default function MedicationConfirmScreen() {
     if (!medication || !canManageThis || !photoUri || !shotAt) return;
     setIsConfirming(true);
 
-    // Split into two try/catches (not one) so a failure names which step it
-    // was — otherwise both "can't reach the server at all" and "reached it,
-    // but the log write itself was rejected" look identical to the user.
     let uploadedUrl: string;
     try {
       uploadedUrl = (await uploadsApi.uploadImage(photoUri)).url;
@@ -152,12 +136,6 @@ export default function MedicationConfirmScreen() {
   };
 
   if (!medication) {
-    // Opened via a deep link (e.g. a medicine reminder from the "การแจ้งเตือน"
-    // screen) while the matching household's data is still being fetched —
-    // that link may have just switched the active household, so `medications`
-    // hasn't caught up yet. Show a neutral loading state instead of "ยังไม่มี
-    // รายการยา" here, which would be actively wrong (the record does exist,
-    // it just hasn't loaded) and would send the user to create a duplicate.
     if (params.id && isLoadingData) {
       return (
         <Screen center gap={Spacing.three}>
@@ -212,11 +190,6 @@ export default function MedicationConfirmScreen() {
         </>
       }>
       <ReadOnlyBanner />
-      {/* ReadOnlyBanner only fires for Viewer (household-level `canEdit`) —
-       *  an Elder can generally edit, just not *this* record if it belongs
-       *  to someone else, so that case needs its own explanation here.
-       *  (`canEdit` check avoids double-showing this alongside ReadOnlyBanner
-       *  for Viewer, who is already `!canManageThis` for every record.) */}
       {canEdit && !canManageThis ? (
         <Card tone="readOnly" elevation="flat" gap={Spacing.one}>
           <ThemedText type="small" themeColor="textSecondary">

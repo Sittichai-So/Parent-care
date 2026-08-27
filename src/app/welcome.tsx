@@ -11,9 +11,6 @@ import { useTheme } from '@/hooks/use-theme';
 
 const STORAGE_KEY = 'parent-care.has-seen-onboarding';
 
-/** First-run welcome screen. Shown once per device install (tracked in
- *  AsyncStorage), then every later unauthenticated visit skips straight past
- *  it to the login screen. */
 export default function WelcomeScreen() {
   const router = useRouter();
   const theme = useTheme();
@@ -36,24 +33,14 @@ export default function WelcomeScreen() {
     router.replace('/login');
   };
 
-  // Blank themed frame while the AsyncStorage check resolves — deliberately
-  // not a spinner, since on a repeat visit this resolves in a single frame
-  // and a spinner would just flash.
   if (!ready) {
     return <View style={[styles.blank, { backgroundColor: theme.background }]} />;
   }
 
   return (
-    // `background.png` is a complete poster — logo, tagline, feature icons and
-    // a hero photo all already composed into one image — so this screen is
-    // just that image full-bleed plus the one button it doesn't already have,
-    // not a re-render of copy the picture already says.
     <View style={styles.container}>
       <Image source={require('@/assets/images/background.png')} style={styles.background} contentFit="cover" />
 
-      {/* Fades the image to the page background right where the CTA sits, so
-       *  the button stays legible over whatever happens to be in the photo
-       *  there rather than needing a hard-edged card. */}
       <View style={[styles.scrim, { experimental_backgroundImage: `linear-gradient(to bottom, transparent, ${theme.background})` }]} />
 
       <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>

@@ -64,8 +64,6 @@ export default function AppointmentsScreen() {
 
   const memberId = params.memberId;
   const member = memberId ? familyMembers.find((m) => m.id === memberId) : undefined;
-  // Where a new appointment from the "+" button would go: the scoped member
-  // if there is one, else self for Elder or the family's Elder otherwise.
   const addTargetMemberId = resolveDefaultMemberId(memberId);
 
   const scoped = useMemo(
@@ -87,7 +85,6 @@ export default function AppointmentsScreen() {
   return (
     <Screen
       gap={Spacing.three}
-      // Owner/Caregiver can add for anyone; Elder only for themself.
       footer={
         canManageFor(addTargetMemberId) ? (
           <AppButton
